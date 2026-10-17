@@ -7,6 +7,7 @@ const PASSWORD_SETUP_FLOW = (() => {
   const hash = new URLSearchParams(window.location.hash.slice(1));
   return query.get("flow") === "recovery" || ["recovery", "invite"].includes(hash.get("type"));
 })();
+let passwordSetupFlow = PASSWORD_SETUP_FLOW;
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   db: { schema: "migrai" },
@@ -153,6 +154,7 @@ ui.passwordForm.addEventListener("submit", async (event) => {
     return;
   }
 
+  passwordSetupFlow = false;
   setMessage(ui.passwordMessage, "Contraseña actualizada. Abriendo el dashboard…");
   const { data } = await supabaseClient.auth.getSession();
   window.history.replaceState({}, document.title, window.location.pathname);
@@ -179,7 +181,8 @@ ui.entityFilter.addEventListener("change", () => {
 ui.horizonFilter.addEventListener("change", refreshSelection);
 
 supabaseClient.auth.onAuthStateChange(async (event, session) => {
-  if (event === "PASSWORD_RECOVERY" || (PASSWORD_SETUP_FLOW && session)) {
+  const setupSessionEvent = ["INITIAL_SESSION", "SIGNED_IN", "USER_UPDATED"].includes(event);
+  if (event === "PASSWORD_RECOVERY" || (passwordSetupFlow && session && setupSessionEvent)) {
     showView("password", session);
     return;
   }
