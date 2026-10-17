@@ -1,6 +1,12 @@
 const SUPABASE_URL = "https://tiappaimkcdwgvvfdmda.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_FlW59YdTdC-TUsH2pmwLfQ_pjsNa_sn";
 const SITE_URL = "https://marionajuny.github.io/migrai-dashboard/";
+const PASSWORD_RECOVERY_URL = new URL("?flow=recovery", SITE_URL).toString();
+const PASSWORD_SETUP_FLOW = (() => {
+  const query = new URLSearchParams(window.location.search);
+  const hash = new URLSearchParams(window.location.hash.slice(1));
+  return query.get("flow") === "recovery" || ["recovery", "invite"].includes(hash.get("type"));
+})();
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   db: { schema: "migrai" },
@@ -117,7 +123,7 @@ ui.resetButton.addEventListener("click", async () => {
   }
 
   setBusy(ui.resetButton, true);
-  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: SITE_URL });
+  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: PASSWORD_RECOVERY_URL });
   setBusy(ui.resetButton, false);
 
   if (error) {
@@ -173,7 +179,7 @@ ui.entityFilter.addEventListener("change", () => {
 ui.horizonFilter.addEventListener("change", refreshSelection);
 
 supabaseClient.auth.onAuthStateChange(async (event, session) => {
-  if (event === "PASSWORD_RECOVERY" || event === "USER_UPDATED" && window.location.hash) {
+  if (event === "PASSWORD_RECOVERY" || (PASSWORD_SETUP_FLOW && session)) {
     showView("password", session);
     return;
   }
@@ -486,7 +492,6 @@ function formatRange(lower, upper) {
 }
 
 async function initialize() {
-  const recoveryFlow = window.location.hash.includes("type=recovery") || window.location.hash.includes("type=invite");
   const { data, error } = await supabaseClient.auth.getSession();
 
   if (error) {
@@ -495,7 +500,7 @@ async function initialize() {
     return;
   }
 
-  if (recoveryFlow && data.session) {
+  if (PASSWORD_SETUP_FLOW && data.session) {
     showView("password", data.session);
     return;
   }
