@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Dashboard privado de previsiones migratorias de MigrAI" />
+    <meta name="color-scheme" content="light" />
+    <title>MigrAI · Dashboard privado</title>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="background-orb background-orb--one" aria-hidden="true"></div>
+    <div class="background-orb background-orb--two" aria-hidden="true"></div>
+
+    <header class="topbar">
+      <a class="brand" href="./" aria-label="MigrAI, inicio">
+        <span class="brand__mark" aria-hidden="true">M</span>
+        <span>
+          <strong>MigrAI</strong>
+          <small>Migration intelligence</small>
+        </span>
+      </a>
+
+      <div id="sessionControls" class="session-controls" hidden>
+        <span id="sessionEmail" class="session-email"></span>
+        <button id="logoutButton" class="button button--ghost" type="button">Cerrar sesión</button>
+      </div>
+    </header>
+
+    <main class="page-shell">
+      <section id="authView" class="auth-layout" aria-labelledby="authTitle">
+        <div class="auth-intro">
+          <p class="eyebrow">Acceso restringido</p>
+          <h1 id="authTitle">Datos para anticipar el cambio.</h1>
+          <p>
+            Explora las previsiones migratorias más recientes de MigrAI en un entorno protegido
+            por Supabase Auth y políticas de acceso a nivel de fila.
+          </p>
+          <div class="auth-intro__facts" aria-label="Características del dashboard">
+            <span>Forecasts por país y ciudad</span>
+            <span>Intervalos de incertidumbre</span>
+            <span>Histórico observado</span>
+          </div>
+        </div>
+
+        <div class="auth-card">
+          <p class="eyebrow">Área privada</p>
+          <h2>Inicia sesión</h2>
+          <p class="muted">Utiliza una cuenta previamente invitada.</p>
+
+          <form id="loginForm" class="form-stack">
+            <label>
+              Correo electrónico
+              <input id="emailInput" type="email" autocomplete="email" required />
+            </label>
+            <label>
+              Contraseña
+              <input id="passwordInput" type="password" autocomplete="current-password" required minlength="8" />
+            </label>
+            <button class="button button--primary" type="submit">Entrar al dashboard</button>
+          </form>
+
+          <button id="resetButton" class="text-button" type="button">
+            Crear o restablecer mi contraseña
+          </button>
+          <p id="authMessage" class="form-message" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section id="passwordView" class="auth-layout" aria-labelledby="passwordTitle" hidden>
+        <div class="auth-intro">
+          <p class="eyebrow">Cuenta MigrAI</p>
+          <h1 id="passwordTitle">Define una contraseña segura.</h1>
+          <p>La contraseña se enviará directamente a Supabase y nunca se almacenará en este sitio.</p>
+        </div>
+
+        <div class="auth-card">
+          <h2>Nueva contraseña</h2>
+          <form id="passwordForm" class="form-stack">
+            <label>
+              Contraseña
+              <input id="newPasswordInput" type="password" autocomplete="new-password" required minlength="10" />
+            </label>
+            <label>
+              Repite la contraseña
+              <input id="repeatPasswordInput" type="password" autocomplete="new-password" required minlength="10" />
+            </label>
+            <button class="button button--primary" type="submit">Guardar contraseña</button>
+          </form>
+          <p id="passwordMessage" class="form-message" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section id="dashboardView" class="dashboard" hidden aria-labelledby="dashboardTitle">
+        <div class="dashboard-heading">
+          <div>
+            <p class="eyebrow">Última ejecución disponible</p>
+            <h1 id="dashboardTitle">Panorama migratorio</h1>
+            <p id="runSummary" class="muted">Cargando información del pipeline…</p>
+          </div>
+          <span id="connectionBadge" class="status-badge">Conectando</span>
+        </div>
+
+        <section class="filter-bar" aria-label="Filtros">
+          <label>
+            Nivel
+            <select id="levelFilter"></select>
+          </label>
+          <label>
+            Territorio
+            <select id="entityFilter"></select>
+          </label>
+          <label>
+            Horizonte
+            <select id="horizonFilter"></select>
+          </label>
+        </section>
+
+        <section class="metrics-grid" aria-label="Indicadores principales">
+          <article class="metric-card">
+            <span>Último valor observado</span>
+            <strong id="observedMetric">—</strong>
+            <small id="observedYear">Sin datos</small>
+          </article>
+          <article class="metric-card metric-card--accent">
+            <span>Previsión</span>
+            <strong id="forecastMetric">—</strong>
+            <small id="forecastYear">Sin datos</small>
+          </article>
+          <article class="metric-card">
+            <span>Variación prevista</span>
+            <strong id="changeMetric">—</strong>
+            <small>respecto al último observado</small>
+          </article>
+          <article class="metric-card">
+            <span>Modelo</span>
+            <strong id="modelMetric" class="metric-card__model">—</strong>
+            <small id="availabilityMetric">Pendiente</small>
+          </article>
+        </section>
+
+        <section class="content-grid">
+          <article class="panel panel--chart">
+            <div class="panel__heading">
+              <div>
+                <p class="eyebrow">Evolución</p>
+                <h2 id="chartTitle">Observado y previsto</h2>
+              </div>
+              <div class="legend" aria-label="Leyenda">
+                <span><i class="legend__dot legend__dot--observed"></i> Observado</span>
+                <span><i class="legend__dot legend__dot--forecast"></i> Previsión</span>
+              </div>
+            </div>
+            <div id="chart" class="chart" role="img" aria-label="Gráfico de evolución migratoria"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel__heading">
+              <div>
+                <p class="eyebrow">Pipeline</p>
+                <h2>Ejecución activa</h2>
+              </div>
+            </div>
+            <dl id="runDetails" class="run-details"></dl>
+          </article>
+        </section>
+
+        <section class="panel panel--table">
+          <div class="panel__heading">
+            <div>
+              <p class="eyebrow">Detalle</p>
+              <h2>Previsiones disponibles</h2>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Año</th>
+                  <th>Horizonte</th>
+                  <th>Previsión</th>
+                  <th>Intervalo 80 %</th>
+                  <th>Intervalo 95 %</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody id="forecastTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <p id="dashboardMessage" class="form-message" role="status" aria-live="polite"></p>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>MigrAI · Trabajo Final de Máster</span>
+      <span>Acceso protegido con Supabase</span>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js" defer></script>
+  </body>
+</html>
