@@ -47,11 +47,13 @@ const ui = {
   benchmarkPage: document.querySelector("#countryBenchmarkPage"),
   contextPage: document.querySelector("#migrationContextPage"),
   reliabilityPage: document.querySelector("#forecastReliabilityPage"),
+  cityPage: document.querySelector("#cityIntelligencePage"),
   navEuropean: document.querySelector("#navEuropeanOutlook"),
   navCountry: document.querySelector("#navCountryIntelligence"),
   navBenchmark: document.querySelector("#navCountryBenchmark"),
   navContext: document.querySelector("#navMigrationContext"),
   navReliability: document.querySelector("#navForecastReliability"),
+  navCity: document.querySelector("#navCityIntelligence"),
   countrySearch: document.querySelector("#countrySearch"),
   countrySearchOptions: document.querySelector("#countrySearchOptions"),
   mapMeasure: document.querySelector("#mapMeasure"),
@@ -150,6 +152,38 @@ const ui = {
   reliabilityRankingEmptyTitle: document.querySelector("#reliabilityRankingEmptyTitle"),
   reliabilityRankingEmptyText: document.querySelector("#reliabilityRankingEmptyText"),
   reliabilityOpenCountry: document.querySelector("#reliabilityOpenCountry"),
+  cityCountryFilter: document.querySelector("#cityCountryFilter"),
+  citySearchInput: document.querySelector("#citySearchInput"),
+  citySelect: document.querySelector("#citySelect"),
+  cityScopeSummary: document.querySelector("#cityScopeSummary"),
+  citySelectionNote: document.querySelector("#citySelectionNote"),
+  cityKpiName: document.querySelector("#cityKpiName"),
+  cityKpiCountry: document.querySelector("#cityKpiCountry"),
+  cityKpiYear: document.querySelector("#cityKpiYear"),
+  cityKpiShare: document.querySelector("#cityKpiShare"),
+  cityKpiForecast1: document.querySelector("#cityKpiForecast1"),
+  cityKpiForecast1Year: document.querySelector("#cityKpiForecast1Year"),
+  cityKpiForecast3: document.querySelector("#cityKpiForecast3"),
+  cityKpiForecast3Year: document.querySelector("#cityKpiForecast3Year"),
+  cityKpiScope: document.querySelector("#cityKpiScope"),
+  cityKpiScopeNote: document.querySelector("#cityKpiScopeNote"),
+  cityTrendTitle: document.querySelector("#cityTrendTitle"),
+  cityTrendChart: document.querySelector("#cityTrendChart"),
+  cityTrendNote: document.querySelector("#cityTrendNote"),
+  cityRankingCriterion: document.querySelector("#cityRankingCriterion"),
+  cityRankingSubtitle: document.querySelector("#cityRankingSubtitle"),
+  cityRankingList: document.querySelector("#cityRankingList"),
+  cityRankingNote: document.querySelector("#cityRankingNote"),
+  cityYoyMeasure: document.querySelector("#cityYoyMeasure"),
+  cityYoyChart: document.querySelector("#cityYoyChart"),
+  cityYoyNote: document.querySelector("#cityYoyNote"),
+  cityForecastCompare: document.querySelector("#cityForecastCompare"),
+  cityForecastCompareNote: document.querySelector("#cityForecastCompareNote"),
+  cityProfileSubtitle: document.querySelector("#cityProfileSubtitle"),
+  cityProfileContent: document.querySelector("#cityProfileContent"),
+  cityInsights: document.querySelector("#cityInsights"),
+  cityReliabilityInterval: document.querySelector("#cityReliabilityInterval"),
+  cityReliabilityIntervalNote: document.querySelector("#cityReliabilityIntervalNote"),
 };
 
 const state = {
@@ -168,6 +202,7 @@ const state = {
   activePage: "european-outlook",
   countryChartZoom: 1,
   selectedCity: null,
+  cityCountryFilter: null,
   selectedBenchmarkCountries: [],
   benchmarkMeasure: "absolute",
   reliabilityScope: "country",
@@ -351,6 +386,11 @@ ui.navReliability.addEventListener("click", (event) => {
   event.preventDefault();
   navigateToDashboardPage("forecast-reliability");
 });
+ui.navCity.addEventListener("click", (event) => {
+  event.preventDefault();
+  if (state.activePage !== "city-intelligence") state.cityCountryFilter = state.selectedCountry;
+  navigateToDashboardPage("city-intelligence");
+});
 ui.benchmarkSelectorToggle.addEventListener("click", () => {
   ui.benchmarkSelectorMenu.hidden = !ui.benchmarkSelectorMenu.hidden;
   ui.benchmarkSelectorToggle.setAttribute("aria-expanded", String(!ui.benchmarkSelectorMenu.hidden));
@@ -422,9 +462,41 @@ ui.reliabilityOpenCountry.addEventListener("click", () => {
   selectCountry(ui.reliabilityEntity.value);
   navigateToDashboardPage("country-intelligence");
 });
+ui.cityCountryFilter.addEventListener("change", () => {
+  state.cityCountryFilter = ui.cityCountryFilter.value;
+  const filtered = cityRecordsAcrossCountries().cities.filter((city) => ui.cityCountryFilter.value === "all" || city.countryId === ui.cityCountryFilter.value);
+  state.selectedCity = filtered[0]?.id ?? null;
+  ui.citySearchInput.value = "";
+  if (filtered[0]) {
+    state.selectedCountry = filtered[0].countryId;
+    updateCountryQuery();
+    updateCityQuery(filtered[0].id);
+  }
+  renderCityIntelligence();
+});
+ui.citySearchInput.addEventListener("input", () => {
+  if (ui.citySearchInput.value.trim()) {
+    ui.cityCountryFilter.value = "all";
+    state.cityCountryFilter = "all";
+  }
+  renderCityIntelligence();
+});
+ui.citySelect.addEventListener("change", () => {
+  const city = cityRecordsAcrossCountries().cities.find((item) => item.key === ui.citySelect.value);
+  if (!city) return;
+  state.selectedCountry = city.countryId;
+  state.selectedCity = city.id;
+  ui.cityCountryFilter.value = city.countryId;
+  updateCountryQuery();
+  updateCityQuery(city.id);
+  renderCityIntelligence();
+});
+ui.cityRankingCriterion.addEventListener("change", renderCityRanking);
+ui.cityYoyMeasure.addEventListener("change", renderCityYearChange);
 window.addEventListener("resize", () => {
   if (state.activePage === "country-benchmark") renderBenchmarkTrendChart();
   if (state.activePage === "migration-context") renderMigrationHistoryChart();
+  if (state.activePage === "city-intelligence") renderCityTrendChart();
 });
 ui.intelligenceCountrySelect.addEventListener("change", () => {
   selectCountry(ui.intelligenceCountrySelect.value);
@@ -524,7 +596,7 @@ async function loadDashboard() {
     ? `Latest available run · ${latestRun.run_label || latestRun.run_id || "Run details unavailable"}`
     : "Run information is not available.";
   ui.helpRunNote.textContent = latestRun
-    ? `Data is read from the latest published Country views. Run reference: ${latestRun.run_label || latestRun.run_id || "Not available"}.`
+    ? `Data is read from the latest published Country and City views. Run reference: ${latestRun.run_label || latestRun.run_id || "Not available"}.`
     : "Run metadata is not available.";
 
   populateCountryControls();
@@ -796,7 +868,8 @@ function navigateToDashboardPage(page) {
   const hash = page === "country-intelligence" ? "#country-intelligence"
     : page === "country-benchmark" ? "#country-benchmark"
       : page === "migration-context" ? "#migration-context"
-        : page === "forecast-reliability" ? "#forecast-reliability" : "#european-outlook";
+        : page === "forecast-reliability" ? "#forecast-reliability"
+          : page === "city-intelligence" ? "#city-intelligence" : "#european-outlook";
   if (window.location.hash === hash) applyDashboardRoute();
   else window.location.hash = hash;
 }
@@ -804,31 +877,35 @@ function navigateToDashboardPage(page) {
 function applyDashboardRoute() {
   if (!state.initialized || ui.dashboardView.hidden) return;
   const isReliabilityPage = window.location.hash === "#forecast-reliability";
+  const isCityPage = window.location.hash === "#city-intelligence";
   const isContextPage = window.location.hash === "#migration-context";
   const isBenchmarkPage = window.location.hash === "#country-benchmark";
   const isCountryPage = window.location.hash === "#country-intelligence";
-  state.activePage = isReliabilityPage ? "forecast-reliability" : isContextPage ? "migration-context" : isBenchmarkPage ? "country-benchmark" : isCountryPage ? "country-intelligence" : "european-outlook";
-  if ((isCountryPage || isContextPage) && state.selectedCountry === "all") {
+  state.activePage = isCityPage ? "city-intelligence" : isReliabilityPage ? "forecast-reliability" : isContextPage ? "migration-context" : isBenchmarkPage ? "country-benchmark" : isCountryPage ? "country-intelligence" : "european-outlook";
+  if ((isCountryPage || isContextPage || isCityPage) && state.selectedCountry === "all") {
     const countries = listCountries();
     const preferred = countries.find((item) => normalizeName(item.name) === "spain") ?? countries[0];
     if (preferred) state.selectedCountry = preferred.id;
   }
-  ui.europeanPage.hidden = isCountryPage || isBenchmarkPage || isContextPage || isReliabilityPage;
+  ui.europeanPage.hidden = isCountryPage || isBenchmarkPage || isContextPage || isReliabilityPage || isCityPage;
   ui.countryPage.hidden = !isCountryPage;
   ui.benchmarkPage.hidden = !isBenchmarkPage;
   ui.contextPage.hidden = !isContextPage;
   ui.reliabilityPage.hidden = !isReliabilityPage;
-  ui.navEuropean.classList.toggle("is-active", !isCountryPage && !isBenchmarkPage && !isContextPage && !isReliabilityPage);
+  ui.cityPage.hidden = !isCityPage;
+  ui.navEuropean.classList.toggle("is-active", !isCountryPage && !isBenchmarkPage && !isContextPage && !isReliabilityPage && !isCityPage);
   ui.navCountry.classList.toggle("is-active", isCountryPage);
   ui.navBenchmark.classList.toggle("is-active", isBenchmarkPage);
   ui.navContext.classList.toggle("is-active", isContextPage);
   ui.navReliability.classList.toggle("is-active", isReliabilityPage);
+  ui.navCity.classList.toggle("is-active", isCityPage);
   if (isCountryPage) {
     ui.navCountry.setAttribute("aria-current", "page");
     ui.navEuropean.removeAttribute("aria-current");
     ui.navBenchmark.removeAttribute("aria-current");
     ui.navContext.removeAttribute("aria-current");
     ui.navReliability.removeAttribute("aria-current");
+    ui.navCity.removeAttribute("aria-current");
     ui.dashboardTitle.textContent = "Country Intelligence";
     ui.dashboardEyebrow.textContent = "COUNTRY · MIGRATION INTELLIGENCE";
     ui.dashboardSubtitle.textContent = "Explore a country's historical trajectory and future outlook";
@@ -843,6 +920,7 @@ function applyDashboardRoute() {
     ui.navCountry.removeAttribute("aria-current");
     ui.navContext.removeAttribute("aria-current");
     ui.navReliability.removeAttribute("aria-current");
+    ui.navCity.removeAttribute("aria-current");
     ui.dashboardTitle.textContent = "Country Benchmark";
     ui.dashboardEyebrow.textContent = "COUNTRY COMPARISON · MIGRATION INTELLIGENCE";
     ui.dashboardSubtitle.textContent = "Compare historical and forecast immigration patterns across countries";
@@ -854,6 +932,7 @@ function applyDashboardRoute() {
     ui.navCountry.removeAttribute("aria-current");
     ui.navBenchmark.removeAttribute("aria-current");
     ui.navReliability.removeAttribute("aria-current");
+    ui.navCity.removeAttribute("aria-current");
     ui.dashboardTitle.textContent = "Migration Context";
     ui.dashboardEyebrow.textContent = "HISTORICAL CONTEXT · MIGRATION INTELLIGENCE";
     ui.dashboardSubtitle.textContent = "Explore how observed migration moves alongside wider conditions";
@@ -866,17 +945,31 @@ function applyDashboardRoute() {
     ui.navCountry.removeAttribute("aria-current");
     ui.navBenchmark.removeAttribute("aria-current");
     ui.navContext.removeAttribute("aria-current");
+    ui.navCity.removeAttribute("aria-current");
     ui.dashboardTitle.textContent = "Forecast Reliability";
     ui.dashboardEyebrow.textContent = "MODEL VALIDATION · MIGRATION INTELLIGENCE";
     ui.dashboardSubtitle.textContent = "See what the published validation evidence can—and cannot—support";
     document.title = "Forecast Reliability · migrAI";
     renderForecastReliability();
+  } else if (isCityPage) {
+    ui.navCity.setAttribute("aria-current", "page");
+    ui.navEuropean.removeAttribute("aria-current");
+    ui.navCountry.removeAttribute("aria-current");
+    ui.navBenchmark.removeAttribute("aria-current");
+    ui.navContext.removeAttribute("aria-current");
+    ui.navReliability.removeAttribute("aria-current");
+    ui.dashboardTitle.textContent = "City Intelligence";
+    ui.dashboardEyebrow.textContent = "URBAN DATA · MIGRATION INTELLIGENCE";
+    ui.dashboardSubtitle.textContent = "Explore foreign population shares and city-level forecasts";
+    document.title = "City Intelligence · migrAI";
+    renderCityIntelligence();
   } else {
     ui.navEuropean.setAttribute("aria-current", "page");
     ui.navCountry.removeAttribute("aria-current");
     ui.navBenchmark.removeAttribute("aria-current");
     ui.navContext.removeAttribute("aria-current");
     ui.navReliability.removeAttribute("aria-current");
+    ui.navCity.removeAttribute("aria-current");
     ui.dashboardTitle.textContent = "European Migration Outlook";
     ui.dashboardEyebrow.textContent = "EUROPE · MIGRATION INTELLIGENCE";
     ui.dashboardSubtitle.textContent = "Explore historical immigration and future forecasts";
@@ -2264,6 +2357,489 @@ function cityRecordsForCurrentCountry() {
   return { cities: [...cityGroups.values()].sort((a, b) => a.name.localeCompare(b.name, "en")), hasParentField, totalRows: allRows.length };
 }
 
+function cityRecordsAcrossCountries() {
+  const allRows = [...state.cityObserved, ...state.cityForecasts];
+  const parentKeys = ["country_name", "country", "country_id", "country_code", "country_iso2", "parent_country_name", "parent_country", "parent_country_id", "parent_entity_name"];
+  const hasParentField = allRows.some((row) => parentKeys.some((key) => row?.[key] !== null && row?.[key] !== undefined && row?.[key] !== ""));
+  const groups = new Map();
+  const getCity = (row) => {
+    const countryId = cityCountryReference(row);
+    if (!countryId || !row?.entity_id) return null;
+    const id = String(row.entity_id);
+    const key = `${countryId}::${id}`;
+    if (!groups.has(key)) groups.set(key, { key, id, name: row.entity_name || id, countryId, observed: [], forecasts: [] });
+    const city = groups.get(key);
+    if (!city.name || city.name === id) city.name = row.entity_name || id;
+    return city;
+  };
+  state.cityObserved.forEach((row) => {
+    const city = getCity(row);
+    if (city && Object.hasOwn(row, "year") && Object.hasOwn(row, "value")) city.observed.push(row);
+  });
+  state.cityForecasts.forEach((row) => {
+    const city = getCity(row);
+    if (city && Object.hasOwn(row, "horizon")) city.forecasts.push(row);
+  });
+  const cities = [...groups.values()].sort((a, b) => a.name.localeCompare(b.name, "en") || (countryById(a.countryId)?.name ?? "").localeCompare(countryById(b.countryId)?.name ?? "", "en"));
+  return { cities, hasParentField, totalRows: allRows.length };
+}
+
+function cityObservationSeries(city) {
+  const byYear = new Map();
+  city.observed
+    .map((row) => ({ row, year: safeNumber(row.year), value: safeNumber(row.value) }))
+    .filter((item) => item.year !== null && item.value !== null)
+    .sort((a, b) => a.year - b.year)
+    .forEach((item) => {
+      if (!byYear.has(item.year)) {
+        byYear.set(item.year, item);
+        return;
+      }
+      const existing = byYear.get(item.year);
+      if (existing && Math.abs(existing.value - item.value) > 0.000001) byYear.set(item.year, null);
+    });
+  return [...byYear.values()].filter(Boolean).sort((a, b) => a.year - b.year);
+}
+
+function cityForecastSeries(city) {
+  return [1, 3].map((horizon) => city.forecasts
+    .filter((row) => safeNumber(row.horizon) === horizon && forecastIsAvailable(row)
+      && safeNumber(row.target_year) !== null && safeNumber(row.prediction) !== null)
+    .sort((a, b) => safeNumber(a.target_year) - safeNumber(b.target_year))[0] ?? null);
+}
+
+function cityPercent(value, digits = 2) {
+  const number = safeNumber(value);
+  return number === null ? "—" : `${new Intl.NumberFormat("en-GB", { maximumFractionDigits: digits }).format(number)}%`;
+}
+
+function cityPercentagePoints(value, digits = 2) {
+  const number = safeNumber(value);
+  if (number === null) return "Not available";
+  const sign = number > 0 ? "+" : number < 0 ? "−" : "";
+  return `${sign}${new Intl.NumberFormat("en-GB", { maximumFractionDigits: digits }).format(Math.abs(number))} pp`;
+}
+
+function cityEmpty(container, message, className = "city-empty-state") {
+  container.replaceChildren();
+  const empty = document.createElement("div");
+  empty.className = className;
+  empty.textContent = message;
+  container.append(empty);
+}
+
+function populateCityControls(cities) {
+  const countries = [...new Map(cities.map((city) => [city.countryId, countryById(city.countryId)]).filter(([, country]) => country).map(([id, country]) => [id, country])).values()]
+    .sort((a, b) => a.name.localeCompare(b.name, "en"));
+  replaceOptions(ui.cityCountryFilter, [{ value: "all", label: "All countries" }, ...countries.map((country) => ({ value: country.id, label: country.name }))]);
+  const requestedCountry = new URLSearchParams(window.location.search).get("country");
+  const preferredCountry = [state.cityCountryFilter, state.selectedCountry, requestedCountry].find((id) => id && (id === "all" || countries.some((country) => country.id === String(id))));
+  ui.cityCountryFilter.value = preferredCountry ?? "all";
+  state.cityCountryFilter = ui.cityCountryFilter.value;
+  const search = normalizeName(ui.citySearchInput.value);
+  const countryFilter = ui.cityCountryFilter.value;
+  const visibleCities = cities.filter((city) => {
+    const countryName = countryById(city.countryId)?.name ?? "";
+    const matchesCountry = countryFilter === "all" || city.countryId === countryFilter;
+    const matchesSearch = !search || normalizeName(city.name).includes(search) || normalizeName(countryName).includes(search);
+    return matchesCountry && matchesSearch;
+  });
+  const requestedCity = new URLSearchParams(window.location.search).get("city");
+  const selected = visibleCities.find((city) => city.id === state.selectedCity && city.countryId === state.selectedCountry)
+    ?? visibleCities.find((city) => city.id === requestedCity && (!requestedCountry || city.countryId === requestedCountry))
+    ?? visibleCities[0]
+    ?? null;
+  replaceOptions(ui.citySelect, visibleCities.map((city) => ({ value: city.key, label: `${city.name} · ${countryById(city.countryId)?.name ?? city.countryId}` })));
+  ui.citySelect.disabled = visibleCities.length === 0;
+  if (selected) {
+    ui.citySelect.value = selected.key;
+    state.selectedCity = selected.id;
+    state.selectedCountry = selected.countryId;
+  }
+  return { visibleCities, selected };
+}
+
+function renderCityIntelligence() {
+  if (!state.initialized) return;
+  const { cities, hasParentField, totalRows } = cityRecordsAcrossCountries();
+  ui.cityScopeSummary.textContent = `${cities.length} verified production ${cities.length === 1 ? "city" : "cities"}`;
+  if (!totalRows) {
+    ui.cityScopeSummary.textContent = "No City records in published views";
+    cityEmpty(ui.cityTrendChart, "No city observations or forecasts are available in the current production views. No urban values are generated or inferred.");
+    setMessage(ui.citySelectionNote, "City-level observations and forecasts have not been published to the dashboard yet.");
+    clearCityIntelligenceDetails();
+    return;
+  }
+  if (!hasParentField || !cities.length) {
+    ui.cityScopeSummary.textContent = "Country linkage unavailable";
+    cityEmpty(ui.cityTrendChart, "City records exist, but they cannot be linked to a verified country from the published fields. The page will not guess city-country assignments.");
+    setMessage(ui.citySelectionNote, "The published City view needs a verifiable country field before city comparison can be enabled.");
+    clearCityIntelligenceDetails();
+    return;
+  }
+  const { visibleCities, selected } = populateCityControls(cities);
+  if (!visibleCities.length || !selected) {
+    setMessage(ui.citySelectionNote, "No production city matches the current country and search filters.");
+    clearCityIntelligenceDetails();
+    return;
+  }
+  setMessage(ui.citySelectionNote, `${visibleCities.length} city${visibleCities.length === 1 ? "" : "ies"} match the current filters. Historical values are foreign-resident share (%), not annual immigration flows.`);
+  const selectionChanged = selected.id !== state.selectedCity || selected.countryId !== state.selectedCountry;
+  state.selectedCountry = selected.countryId;
+  state.selectedCity = selected.id;
+  if (selectionChanged) {
+    updateCountryQuery();
+    updateCityQuery(selected.id);
+  }
+  renderSelectedCity(selected);
+  renderCityRanking();
+}
+
+function clearCityIntelligenceDetails() {
+  [ui.cityKpiName, ui.cityKpiCountry, ui.cityKpiYear, ui.cityKpiShare, ui.cityKpiForecast1, ui.cityKpiForecast1Year, ui.cityKpiForecast3, ui.cityKpiForecast3Year, ui.cityKpiScope, ui.cityKpiScopeNote].forEach((element) => { element.textContent = "—"; });
+  ui.cityTrendTitle.textContent = "Foreign Population Share";
+  cityEmpty(ui.cityRankingList, "No verified city observations are available for ranking.", "city-ranking-empty");
+  cityEmpty(ui.cityYoyChart, "Year-over-year change is unavailable without observed city values.");
+  cityEmpty(ui.cityForecastCompare, "No matching City forecast and observed baseline are available.");
+  cityEmpty(ui.cityProfileContent, "No verified city profile metadata is available.", "city-profile-empty");
+  cityEmpty(ui.cityInsights, "Insights will appear when verified City observations or forecasts are available.", "city-insights-empty");
+  [ui.cityTrendNote, ui.cityRankingSubtitle, ui.cityRankingNote, ui.cityYoyNote, ui.cityForecastCompareNote, ui.cityProfileSubtitle].forEach((element) => { element.textContent = ""; });
+  ui.cityReliabilityInterval.textContent = "Not published";
+  ui.cityReliabilityIntervalNote.textContent = "No verified City forecast interval is available for this selection";
+}
+
+function renderSelectedCity(city) {
+  const country = countryById(city.countryId);
+  const observations = cityObservationSeries(city);
+  const latest = observations.at(-1) ?? null;
+  const forecasts = cityForecastSeries(city);
+  const availableForecasts = forecasts.filter(Boolean);
+  ui.cityKpiName.textContent = city.name;
+  ui.cityKpiCountry.textContent = country?.name ?? "Verified country";
+  ui.cityKpiYear.textContent = latest ? String(latest.year) : "Not available";
+  ui.cityKpiShare.textContent = latest ? cityPercent(latest.value) : "Not available";
+  const forecast1 = forecasts[0];
+  const forecast3 = forecasts[1];
+  ui.cityKpiForecast1.textContent = forecast1 ? cityPercent(forecast1.prediction) : "Not available";
+  ui.cityKpiForecast1Year.textContent = forecast1 ? cityForecastTargetLabel(forecast1) : "No valid +1 City forecast";
+  ui.cityKpiForecast3.textContent = forecast3 ? cityPercent(forecast3.prediction) : "Out of model scope";
+  ui.cityKpiForecast3Year.textContent = forecast3 ? cityForecastTargetLabel(forecast3) : "No +3 forecast published for this city";
+  ui.cityKpiScope.textContent = `${observations.length} years`;
+  ui.cityKpiScopeNote.textContent = `${availableForecasts.length} of 2 supported horizons available`;
+  const intervalForecasts = availableForecasts.filter((row) => intervalBounds(row, 80) || intervalBounds(row, 95));
+  ui.cityReliabilityInterval.textContent = intervalForecasts.length ? `${intervalForecasts.length} horizon${intervalForecasts.length === 1 ? "" : "s"}` : "Not published";
+  ui.cityReliabilityIntervalNote.textContent = intervalForecasts.length ? "Valid 80% / 95% interval(s) shown in the main chart; coverage score not published" : "No valid 80% / 95% range for these forecasts";
+  ui.cityTrendTitle.textContent = `Foreign Population Share in ${city.name}: Historical Trend and Forecast`;
+  renderCityTrendChart(city);
+  renderCityYearChange(city);
+  renderCityForecastComparison(city, latest, forecasts);
+  renderCityProfile(city, observations, forecasts);
+  renderCityInsights(city, observations, forecasts);
+}
+
+function cityForecastTargetLabel(row) {
+  const year = safeNumber(row.target_year);
+  const currentYear = new Date().getFullYear();
+  const label = year !== null && year < currentYear ? "Historical model projection" : year === currentYear ? "Current-year model projection" : "Forecast target";
+  return `${label} · ${year ?? "year unavailable"}`;
+}
+
+function renderCityTrendChart(city = null) {
+  ui.cityTrendChart.replaceChildren();
+  city ??= cityRecordsAcrossCountries().cities.find((item) => item.id === state.selectedCity && item.countryId === state.selectedCountry);
+  if (!city) return;
+  const observations = cityObservationSeries(city);
+  const forecasts = cityForecastSeries(city).filter(Boolean).map((row) => ({
+    row,
+    year: safeNumber(row.target_year),
+    value: safeNumber(row.prediction),
+    horizon: safeNumber(row.horizon),
+    band80: intervalBounds(row, 80),
+    band95: intervalBounds(row, 95),
+  }));
+  const points = [...observations.map((item) => ({ year: item.year, value: item.value })), ...forecasts];
+  if (!points.length) {
+    cityEmpty(ui.cityTrendChart, `No valid observed share or available +1/+3 forecast is published for ${city.name}.`);
+    ui.cityTrendNote.textContent = "Only available forecast horizons are shown; +5 is outside this view.";
+    return;
+  }
+  const width = Math.max(ui.cityTrendChart.clientWidth || 740, 480);
+  const height = 345;
+  const margin = { top: 22, right: 30, bottom: 55, left: 72 };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  const years = points.map((point) => point.year);
+  const values = points.map((point) => point.value);
+  forecasts.forEach((point) => [point.band80, point.band95].filter(Boolean).forEach((band) => values.push(band.lower, band.upper)));
+  const minYear = Math.min(...years);
+  const maxYear = Math.max(...years);
+  const xDomain = maxYear === minYear ? [minYear - 1, maxYear + 1] : [minYear, maxYear];
+  const minValue = Math.min(0, ...values);
+  const maxValue = Math.max(...values);
+  const padding = Math.max((maxValue - minValue) * 0.12, 0.5);
+  const yDomain = [minValue - padding * 0.15, maxValue + padding];
+  const x = (value) => margin.left + (value - xDomain[0]) / (xDomain[1] - xDomain[0]) * plotWidth;
+  const y = (value) => margin.top + (yDomain[1] - value) / (yDomain[1] - yDomain[0]) * plotHeight;
+  const svg = createSvg("svg", { viewBox: `0 0 ${width} ${height}`, role: "img", "aria-label": `Observed foreign population share and city forecasts for ${city.name}` });
+  for (let index = 0; index <= 4; index += 1) {
+    const value = yDomain[0] + (yDomain[1] - yDomain[0]) * index / 4;
+    svg.append(createSvg("line", { x1: margin.left, x2: width - margin.right, y1: y(value), y2: y(value), class: "city-chart-gridline" }));
+    const label = createSvg("text", { x: margin.left - 10, y: y(value) + 4, "text-anchor": "end", class: "city-chart-axis-label" });
+    label.textContent = `${new Intl.NumberFormat("en-GB", { maximumFractionDigits: 1 }).format(value)}%`;
+    svg.append(label);
+  }
+  forecasts.forEach((point) => {
+    [{ bounds: point.band95, kind: "95" }, { bounds: point.band80, kind: "80" }].filter((item) => item.bounds).forEach(({ bounds, kind }) => {
+      const band = createSvg("rect", { x: x(point.year) - 13, y: y(bounds.upper), width: 26, height: Math.max(1, y(bounds.lower) - y(bounds.upper)), rx: 5, class: `city-chart-band city-chart-band--${kind}` });
+      const title = createSvg("title");
+      title.textContent = `${point.year} · ${kind}% interval · ${cityPercent(bounds.lower)}–${cityPercent(bounds.upper)}`;
+      band.append(title);
+      svg.append(band);
+    });
+  });
+  if (observations.length > 1) {
+    const path = observations.map((point, index) => `${index ? "L" : "M"} ${x(point.year)} ${y(point.value)}`).join(" ");
+    svg.append(createSvg("path", { d: path, class: "city-chart-line city-chart-line--observed" }));
+  }
+  const latest = observations.at(-1);
+  const lineForecasts = forecasts.filter((point) => !latest || point.year > latest.year);
+  const forecastPath = [...(latest && lineForecasts.length ? [{ year: latest.year, value: latest.value, observed: true }] : []), ...lineForecasts].sort((a, b) => a.year - b.year);
+  if (forecastPath.length > 1) {
+    const path = forecastPath.map((point, index) => `${index ? "L" : "M"} ${x(point.year)} ${y(point.value)}`).join(" ");
+    svg.append(createSvg("path", { d: path, class: "city-chart-line city-chart-line--forecast" }));
+  }
+  if (forecasts.length && latest) svg.append(createSvg("line", { x1: x(latest.year), x2: x(latest.year), y1: margin.top, y2: height - margin.bottom, class: "city-chart-divider" }));
+  observations.forEach((point) => {
+    const circle = createSvg("circle", { cx: x(point.year), cy: y(point.value), r: 3.5, class: "city-chart-point city-chart-point--observed" });
+    const title = createSvg("title");
+    title.textContent = `${city.name} · ${point.year} · Observed · ${cityPercent(point.value)}`;
+    circle.append(title);
+    svg.append(circle);
+  });
+  forecasts.forEach((point) => {
+    const circle = createSvg("circle", { cx: x(point.year), cy: y(point.value), r: 5.5, class: "city-chart-point city-chart-point--forecast" });
+    const title = createSvg("title");
+    const interval = [point.band80 && `80% ${cityPercent(point.band80.lower)}–${cityPercent(point.band80.upper)}`, point.band95 && `95% ${cityPercent(point.band95.lower)}–${cityPercent(point.band95.upper)}`].filter(Boolean).join(" · ");
+    title.textContent = `${city.name} · target ${point.year} · ${cityForecastTargetLabel(point.row)} · ${cityPercent(point.value)}${interval ? ` · ${interval}` : ""}`;
+    circle.append(title);
+    svg.append(circle);
+  });
+  const visibleYears = unique(points.map((point) => point.year)).sort((a, b) => a - b);
+  const step = Math.max(1, Math.ceil(visibleYears.length / 9));
+  visibleYears.filter((year, index) => index % step === 0 || year === visibleYears.at(-1)).forEach((year) => {
+    const label = createSvg("text", { x: x(year), y: height - 27, "text-anchor": "middle", class: "city-chart-axis-label" });
+    label.textContent = String(year);
+    svg.append(label);
+  });
+  const xTitle = createSvg("text", { x: margin.left + plotWidth / 2, y: height - 5, "text-anchor": "middle", class: "city-chart-axis-title" });
+  xTitle.textContent = "Year";
+  const yTitle = createSvg("text", { x: 20, y: margin.top + plotHeight / 2, transform: `rotate(-90 20 ${margin.top + plotHeight / 2})`, "text-anchor": "middle", class: "city-chart-axis-title" });
+  yTitle.textContent = "Foreign residents (% of residents)";
+  svg.append(xTitle, yTitle);
+  ui.cityTrendChart.append(svg);
+  const historicalTargets = forecasts.filter((point) => point.year < new Date().getFullYear()).map((point) => point.year);
+  ui.cityTrendNote.textContent = `${observations.length} unambiguous observed year${observations.length === 1 ? "" : "s"} shown. Forecast markers are plotted at published target years; targets already elapsed (${historicalTargets.join(", ") || "none"}) are model-snapshot projections, not predictions of the future from today. ${forecasts.some((point) => point.band80 || point.band95) ? "Shaded ranges use only valid published City intervals." : "No valid uncertainty interval is published for this selection."}`;
+}
+
+function renderCityRanking() {
+  const { cities } = cityRecordsAcrossCountries();
+  ui.cityRankingList.replaceChildren();
+  const records = cities.map((city) => ({ city, observations: cityObservationSeries(city) })).filter((item) => item.observations.length);
+  const yearSets = records.map((item) => new Set(item.observations.map((row) => row.year)));
+  const commonYears = yearSets.length ? [...yearSets[0]].filter((year) => yearSets.every((years) => years.has(year))) : [];
+  let ranking;
+  if (ui.cityRankingCriterion.value === "common") {
+    const year = commonYears.sort((a, b) => b - a)[0];
+    ranking = year === undefined ? [] : records.map(({ city, observations }) => ({ city, row: observations.find((item) => item.year === year) })).filter((item) => item.row);
+    ui.cityRankingSubtitle.textContent = year === undefined ? "No year is observed for every listed city" : `Strict comparison using the latest year shared by all listed cities · ${year}`;
+    ui.cityRankingNote.textContent = year === undefined ? "A common-year comparison requires at least one shared observed year across every verified city with data." : `All ${ranking.length} ranked cities use the same observed year (${year}); cities without that year's valid value are omitted.`;
+  } else {
+    ranking = records.map(({ city, observations }) => ({ city, row: observations.at(-1) }));
+    const years = unique(ranking.map((item) => item.row.year));
+    ui.cityRankingSubtitle.textContent = "Rank by each city's latest available observed value";
+    ui.cityRankingNote.textContent = years.length > 1 ? `Warning: dates differ across cities (${Math.min(...years)}–${Math.max(...years)}). Each row shows its own latest year.` : years.length === 1 ? `All displayed values are from ${years[0]}.` : "No valid observed city shares are published.";
+  }
+  ranking.sort((a, b) => b.row.value - a.row.value || a.city.name.localeCompare(b.city.name, "en"));
+  const top = ranking.slice(0, 12);
+  if (!top.length) {
+    cityEmpty(ui.cityRankingList, "No comparable observed City values are available for the selected criterion.", "city-ranking-empty");
+    return;
+  }
+  const maxValue = Math.max(...top.map((item) => item.row.value), 0.000001);
+  top.forEach(({ city, row }, index) => {
+    const item = document.createElement("div");
+    item.className = `city-ranking-row${city.id === state.selectedCity && city.countryId === state.selectedCountry ? " is-selected" : ""}`;
+    const rank = document.createElement("span");
+    rank.className = "city-ranking-rank";
+    rank.textContent = String(index + 1).padStart(2, "0");
+    const label = document.createElement("span");
+    label.className = "city-ranking-name";
+    const name = document.createElement("strong");
+    name.textContent = city.name;
+    const country = document.createElement("small");
+    country.textContent = `${countryById(city.countryId)?.name ?? city.countryId} · ${row.year}`;
+    label.append(name, country);
+    const track = document.createElement("span");
+    track.className = "city-ranking-track";
+    const bar = document.createElement("i");
+    bar.style.width = `${Math.max(0, Math.min(100, row.value / maxValue * 100))}%`;
+    track.append(bar);
+    const value = document.createElement("strong");
+    value.textContent = cityPercent(row.value);
+    item.append(rank, label, track, value);
+    ui.cityRankingList.append(item);
+  });
+}
+
+function renderCityYearChange(city = null) {
+  ui.cityYoyChart.replaceChildren();
+  city ??= cityRecordsAcrossCountries().cities.find((item) => item.id === state.selectedCity && item.countryId === state.selectedCountry);
+  if (!city) return;
+  const observations = cityObservationSeries(city);
+  const measure = ui.cityYoyMeasure.value;
+  const changes = [];
+  for (let index = 1; index < observations.length; index += 1) {
+    const previous = observations[index - 1];
+    const current = observations[index];
+    if (current.year !== previous.year + 1) continue;
+    const delta = current.value - previous.value;
+    const value = measure === "relative" ? (previous.value === 0 ? null : delta / Math.abs(previous.value) * 100) : delta;
+    if (value !== null) changes.push({ year: current.year, value });
+  }
+  if (!changes.length) {
+    cityEmpty(ui.cityYoyChart, "No consecutive observed years are available to calculate a city change.");
+    ui.cityYoyNote.textContent = "Percentage-point change is current share minus prior-year share. Relative change is a separate percentage and is omitted when the prior value is zero.";
+    return;
+  }
+  const visible = changes.slice(-8);
+  const width = Math.max(ui.cityYoyChart.clientWidth || 480, 340);
+  const rowHeight = 27;
+  const height = Math.max(190, 40 + visible.length * rowHeight);
+  const margin = { left: 74, right: 48, top: 12, bottom: 12 };
+  const plotWidth = width - margin.left - margin.right;
+  const maxAbs = Math.max(...visible.map((item) => Math.abs(item.value)), 0.01);
+  const zeroX = margin.left + plotWidth / 2;
+  const svg = createSvg("svg", { viewBox: `0 0 ${width} ${height}`, role: "img", "aria-label": `${measure === "pp" ? "Percentage-point" : "Relative percentage"} annual change for ${city.name}` });
+  svg.append(createSvg("line", { x1: zeroX, x2: zeroX, y1: 5, y2: height - 5, class: "city-yoy-zero" }));
+  visible.forEach((item, index) => {
+    const centerY = 23 + index * rowHeight;
+    const label = createSvg("text", { x: margin.left - 9, y: centerY + 4, "text-anchor": "end", class: "city-chart-axis-label" });
+    label.textContent = String(item.year);
+    const barWidth = Math.abs(item.value) / maxAbs * (plotWidth / 2 - 4);
+    const rect = createSvg("rect", { x: item.value >= 0 ? zeroX : zeroX - barWidth, y: centerY - 6, width: Math.max(1, barWidth), height: 12, rx: 4, class: `city-yoy-bar${item.value < 0 ? " is-negative" : ""}` });
+    const value = createSvg("text", { x: item.value >= 0 ? zeroX + barWidth + 6 : zeroX - barWidth - 6, y: centerY + 4, "text-anchor": item.value >= 0 ? "start" : "end", class: "city-yoy-value" });
+    value.textContent = `${item.value > 0 ? "+" : ""}${new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 }).format(item.value)}${measure === "pp" ? " pp" : "%"}`;
+    svg.append(label, rect, value);
+  });
+  ui.cityYoyChart.append(svg);
+  ui.cityYoyNote.textContent = measure === "pp"
+    ? "Percentage points are the difference between two annual foreign-resident shares (for example, 8% to 9% = +1 pp)."
+    : "Relative change is the percentage change from the previous year's share; it is not percentage points.";
+}
+
+function renderCityForecastComparison(city, latest, forecasts) {
+  ui.cityForecastCompare.replaceChildren();
+  const entries = forecasts.map((row) => {
+    if (!row || !latest) return null;
+    const recordedBaseline = safeNumber(row.last_observed_value);
+    if (recordedBaseline === null || Math.abs(recordedBaseline - latest.value) > 0.000001) return null;
+    return { row, baseline: latest.value, change: safeNumber(row.prediction) - latest.value };
+  }).filter(Boolean);
+  if (!entries.length) {
+    cityEmpty(ui.cityForecastCompare, "No available +1/+3 forecast has a published baseline that matches the selected city's latest observed value.");
+    ui.cityForecastCompareNote.textContent = latest ? `Latest observed baseline: ${cityPercent(latest.value)} in ${latest.year}. Forecast comparisons stay blank until the production baseline can be verified.` : "A valid observed city baseline is required.";
+    return;
+  }
+  const maxAbs = Math.max(...entries.map((item) => Math.abs(item.change)), 0.01);
+  entries.forEach(({ row, baseline, change }) => {
+    const item = document.createElement("article");
+    item.className = "forecast-compare-item city-forecast-compare-item";
+    const heading = document.createElement("div");
+    heading.className = "forecast-compare-item__heading";
+    const title = document.createElement("strong");
+    title.textContent = `${safeNumber(row.horizon)}-year · target ${safeNumber(row.target_year)}`;
+    const value = document.createElement("span");
+    value.textContent = cityPercentagePoints(change);
+    heading.append(title, value);
+    const track = document.createElement("div");
+    track.className = "forecast-change-track city-change-track";
+    const zero = document.createElement("i");
+    zero.className = "forecast-change-track__zero";
+    const bar = document.createElement("i");
+    bar.className = `forecast-change-track__bar city-change-track__bar${change < 0 ? " is-negative" : ""}`;
+    const width = Math.max(1, Math.abs(change) / maxAbs * 46);
+    bar.style.width = `${width}%`;
+    bar.style.left = change >= 0 ? "50%" : `calc(50% - ${width}%)`;
+    track.append(zero, bar);
+    const note = document.createElement("p");
+    note.textContent = `Baseline ${cityPercent(baseline)} · ${cityForecastTargetLabel(row)} · change in percentage points`;
+    item.append(heading, track, note);
+    ui.cityForecastCompare.append(item);
+  });
+  ui.cityForecastCompareNote.textContent = "Only horizons +1 and +3 are included. No +5 result is displayed.";
+}
+
+function renderCityProfile(city, observations, forecasts) {
+  ui.cityProfileContent.replaceChildren();
+  const country = countryById(city.countryId);
+  const coordinates = readCityCoordinates([...city.observed, ...city.forecasts]);
+  const tiles = [
+    { label: "Country linkage", value: country?.name ?? "Verified", meta: "Published parent-country field" },
+    { label: "Observed coverage", value: observations.length ? `${observations[0].year}–${observations.at(-1).year}` : "Not available", meta: `${observations.length} valid city-year records` },
+    { label: "Model horizons", value: forecasts.filter(Boolean).map((row) => `+${safeNumber(row.horizon)}y`).join(" · ") || "None published", meta: "Available City production outputs only" },
+    { label: "Coordinates", value: coordinates ? `${coordinates.latitude.toFixed(3)}, ${coordinates.longitude.toFixed(3)}` : "Not published", meta: coordinates ? "Latitude / longitude · degrees" : "No verified location fields" },
+  ];
+  tiles.forEach((tile) => {
+    const article = document.createElement("article");
+    const label = document.createElement("span");
+    label.textContent = tile.label;
+    const value = document.createElement("strong");
+    value.textContent = tile.value;
+    const meta = document.createElement("small");
+    meta.textContent = tile.meta;
+    article.append(label, value, meta);
+    ui.cityProfileContent.append(article);
+  });
+  ui.cityProfileSubtitle.textContent = `${city.name}${country ? ` · ${country.name}` : ""} · source fields currently published by the City views`;
+}
+
+function renderCityInsights(city, observations, forecasts) {
+  ui.cityInsights.replaceChildren();
+  const latest = observations.at(-1);
+  const allCities = cityRecordsAcrossCountries().cities;
+  const observedSets = allCities.map((item) => cityObservationSeries(item).map((row) => row.year)).filter((years) => years.length);
+  const commonYears = observedSets.length ? observedSets[0].filter((year) => observedSets.every((years) => years.includes(year))) : [];
+  const comparisonYear = commonYears.sort((a, b) => b - a)[0];
+  const commonRows = comparisonYear === undefined ? [] : allCities.map((item) => ({ city: item, row: cityObservationSeries(item).find((point) => point.year === comparisonYear) })).filter((item) => item.row).sort((a, b) => b.row.value - a.row.value);
+  const selectedRank = commonRows.findIndex((item) => item.city.key === city.key) + 1;
+  const first = forecasts.find(Boolean);
+  const outlookDescription = first
+    ? `${first.horizon}-year target ${safeNumber(first.target_year)} is ${safeNumber(first.target_year) < new Date().getFullYear() ? "a historical model-snapshot projection" : safeNumber(first.target_year) === new Date().getFullYear() ? "a current-year model projection" : "a future target relative to today"}; the published value is ${cityPercent(first.prediction)}.`
+    : "No valid +1 or +3 City forecast is published for this city; the page does not extend the observed line.";
+  const items = [
+    { title: "Urban concentration", value: latest ? cityPercent(latest.value) : "Not available", detail: latest ? `Foreign-resident share in ${latest.year}.${selectedRank ? ` Within the strict common-year city ranking, this city is ${selectedRank} of ${commonRows.length} for ${comparisonYear}.` : " No common-year rank is available across the verified city set."}` : "A city share requires at least one valid observed city-year record." },
+    { title: "City outlook", value: first ? `Target ${safeNumber(first.target_year)}` : "Not in model scope", detail: outlookDescription },
+    { title: "Planning use", value: "Context, not allocation", detail: "Observed shares can support comparisons of urban composition over time. They do not by themselves estimate future service demand or identify housing, school or healthcare needs." },
+  ];
+  items.forEach((item, index) => {
+    const article = document.createElement("article");
+    article.className = "city-insight-item";
+    const number = document.createElement("span");
+    number.className = "city-insight-number";
+    number.textContent = String(index + 1).padStart(2, "0");
+    const content = document.createElement("div");
+    const title = document.createElement("h3");
+    title.textContent = item.title;
+    const value = document.createElement("strong");
+    value.textContent = item.value;
+    const detail = document.createElement("p");
+    detail.textContent = item.detail;
+    content.append(title, value, detail);
+    article.append(number, content);
+    ui.cityInsights.append(article);
+  });
+}
+
 function renderCityExplorer(country) {
   ui.cityExplorerContent.replaceChildren();
   const { cities, hasParentField, totalRows } = cityRecordsForCurrentCountry();
@@ -2375,7 +2951,11 @@ function renderCitySnapshot(container, city) {
   }
   const planned = document.createElement("p");
   planned.className = "city-page-next-note";
-  planned.textContent = "The full City Intelligence page will be built in its own stage. This snapshot uses only the city records currently available in Supabase.";
+  planned.append(document.createTextNode("For the full city-level historical trend, ranking, forecast horizons and scope notes, open "));
+  const cityPageLink = document.createElement("a");
+  cityPageLink.href = "#city-intelligence";
+  cityPageLink.textContent = "City Intelligence";
+  planned.append(cityPageLink, document.createTextNode(". This view uses only city records currently published in Supabase."));
   container.append(planned);
 }
 

@@ -7,7 +7,7 @@
     <meta name="description" content="Acceso privado al dashboard de migrAI." />
     <title>Acceso privado · migrAI</title>
     <link rel="icon" href="migrai-mark.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=forecast-reliability-1" />
+    <link rel="stylesheet" href="styles.css?v=city-intelligence-1" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   </head>
   <body>
@@ -67,7 +67,7 @@
             <a id="navCountryBenchmark" class="dashboard-nav__item" href="#country-benchmark"><span class="nav-icon" aria-hidden="true">▤</span><span>Country Benchmark</span></a>
             <a id="navMigrationContext" class="dashboard-nav__item" href="#migration-context"><span class="nav-icon" aria-hidden="true">▣</span><span>Migration Context</span></a>
             <a id="navForecastReliability" class="dashboard-nav__item" href="#forecast-reliability"><span class="nav-icon" aria-hidden="true">⬡</span><span>Forecast Reliability</span></a>
-            <span class="dashboard-nav__item is-upcoming" aria-disabled="true"><span class="nav-icon" aria-hidden="true">⌖</span><span>City Intelligence</span><small>Next</small></span>
+            <a id="navCityIntelligence" class="dashboard-nav__item" href="#city-intelligence"><span class="nav-icon" aria-hidden="true">⌖</span><span>City Intelligence</span></a>
             <span class="dashboard-nav__item is-upcoming" aria-disabled="true"><span class="nav-icon" aria-hidden="true">▤</span><span>Data &amp; Methodology</span><small>Next</small></span>
           </nav>
           <div class="sidebar-promise">
@@ -374,13 +374,83 @@
             </div>
           </section>
 
+          <section id="cityIntelligencePage" class="dashboard-page city-intelligence-page" aria-labelledby="cityIntelligencePageHeading" hidden>
+            <section class="outlook-panel city-selector-panel" aria-labelledby="cityIntelligencePageHeading">
+              <div class="panel-heading panel-heading--wrap">
+                <div><h2 id="cityIntelligencePageHeading">Select a production city</h2><p>Search by city or country. Only cities linked to a verified country are listed.</p></div>
+                <span id="cityScopeSummary" class="coverage-note">Checking city coverage…</span>
+              </div>
+              <div class="city-page-controls">
+                <label><span>Country</span><select id="cityCountryFilter" class="compact-select" aria-label="Filter cities by country"></select></label>
+                <label class="city-search-control"><span>Search city or country</span><input id="citySearchInput" type="search" autocomplete="off" placeholder="Start typing a city or country…" aria-label="Search cities by city or country" /></label>
+                <label class="city-select-control"><span>Available city</span><select id="citySelect" class="compact-select" aria-label="Select a production city"></select></label>
+              </div>
+              <p id="citySelectionNote" class="analysis-note" aria-live="polite"></p>
+            </section>
+
+            <div class="city-kpi-grid" id="cityKpiGrid" aria-label="Selected city summary">
+              <article class="outlook-panel city-kpi city-kpi--selected"><span>Selected city</span><strong id="cityKpiName">Not available</strong><small id="cityKpiCountry">Choose a city from the production data</small></article>
+              <article class="outlook-panel city-kpi"><span>Latest observed year</span><strong id="cityKpiYear">—</strong><small>Latest valid observed record</small></article>
+              <article class="outlook-panel city-kpi"><span>Foreign population share</span><strong id="cityKpiShare">—</strong><small>Percent of city residents</small></article>
+              <article class="outlook-panel city-kpi"><span>1-year forecast</span><strong id="cityKpiForecast1">—</strong><small id="cityKpiForecast1Year">Not available</small></article>
+              <article class="outlook-panel city-kpi"><span>3-year forecast</span><strong id="cityKpiForecast3">—</strong><small id="cityKpiForecast3Year">Not available</small></article>
+              <article class="outlook-panel city-kpi"><span>City scope</span><strong id="cityKpiScope">—</strong><small id="cityKpiScopeNote">Published observations and horizons</small></article>
+            </div>
+
+            <section class="outlook-panel city-trend-panel" aria-labelledby="cityTrendTitle">
+              <div class="panel-heading panel-heading--wrap"><div><h2 id="cityTrendTitle">Foreign Population Share</h2><p>Observed history and available forecast targets · % of residents</p></div><div class="city-chart-legend"><span><i class="is-observed"></i>Observed</span><span><i class="is-forecast"></i>Forecast</span><span><i class="is-band"></i>Published uncertainty interval</span></div></div>
+              <div id="cityTrendChart" class="city-trend-chart" role="img" aria-label="Historical and forecast foreign population share for the selected city"></div>
+              <p id="cityTrendNote" class="analysis-note"></p>
+            </section>
+
+            <div class="city-analysis-grid">
+              <section class="outlook-panel city-ranking-panel" aria-labelledby="cityRankingTitle">
+                <div class="panel-heading panel-heading--wrap"><div><h2 id="cityRankingTitle">Cities by Foreign Population Share</h2><p id="cityRankingSubtitle">Rank from published observed city values</p></div><label class="city-inline-control"><span>Comparison year</span><select id="cityRankingCriterion" class="compact-select"><option value="latest">Last available per city</option><option value="common">Latest common year</option></select></label></div>
+                <div id="cityRankingList" class="city-ranking-list"></div>
+                <p id="cityRankingNote" class="analysis-note"></p>
+              </section>
+
+              <section class="outlook-panel city-yoy-panel" aria-labelledby="cityYoyTitle">
+                <div class="panel-heading panel-heading--wrap"><div><h2 id="cityYoyTitle">Year-over-year change</h2><p>Consecutive observed years only</p></div><label class="city-inline-control"><span>Measure</span><select id="cityYoyMeasure" class="compact-select"><option value="pp">Percentage points</option><option value="relative">Relative change (%)</option></select></label></div>
+                <div id="cityYoyChart" class="city-yoy-chart" role="img" aria-label="Year-over-year change in city foreign population share"></div>
+                <p id="cityYoyNote" class="analysis-note"></p>
+              </section>
+
+              <section class="outlook-panel city-forecast-compare-panel" aria-labelledby="cityForecastCompareTitle">
+                <div class="panel-heading"><div><h2 id="cityForecastCompareTitle">Forecast vs. last observed</h2><p>Change from a matching City model baseline · percentage points</p></div></div>
+                <div id="cityForecastCompare" class="forecast-compare-list"></div>
+                <p id="cityForecastCompareNote" class="analysis-note"></p>
+              </section>
+            </div>
+
+            <div class="city-lower-grid">
+              <section class="outlook-panel city-reliability-panel" aria-labelledby="cityReliabilityTitle">
+                <div class="panel-heading"><div><h2 id="cityReliabilityTitle">City Model Reliability</h2><p>City-level evaluation evidence · percentage points</p></div></div>
+                <div class="reliability-metrics city-reliability-metrics"><article><span>MAE</span><strong>Not published</strong><small>Mean absolute error · percentage points</small></article><article><span>WAPE</span><strong>Not published</strong><small>Requires a defined city evaluation sample</small></article><article><span>R²</span><strong>Not published</strong><small>Coefficient, not a percentage</small></article><article><span>Evaluation sample</span><strong>Not published</strong><small>No backtest row count is inferred</small></article><article><span>Forecast intervals</span><strong id="cityReliabilityInterval">Checking</strong><small id="cityReliabilityIntervalNote">Interval evidence for selected horizons</small></article></div>
+                <p class="analysis-note">Production forecasts are not a backtest. No accuracy or interval-coverage score is estimated from them.</p>
+              </section>
+
+              <section class="outlook-panel city-profile-panel" aria-labelledby="cityProfileTitle">
+                <div class="panel-heading"><div><h2 id="cityProfileTitle">City Profile &amp; Urban Context</h2><p id="cityProfileSubtitle">Verified metadata attached to the selected city</p></div></div>
+                <div id="cityProfileContent" class="city-profile-content"></div>
+                <p class="analysis-note">Population, housing, employment and regional indicators appear only when their source, unit and date are published.</p>
+              </section>
+
+              <section class="outlook-panel city-insights-panel" aria-labelledby="cityInsightsTitle">
+                <div class="panel-heading"><div><h2 id="cityInsightsTitle">Key insights</h2><p>Grounded in this city's available production records</p></div></div>
+                <div id="cityInsights" class="city-insights-list"></div>
+                <p class="analysis-note">These indicators inform planning discussions; they do not infer specific housing, school or healthcare needs.</p>
+              </section>
+            </div>
+          </section>
+
           <p id="dashboardMessage" class="form-message" role="status" aria-live="polite"></p>
         </div>
 
         <dialog id="outlookHelp" class="help-dialog">
           <form method="dialog"><button class="dialog-close" aria-label="Close">×</button></form>
           <p class="eyebrow">ABOUT THIS VIEW</p><h2>Observed data and forecasts</h2>
-          <p>Country figures represent annual immigration flows, not the resident foreign-born population. Solid marks show observed values; hollow marks show forecasts.</p>
+          <p>Country figures represent annual immigration flows (persons per year), while City figures represent the foreign-resident share of a city's population (percent of residents); these measures are not directly comparable. Solid marks show observed values; hollow marks show forecasts.</p>
           <p>Map colours and rankings use only values available for the selected year. Missing values are not treated as zero. The European total does not display an aggregated uncertainty band because no validated method for combining country bands is available here.</p>
           <p id="helpRunNote" class="help-run-note"></p>
         </dialog>
@@ -390,6 +460,6 @@
     <footer class="site-footer site-footer--compact"><div class="container footer-bottom"><span>© migrAI · Migration intelligence</span><span>Acceso privado · Supabase Auth</span></div></footer>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-    <script src="app.js?v=forecast-reliability-1" defer></script>
+    <script src="app.js?v=city-intelligence-1" defer></script>
   </body>
 </html>
