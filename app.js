@@ -436,17 +436,17 @@ function renderChart(observedRows, forecastRows) {
   const svg = createSvg("svg", { viewBox: `0 0 ${width} ${height}`, "aria-hidden": "true" });
   for (let i = 0; i <= 4; i += 1) {
     const gridY = margin.top + (plotHeight / 4) * i;
-    svg.append(createSvg("line", { x1: margin.left, x2: width - margin.right, y1: gridY, y2: gridY, stroke: "#dfe7e2" }));
+    svg.append(createSvg("line", { x1: margin.left, x2: width - margin.right, y1: gridY, y2: gridY, stroke: "#293b50" }));
   }
 
   const observedPath = observed.map((point, index) => `${index ? "L" : "M"} ${x(point.year)} ${y(point.value)}`).join(" ");
   if (observedPath) {
-    svg.append(createSvg("path", { d: observedPath, fill: "none", stroke: "#0d756b", "stroke-width": "3", "stroke-linecap": "round" }));
+    svg.append(createSvg("path", { d: observedPath, fill: "none", stroke: "#ffd2b6", "stroke-width": "3", "stroke-linecap": "round" }));
   }
 
   const forecastPath = forecasts.map((point, index) => `${index ? "L" : "M"} ${x(point.year)} ${y(point.value)}`).join(" ");
   if (forecastPath) {
-    svg.append(createSvg("path", { d: forecastPath, fill: "none", stroke: "#e8a838", "stroke-width": "3", "stroke-dasharray": "7 6", "stroke-linecap": "round" }));
+    svg.append(createSvg("path", { d: forecastPath, fill: "none", stroke: "#f07b37", "stroke-width": "3", "stroke-dasharray": "7 6", "stroke-linecap": "round" }));
   }
 
   points.forEach((point) => {
@@ -454,7 +454,7 @@ function renderChart(observedRows, forecastRows) {
       cx: x(point.year),
       cy: y(point.value),
       r: point.type === "forecast" ? 5 : 4,
-      fill: point.type === "forecast" ? "#e8a838" : "#0d756b",
+      fill: point.type === "forecast" ? "#f07b37" : "#ffd2b6",
       stroke: "#fff",
       "stroke-width": "2",
     });

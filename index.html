@@ -3,203 +3,138 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Dashboard privado de previsiones migratorias de MigrAI" />
-    <meta name="color-scheme" content="light" />
-    <title>MigrAI · Dashboard privado</title>
-    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
+    <meta name="theme-color" content="#081426" />
+    <meta name="description" content="MigrAI transforma datos de migración en previsiones territoriales para ayudar a planificar con perspectiva." />
+    <title>MigrAI — Inteligencia migratoria</title>
+    <link rel="icon" href="migrai-mark.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="styles.css" />
+    <script>
+      if (new URLSearchParams(window.location.search).get("flow") === "recovery") {
+        const accessUrl = new URL("acceso.html", window.location.href);
+        accessUrl.search = window.location.search;
+        accessUrl.hash = window.location.hash;
+        window.location.replace(accessUrl.href);
+      }
+    </script>
   </head>
   <body>
-    <div class="background-orb background-orb--one" aria-hidden="true"></div>
-    <div class="background-orb background-orb--two" aria-hidden="true"></div>
-
-    <header class="topbar">
-      <a class="brand" href="./" aria-label="MigrAI, inicio">
-        <span class="brand__mark" aria-hidden="true">M</span>
-        <span>
-          <strong>MigrAI</strong>
-          <small>Migration intelligence</small>
-        </span>
-      </a>
-
-      <div id="sessionControls" class="session-controls" hidden>
-        <span id="sessionEmail" class="session-email"></span>
-        <button id="logoutButton" class="button button--ghost" type="button">Cerrar sesión</button>
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="brand" href="./" aria-label="MigrAI, inicio">
+          <img class="brand-mark" src="migrai-mark.svg" alt="" />
+          <span class="brand-name">migr<span>AI</span></span>
+        </a>
+        <nav class="site-nav" aria-label="Navegación principal">
+          <a aria-current="page" href="./">Producto</a>
+          <a href="planes.html">Planes</a>
+          <a href="equipo.html">Equipo</a>
+        </nav>
+        <a class="button button--nav" href="acceso.html">Acceso privado <span aria-hidden="true">↗</span></a>
       </div>
     </header>
 
-    <main class="page-shell">
-      <section id="authView" class="auth-layout" aria-labelledby="authTitle">
-        <div class="auth-intro">
-          <p class="eyebrow">Acceso restringido</p>
-          <h1 id="authTitle">Datos para anticipar el cambio.</h1>
-          <p>
-            Explora las previsiones migratorias más recientes de MigrAI en un entorno protegido
-            por Supabase Auth y políticas de acceso a nivel de fila.
+    <main>
+      <section class="hero container">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="eyebrow-line"></span> Inteligencia migratoria · Europa</p>
+          <h1>Leer el presente.<br /><span>Anticipar el movimiento.</span></h1>
+          <p class="hero-lede">
+            MigrAI convierte datos de migración y señales contextuales en previsiones territoriales
+            que ayudan a planificar servicios, ciudades y oportunidades con más perspectiva.
           </p>
-          <div class="auth-intro__facts" aria-label="Características del dashboard">
-            <span>Forecasts por país y ciudad</span>
-            <span>Intervalos de incertidumbre</span>
-            <span>Histórico observado</span>
+          <div class="hero-actions">
+            <a class="button button--primary" href="planes.html">Explorar planes <span aria-hidden="true">↗</span></a>
+            <a class="text-link" href="#metodo">Conoce cómo funciona <span aria-hidden="true">↓</span></a>
+          </div>
+          <div class="hero-proof" aria-label="Características del producto">
+            <span><i></i> Datos observados y previstos</span>
+            <span><i></i> Lectura por país y ciudad</span>
+            <span><i></i> Intervalos de incertidumbre</span>
           </div>
         </div>
-
-        <div class="auth-card">
-          <p class="eyebrow">Área privada</p>
-          <h2>Inicia sesión</h2>
-          <p class="muted">Utiliza una cuenta previamente invitada.</p>
-
-          <form id="loginForm" class="form-stack">
-            <label>
-              Correo electrónico
-              <input id="emailInput" type="email" autocomplete="email" required />
-            </label>
-            <label>
-              Contraseña
-              <input id="passwordInput" type="password" autocomplete="current-password" required minlength="8" />
-            </label>
-            <button class="button button--primary" type="submit">Entrar al dashboard</button>
-          </form>
-
-          <button id="resetButton" class="text-button" type="button">
-            Crear o restablecer mi contraseña
-          </button>
-          <p id="authMessage" class="form-message" role="status" aria-live="polite"></p>
+        <div class="hero-visual" aria-label="Representación visual de datos migratorios en la península ibérica" role="img">
+          <div class="visual-label visual-label--top"><span class="live-dot"></span> MIGRATION INTELLIGENCE</div>
+          <img src="iberia-network.svg" alt="" />
+          <div class="visual-caption"><span>01 / TERRITORIAL OUTLOOK</span><span>EUROPE</span></div>
+          <div class="visual-callout"><span class="callout-mark">↗</span><span><strong>Del dato a la decisión</strong><small>Señales conectadas, lectura territorial</small></span></div>
         </div>
       </section>
 
-      <section id="passwordView" class="auth-layout" aria-labelledby="passwordTitle" hidden>
-        <div class="auth-intro">
-          <p class="eyebrow">Cuenta MigrAI</p>
-          <h1 id="passwordTitle">Define una contraseña segura.</h1>
-          <p>La contraseña se enviará directamente a Supabase y nunca se almacenará en este sitio.</p>
-        </div>
-
-        <div class="auth-card">
-          <h2>Nueva contraseña</h2>
-          <form id="passwordForm" class="form-stack">
-            <label>
-              Contraseña
-              <input id="newPasswordInput" type="password" autocomplete="new-password" required minlength="10" />
-            </label>
-            <label>
-              Repite la contraseña
-              <input id="repeatPasswordInput" type="password" autocomplete="new-password" required minlength="10" />
-            </label>
-            <button class="button button--primary" type="submit">Guardar contraseña</button>
-          </form>
-          <p id="passwordMessage" class="form-message" role="status" aria-live="polite"></p>
+      <section class="signal-strip" aria-label="Capacidades">
+        <div class="container signal-strip-inner">
+          <span>DECISION INTELLIGENCE</span><b></b>
+          <span>OBSERVED + FORECAST</span><b></b>
+          <span>COUNTRY + CITY</span><b></b>
+          <span>UNCERTAINTY-AWARE</span>
         </div>
       </section>
 
-      <section id="dashboardView" class="dashboard" hidden aria-labelledby="dashboardTitle">
-        <div class="dashboard-heading">
+      <section class="section container" id="metodo">
+        <div class="section-heading section-heading--split">
           <div>
-            <p class="eyebrow">Última ejecución disponible</p>
-            <h1 id="dashboardTitle">Panorama migratorio</h1>
-            <p id="runSummary" class="muted">Cargando información del pipeline…</p>
+            <p class="eyebrow">Una cadena de valor transparente</p>
+            <h2>Del dato disperso a<br /><span>una visión conectada.</span></h2>
           </div>
-          <span id="connectionBadge" class="status-badge">Conectando</span>
+          <p class="section-intro">Combinamos fuentes demográficas y señales contextuales para ofrecer una lectura clara, comparable y preparada para explorar.</p>
         </div>
+        <div class="process-grid">
+          <article class="process-card">
+            <span class="process-index">01 — FUENTES</span>
+            <div class="process-icon process-icon--source" aria-hidden="true"><span>◌</span><span>◌</span><span>◌</span></div>
+            <h3>Contexto con fundamento</h3>
+            <p>Datos de migración y asilo de Eurostat, indicadores contextuales de GDELT y referencias estadísticas del INE.</p>
+            <div class="source-tags"><span>EUROSTAT</span><span>GDELT</span><span>INE</span></div>
+          </article>
+          <article class="process-card process-card--accent">
+            <span class="process-index">02 — PREPARACIÓN</span>
+            <div class="process-icon process-icon--clean" aria-hidden="true"><span>↘</span><span>↗</span><i></i></div>
+            <h3>Datos listos para analizar</h3>
+            <p>El pipeline organiza, limpia y valida la información; trata duplicados y valores ausentes antes de generar resultados.</p>
+            <div class="source-tags"><span>VALIDACIÓN</span><span>CALIDAD</span><span>TRAZABILIDAD</span></div>
+          </article>
+          <article class="process-card">
+            <span class="process-index">03 — EXPLORACIÓN</span>
+            <div class="process-icon process-icon--view" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+            <h3>Una lectura accionable</h3>
+            <p>Explora observaciones, previsiones, horizontes e intervalos de incertidumbre desde un dashboard privado.</p>
+            <div class="source-tags"><span>PAÍSES</span><span>CIUDADES</span><span>ESCENARIOS</span></div>
+          </article>
+        </div>
+      </section>
 
-        <section class="filter-bar" aria-label="Filtros">
-          <label>
-            Nivel
-            <select id="levelFilter"></select>
-          </label>
-          <label>
-            Territorio
-            <select id="entityFilter"></select>
-          </label>
-          <label>
-            Horizonte
-            <select id="horizonFilter"></select>
-          </label>
-        </section>
-
-        <section class="metrics-grid" aria-label="Indicadores principales">
-          <article class="metric-card">
-            <span>Último valor observado</span>
-            <strong id="observedMetric">—</strong>
-            <small id="observedYear">Sin datos</small>
-          </article>
-          <article class="metric-card metric-card--accent">
-            <span>Previsión</span>
-            <strong id="forecastMetric">—</strong>
-            <small id="forecastYear">Sin datos</small>
-          </article>
-          <article class="metric-card">
-            <span>Variación prevista</span>
-            <strong id="changeMetric">—</strong>
-            <small>respecto al último observado</small>
-          </article>
-          <article class="metric-card">
-            <span>Modelo</span>
-            <strong id="modelMetric" class="metric-card__model">—</strong>
-            <small id="availabilityMetric">Pendiente</small>
-          </article>
-        </section>
-
-        <section class="content-grid">
-          <article class="panel panel--chart">
-            <div class="panel__heading">
-              <div>
-                <p class="eyebrow">Evolución</p>
-                <h2 id="chartTitle">Observado y previsto</h2>
-              </div>
-              <div class="legend" aria-label="Leyenda">
-                <span><i class="legend__dot legend__dot--observed"></i> Observado</span>
-                <span><i class="legend__dot legend__dot--forecast"></i> Previsión</span>
-              </div>
-            </div>
-            <div id="chart" class="chart" role="img" aria-label="Gráfico de evolución migratoria"></div>
-          </article>
-
-          <article class="panel">
-            <div class="panel__heading">
-              <div>
-                <p class="eyebrow">Pipeline</p>
-                <h2>Ejecución activa</h2>
-              </div>
-            </div>
-            <dl id="runDetails" class="run-details"></dl>
-          </article>
-        </section>
-
-        <section class="panel panel--table">
-          <div class="panel__heading">
+      <section class="usecase-section">
+        <div class="container">
+          <div class="section-heading section-heading--split">
             <div>
-              <p class="eyebrow">Detalle</p>
-              <h2>Previsiones disponibles</h2>
+              <p class="eyebrow">Pensado para anticipar necesidades</p>
+              <h2>Planificar mejor empieza<br /><span>por hacer mejores preguntas.</span></h2>
             </div>
+            <p class="section-intro">Una herramienta de análisis para explorar escenarios y poner los cambios territoriales en contexto. No sustituye el criterio experto: lo acompaña.</p>
           </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Año</th>
-                  <th>Horizonte</th>
-                  <th>Previsión</th>
-                  <th>Intervalo 80 %</th>
-                  <th>Intervalo 95 %</th>
-                  <th>Estado</th>
-                </tr>
-              </thead>
-              <tbody id="forecastTableBody"></tbody>
-            </table>
+          <div class="usecase-grid">
+            <article class="usecase-card"><span>01</span><div><h3>Planificación urbana</h3><p>Explora cómo pueden evolucionar las necesidades de vivienda, movilidad y servicios en distintos territorios.</p></div><span class="usecase-arrow" aria-hidden="true">↗</span></article>
+            <article class="usecase-card"><span>02</span><div><h3>Capacidad de servicios</h3><p>Contrasta señales y previsiones para apoyar conversaciones sobre educación, salud e integración.</p></div><span class="usecase-arrow" aria-hidden="true">↗</span></article>
+            <article class="usecase-card"><span>03</span><div><h3>Análisis territorial</h3><p>Compara niveles geográficos y horizontes para entender tendencias y plantear escenarios de trabajo.</p></div><span class="usecase-arrow" aria-hidden="true">↗</span></article>
+            <article class="usecase-card"><span>04</span><div><h3>Contexto para inversión</h3><p>Añade una perspectiva demográfica de largo plazo a la evaluación de mercados y activos urbanos.</p></div><span class="usecase-arrow" aria-hidden="true">↗</span></article>
           </div>
-        </section>
+          <p class="disclaimer">Los resultados son estimaciones analíticas y deben interpretarse junto con otras fuentes y conocimiento local.</p>
+        </div>
+      </section>
 
-        <p id="dashboardMessage" class="form-message" role="status" aria-live="polite"></p>
+      <section class="closing-cta container">
+        <div class="closing-orbit" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div><p class="eyebrow">Siguiente paso</p><h2>Encuentra la cobertura<br />que encaja con tu análisis.</h2></div>
+        <a class="button button--primary" href="planes.html">Ver opciones de acceso <span aria-hidden="true">↗</span></a>
       </section>
     </main>
 
-    <footer class="footer">
-      <span>MigrAI · Trabajo Final de Máster</span>
-      <span>Acceso protegido con Supabase</span>
+    <footer class="site-footer">
+      <div class="container footer-main">
+        <a class="brand" href="./"><img class="brand-mark" src="migrai-mark.svg" alt="" /><span class="brand-name">migr<span>AI</span></span></a>
+        <p>Inteligencia migratoria para entender el cambio y planificar con perspectiva.</p>
+        <nav aria-label="Navegación del pie"><a href="planes.html">Planes</a><a href="equipo.html">Equipo</a><a href="acceso.html">Acceso privado</a></nav>
+      </div>
+      <div class="container footer-bottom"><span>© MigrAI · Migration intelligence</span><span>Datos para una planificación con perspectiva.</span></div>
     </footer>
-
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js?v=2" defer></script>
   </body>
 </html>
