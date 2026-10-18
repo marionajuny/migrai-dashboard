@@ -7,7 +7,7 @@
     <meta name="description" content="Acceso privado al dashboard de migrAI." />
     <title>Acceso privado · migrAI</title>
     <link rel="icon" href="migrai-mark.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=city-intelligence-1" />
+    <link rel="stylesheet" href="styles.css?v=data-methodology-1" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   </head>
   <body>
@@ -68,7 +68,7 @@
             <a id="navMigrationContext" class="dashboard-nav__item" href="#migration-context"><span class="nav-icon" aria-hidden="true">▣</span><span>Migration Context</span></a>
             <a id="navForecastReliability" class="dashboard-nav__item" href="#forecast-reliability"><span class="nav-icon" aria-hidden="true">⬡</span><span>Forecast Reliability</span></a>
             <a id="navCityIntelligence" class="dashboard-nav__item" href="#city-intelligence"><span class="nav-icon" aria-hidden="true">⌖</span><span>City Intelligence</span></a>
-            <span class="dashboard-nav__item is-upcoming" aria-disabled="true"><span class="nav-icon" aria-hidden="true">▤</span><span>Data &amp; Methodology</span><small>Next</small></span>
+            <a id="navMethodology" class="dashboard-nav__item" href="#data-methodology"><span class="nav-icon" aria-hidden="true">▤</span><span>Data &amp; Methodology</span></a>
           </nav>
           <div class="sidebar-promise">
             <span class="sidebar-promise__eyebrow">Evidence for</span>
@@ -444,6 +444,82 @@
             </div>
           </section>
 
+          <section id="dataMethodologyPage" class="dashboard-page methodology-page" aria-labelledby="methodologyCoverageTitle" hidden>
+            <section class="methodology-summary-grid" aria-label="Published data summary">
+              <article class="outlook-panel methodology-summary-card"><span>Observed records</span><strong id="methodologyObservedCount">—</strong><small>Valid values in published views</small></article>
+              <article class="outlook-panel methodology-summary-card"><span>Missing values</span><strong id="methodologyMissingCount">—</strong><small id="methodologyMissingNote">Null or non-numeric published values</small></article>
+              <article class="outlook-panel methodology-summary-card"><span>Temporal coverage</span><strong id="methodologyTemporalCoverage">—</strong><small id="methodologyTemporalNote">Observed years in the current view</small></article>
+              <article class="outlook-panel methodology-summary-card"><span>Territorial coverage</span><strong id="methodologyTerritorialCoverage">—</strong><small id="methodologyTerritorialNote">Entities with at least one valid observation</small></article>
+              <article class="outlook-panel methodology-summary-card"><span>Source attribution</span><strong id="methodologySourceCoverage">—</strong><small id="methodologySourceCoverageNote">Rows with a published source family</small></article>
+              <article class="outlook-panel methodology-summary-card"><span>Available forecasts</span><strong id="methodologyForecastCount">—</strong><small id="methodologyForecastNote">Derived from published forecast status and values</small></article>
+            </section>
+
+            <section class="outlook-panel methodology-coverage-panel" aria-labelledby="methodologyCoverageTitle">
+              <div class="panel-heading panel-heading--wrap">
+                <div><h2 id="methodologyCoverageTitle">Data coverage by territory and year</h2><p>Observed records exposed by the current Supabase views. A dark cell means no row is published for that entity-year.</p></div>
+                <div class="methodology-filters methodology-coverage-filters">
+                  <label><span>Territorial level</span><select id="methodologyCoverageLevel" class="compact-select"><option value="all">Country &amp; City</option><option value="country">Country</option><option value="city">City</option></select></label>
+                  <label><span>Source family</span><select id="methodologySourceFilter" class="compact-select"><option value="all">All published records</option></select></label>
+                </div>
+              </div>
+              <div class="methodology-coverage-legend"><span><i class="coverage-cell--available"></i>Available</span><span><i class="coverage-cell--partial"></i>Partial value</span><span><i class="coverage-cell--unavailable"></i>No row</span><small id="methodologyCoverageNote">Coverage status is calculated from published observation rows.</small></div>
+              <div id="methodologyCoverageGrid" class="methodology-coverage-scroll" role="region" aria-label="Observed data coverage matrix" tabindex="0"></div>
+            </section>
+
+            <div class="methodology-main-grid">
+              <section class="outlook-panel methodology-lineage-panel" aria-labelledby="methodologyLineageTitle">
+                <div class="panel-heading"><div><h2 id="methodologyLineageTitle">Source lineage and methodology</h2><p>From documented source families to the authenticated dashboard</p></div></div>
+                <div class="methodology-lineage">
+                  <details class="methodology-stage" open><summary><span>01</span><strong>Data sources</strong></summary><p>The project documentation names Eurostat, GDELT and INE. The current published views do not attach source-family identifiers to each observation, so row-level attribution cannot be verified here.</p></details>
+                  <details class="methodology-stage"><summary><span>02</span><strong>Processing</strong></summary><p>Project materials describe cleaning, validation, duplicate handling and missing-value treatment in the upstream pipeline. Detailed transformation logs are not exposed in these dashboard views.</p></details>
+                  <details class="methodology-stage"><summary><span>03</span><strong>Country &amp; City datasets</strong></summary><p>Country and City observations and forecast rows are read from the published <code>observed_latest</code> and <code>forecasts_latest</code> views in the <code>migrai</code> schema.</p></details>
+                  <details class="methodology-stage"><summary><span>04</span><strong>Model evaluation</strong></summary><p>Production forecasts are distinct from backtesting. Historical prediction pairs and fold-level evaluation are not currently published in the dashboard data contract.</p></details>
+                  <details class="methodology-stage"><summary><span>05</span><strong>Production forecasts</strong></summary><p>Forecast status, target year, horizon, model label and interval bounds are displayed only when the corresponding fields are present and valid in the published rows.</p></details>
+                  <details class="methodology-stage"><summary><span>06</span><strong>Supabase → Dashboard</strong></summary><p>Supabase Auth gates access. The static GitHub Pages client makes authenticated, read-only queries to the views; row-level security protects the underlying data.</p></details>
+                </div>
+                <p class="analysis-note">Source inventory is based on project documentation, not inferred from individual output rows. Add source metadata to the published views to enable verified source-family filtering.</p>
+              </section>
+
+              <section class="outlook-panel methodology-run-panel" aria-labelledby="methodologyRunTitle">
+                <div class="panel-heading"><div><h2 id="methodologyRunTitle">Latest production run</h2><p>Metadata returned by the authenticated <code>runs</code> view</p></div></div>
+                <div id="methodologyRunMetadata" class="methodology-run-metadata" aria-live="polite"></div>
+                <p id="methodologyRunNote" class="analysis-note"></p>
+              </section>
+            </div>
+
+            <section class="outlook-panel methodology-status-panel" aria-labelledby="methodologyStatusTitle">
+              <div class="panel-heading panel-heading--wrap">
+                <div><h2 id="methodologyStatusTitle">Forecast status and data availability</h2><p>Each row reflects the current published Country or City forecast record</p></div>
+                <div class="methodology-filters methodology-status-filters">
+                  <label><span>Entity</span><select id="methodologyEntityFilter" class="compact-select"><option value="all">All entities</option></select></label>
+                  <label><span>Level</span><select id="methodologyStatusLevel" class="compact-select"><option value="all">All levels</option><option value="country">Country</option><option value="city">City</option></select></label>
+                  <label><span>Horizon</span><select id="methodologyHorizonFilter" class="compact-select"><option value="all">All horizons</option></select></label>
+                  <label><span>Status</span><select id="methodologyStatusFilter" class="compact-select"><option value="all">All statuses</option></select></label>
+                  <label><span>Run</span><select id="methodologyRunFilter" class="compact-select"><option value="all">All runs</option></select></label>
+                </div>
+              </div>
+              <div class="methodology-table-scroll">
+                <table class="methodology-status-table">
+                  <thead><tr><th scope="col">Entity</th><th scope="col">Level</th><th scope="col">Origin year</th><th scope="col">Target year</th><th scope="col">Horizon</th><th scope="col">Model</th><th scope="col">Forecast status</th><th scope="col">Notes</th></tr></thead>
+                  <tbody id="methodologyStatusRows"></tbody>
+                </table>
+              </div>
+              <p id="methodologyStatusNote" class="analysis-note" aria-live="polite"></p>
+            </section>
+
+            <section class="outlook-panel methodology-transparency-panel" aria-labelledby="methodologyTransparencyTitle">
+              <div class="panel-heading"><div><h2 id="methodologyTransparencyTitle">Transparency and scope</h2><p>What the production views can describe—and what they cannot establish</p></div></div>
+              <div class="methodology-transparency-grid">
+                <article><span>01</span><div><strong>Different measures</strong><p>Country predicts annual immigration flows in persons per year. City predicts foreign-resident share as a percentage of city residents; these measures are not comparable.</p></div></article>
+                <article><span>02</span><div><strong>No causal or individual inference</strong><p>Aggregate patterns do not identify why a person moves, individual behaviour, undocumented flows, policy choices or specific service needs.</p></div></article>
+                <article><span>03</span><div><strong>Uncertainty bands</strong><p>Where published, intervals represent modelled uncertainty under the model assumptions. They are not guarantees or probability claims about any individual outcome.</p></div></article>
+                <article><span>04</span><div><strong>Five-year horizon</strong><p>Longer horizons compound uncertainty and depend on assumptions about continuation of observed patterns. City views currently expose only the horizons present in their records.</p></div></article>
+                <article><span>05</span><div><strong>Updates</strong><p>The dashboard reads the latest published views. Refresh timing follows the upstream pipeline; no fixed schedule is claimed unless run timestamps are supplied.</p></div></article>
+                <article><span>06</span><div><strong>Production vs. experiments</strong><p>Only values in the production views appear here. Experimental outputs and backtest metrics are not substituted for released forecasts.</p></div></article>
+              </div>
+            </section>
+          </section>
+
           <p id="dashboardMessage" class="form-message" role="status" aria-live="polite"></p>
         </div>
 
@@ -460,6 +536,6 @@
     <footer class="site-footer site-footer--compact"><div class="container footer-bottom"><span>© migrAI · Migration intelligence</span><span>Acceso privado · Supabase Auth</span></div></footer>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-    <script src="app.js?v=city-intelligence-1" defer></script>
+    <script src="app.js?v=data-methodology-1" defer></script>
   </body>
 </html>

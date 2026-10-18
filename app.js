@@ -48,12 +48,14 @@ const ui = {
   contextPage: document.querySelector("#migrationContextPage"),
   reliabilityPage: document.querySelector("#forecastReliabilityPage"),
   cityPage: document.querySelector("#cityIntelligencePage"),
+  methodologyPage: document.querySelector("#dataMethodologyPage"),
   navEuropean: document.querySelector("#navEuropeanOutlook"),
   navCountry: document.querySelector("#navCountryIntelligence"),
   navBenchmark: document.querySelector("#navCountryBenchmark"),
   navContext: document.querySelector("#navMigrationContext"),
   navReliability: document.querySelector("#navForecastReliability"),
   navCity: document.querySelector("#navCityIntelligence"),
+  navMethodology: document.querySelector("#navMethodology"),
   countrySearch: document.querySelector("#countrySearch"),
   countrySearchOptions: document.querySelector("#countrySearchOptions"),
   mapMeasure: document.querySelector("#mapMeasure"),
@@ -184,6 +186,30 @@ const ui = {
   cityInsights: document.querySelector("#cityInsights"),
   cityReliabilityInterval: document.querySelector("#cityReliabilityInterval"),
   cityReliabilityIntervalNote: document.querySelector("#cityReliabilityIntervalNote"),
+  methodologyObservedCount: document.querySelector("#methodologyObservedCount"),
+  methodologyMissingCount: document.querySelector("#methodologyMissingCount"),
+  methodologyMissingNote: document.querySelector("#methodologyMissingNote"),
+  methodologyTemporalCoverage: document.querySelector("#methodologyTemporalCoverage"),
+  methodologyTemporalNote: document.querySelector("#methodologyTemporalNote"),
+  methodologyTerritorialCoverage: document.querySelector("#methodologyTerritorialCoverage"),
+  methodologyTerritorialNote: document.querySelector("#methodologyTerritorialNote"),
+  methodologySourceCoverage: document.querySelector("#methodologySourceCoverage"),
+  methodologySourceCoverageNote: document.querySelector("#methodologySourceCoverageNote"),
+  methodologyForecastCount: document.querySelector("#methodologyForecastCount"),
+  methodologyForecastNote: document.querySelector("#methodologyForecastNote"),
+  methodologyCoverageLevel: document.querySelector("#methodologyCoverageLevel"),
+  methodologySourceFilter: document.querySelector("#methodologySourceFilter"),
+  methodologyCoverageGrid: document.querySelector("#methodologyCoverageGrid"),
+  methodologyCoverageNote: document.querySelector("#methodologyCoverageNote"),
+  methodologyRunMetadata: document.querySelector("#methodologyRunMetadata"),
+  methodologyRunNote: document.querySelector("#methodologyRunNote"),
+  methodologyEntityFilter: document.querySelector("#methodologyEntityFilter"),
+  methodologyStatusLevel: document.querySelector("#methodologyStatusLevel"),
+  methodologyHorizonFilter: document.querySelector("#methodologyHorizonFilter"),
+  methodologyStatusFilter: document.querySelector("#methodologyStatusFilter"),
+  methodologyRunFilter: document.querySelector("#methodologyRunFilter"),
+  methodologyStatusRows: document.querySelector("#methodologyStatusRows"),
+  methodologyStatusNote: document.querySelector("#methodologyStatusNote"),
 };
 
 const state = {
@@ -206,6 +232,7 @@ const state = {
   selectedBenchmarkCountries: [],
   benchmarkMeasure: "absolute",
   reliabilityScope: "country",
+  methodologySource: "all",
 };
 
 const numberFormatter = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 0 });
@@ -391,6 +418,17 @@ ui.navCity.addEventListener("click", (event) => {
   if (state.activePage !== "city-intelligence") state.cityCountryFilter = state.selectedCountry;
   navigateToDashboardPage("city-intelligence");
 });
+ui.navMethodology.addEventListener("click", (event) => {
+  event.preventDefault();
+  navigateToDashboardPage("data-methodology");
+});
+ui.methodologyCoverageLevel.addEventListener("change", renderDataMethodologyCoverage);
+ui.methodologySourceFilter.addEventListener("change", () => {
+  state.methodologySource = ui.methodologySourceFilter.value;
+  renderDataMethodologyCoverage();
+});
+[ui.methodologyEntityFilter, ui.methodologyStatusLevel, ui.methodologyHorizonFilter, ui.methodologyStatusFilter, ui.methodologyRunFilter]
+  .forEach((control) => control.addEventListener("change", renderDataMethodologyStatus));
 ui.benchmarkSelectorToggle.addEventListener("click", () => {
   ui.benchmarkSelectorMenu.hidden = !ui.benchmarkSelectorMenu.hidden;
   ui.benchmarkSelectorToggle.setAttribute("aria-expanded", String(!ui.benchmarkSelectorMenu.hidden));
@@ -606,6 +644,7 @@ async function loadDashboard() {
   populateIntelligenceCountryControl();
   populateMigrationCountryControl();
   renderOutlook();
+  renderDataMethodology();
   applyDashboardRoute();
   renderCountryIntelligence();
   loadEuropeMap();
@@ -869,7 +908,8 @@ function navigateToDashboardPage(page) {
     : page === "country-benchmark" ? "#country-benchmark"
       : page === "migration-context" ? "#migration-context"
         : page === "forecast-reliability" ? "#forecast-reliability"
-          : page === "city-intelligence" ? "#city-intelligence" : "#european-outlook";
+          : page === "city-intelligence" ? "#city-intelligence"
+            : page === "data-methodology" ? "#data-methodology" : "#european-outlook";
   if (window.location.hash === hash) applyDashboardRoute();
   else window.location.hash = hash;
 }
@@ -878,27 +918,31 @@ function applyDashboardRoute() {
   if (!state.initialized || ui.dashboardView.hidden) return;
   const isReliabilityPage = window.location.hash === "#forecast-reliability";
   const isCityPage = window.location.hash === "#city-intelligence";
+  const isMethodologyPage = window.location.hash === "#data-methodology";
   const isContextPage = window.location.hash === "#migration-context";
   const isBenchmarkPage = window.location.hash === "#country-benchmark";
   const isCountryPage = window.location.hash === "#country-intelligence";
-  state.activePage = isCityPage ? "city-intelligence" : isReliabilityPage ? "forecast-reliability" : isContextPage ? "migration-context" : isBenchmarkPage ? "country-benchmark" : isCountryPage ? "country-intelligence" : "european-outlook";
+  state.activePage = isMethodologyPage ? "data-methodology" : isCityPage ? "city-intelligence" : isReliabilityPage ? "forecast-reliability" : isContextPage ? "migration-context" : isBenchmarkPage ? "country-benchmark" : isCountryPage ? "country-intelligence" : "european-outlook";
   if ((isCountryPage || isContextPage || isCityPage) && state.selectedCountry === "all") {
     const countries = listCountries();
     const preferred = countries.find((item) => normalizeName(item.name) === "spain") ?? countries[0];
     if (preferred) state.selectedCountry = preferred.id;
   }
-  ui.europeanPage.hidden = isCountryPage || isBenchmarkPage || isContextPage || isReliabilityPage || isCityPage;
+  ui.europeanPage.hidden = isCountryPage || isBenchmarkPage || isContextPage || isReliabilityPage || isCityPage || isMethodologyPage;
   ui.countryPage.hidden = !isCountryPage;
   ui.benchmarkPage.hidden = !isBenchmarkPage;
   ui.contextPage.hidden = !isContextPage;
   ui.reliabilityPage.hidden = !isReliabilityPage;
   ui.cityPage.hidden = !isCityPage;
-  ui.navEuropean.classList.toggle("is-active", !isCountryPage && !isBenchmarkPage && !isContextPage && !isReliabilityPage && !isCityPage);
+  ui.methodologyPage.hidden = !isMethodologyPage;
+  ui.navEuropean.classList.toggle("is-active", !isCountryPage && !isBenchmarkPage && !isContextPage && !isReliabilityPage && !isCityPage && !isMethodologyPage);
   ui.navCountry.classList.toggle("is-active", isCountryPage);
   ui.navBenchmark.classList.toggle("is-active", isBenchmarkPage);
   ui.navContext.classList.toggle("is-active", isContextPage);
   ui.navReliability.classList.toggle("is-active", isReliabilityPage);
   ui.navCity.classList.toggle("is-active", isCityPage);
+  ui.navMethodology.classList.toggle("is-active", isMethodologyPage);
+  ui.navMethodology.removeAttribute("aria-current");
   if (isCountryPage) {
     ui.navCountry.setAttribute("aria-current", "page");
     ui.navEuropean.removeAttribute("aria-current");
@@ -963,6 +1007,19 @@ function applyDashboardRoute() {
     ui.dashboardSubtitle.textContent = "Explore foreign population shares and city-level forecasts";
     document.title = "City Intelligence · migrAI";
     renderCityIntelligence();
+  } else if (isMethodologyPage) {
+    ui.navMethodology.setAttribute("aria-current", "page");
+    ui.navEuropean.removeAttribute("aria-current");
+    ui.navCountry.removeAttribute("aria-current");
+    ui.navBenchmark.removeAttribute("aria-current");
+    ui.navContext.removeAttribute("aria-current");
+    ui.navReliability.removeAttribute("aria-current");
+    ui.navCity.removeAttribute("aria-current");
+    ui.dashboardTitle.textContent = "Data & Methodology";
+    ui.dashboardEyebrow.textContent = "DATA COVERAGE · TRANSPARENCY";
+    ui.dashboardSubtitle.textContent = "Understand published data, forecast status and modelling scope";
+    document.title = "Data & Methodology · migrAI";
+    renderDataMethodology();
   } else {
     ui.navEuropean.setAttribute("aria-current", "page");
     ui.navCountry.removeAttribute("aria-current");
@@ -976,6 +1033,314 @@ function applyDashboardRoute() {
     document.title = "European Migration Outlook · migrAI";
     renderOutlook();
   }
+}
+
+function methodologySourceKey(row) {
+  return Object.keys(row ?? {}).find((key) => /^(source(_family|_name|_id|_code)?|dataset(_name|_id)?|provider)$/i.test(key)) ?? null;
+}
+
+function methodologySourceLabel(row) {
+  const key = methodologySourceKey(row);
+  const value = key ? row[key] : null;
+  return typeof value === "string" || typeof value === "number" ? String(value).trim() : "";
+}
+
+function methodologyObservedRows() {
+  return [...state.observed, ...state.cityObserved];
+}
+
+function methodologyCoverageRows() {
+  const selectedLevel = ui.methodologyCoverageLevel.value;
+  return methodologyObservedRows().filter((row) => {
+    if (selectedLevel !== "all" && row.level !== selectedLevel) return false;
+    if (state.methodologySource !== "all" && methodologySourceLabel(row) !== state.methodologySource) return false;
+    return true;
+  });
+}
+
+function renderDataMethodology() {
+  renderDataMethodologySummary();
+  renderDataMethodologySourceOptions();
+  renderDataMethodologyCoverage();
+  renderDataMethodologyRun();
+  renderDataMethodologyStatus();
+}
+
+function renderDataMethodologySummary() {
+  const rows = methodologyObservedRows();
+  const validRows = rows.filter((row) => safeNumber(row.value) !== null && safeNumber(row.year) !== null);
+  const missingRows = rows.filter((row) => safeNumber(row.value) === null).length;
+  const years = unique(rows.map((row) => safeNumber(row.year)).filter((year) => year !== null)).sort((a, b) => a - b);
+  const entityKey = (row) => String(row.entity_id ?? row.entity_name ?? "");
+  const representedEntities = unique(rows.map(entityKey).filter(Boolean));
+  const validEntities = unique(validRows.map(entityKey).filter(Boolean));
+  const attributedRows = rows.filter((row) => methodologySourceLabel(row));
+  const sourceFamilies = unique(attributedRows.map(methodologySourceLabel));
+  const forecasts = [...state.forecasts, ...state.cityForecasts];
+  const availableForecasts = forecasts.filter((row) => methodologyForecastStatus(row) === "available");
+  const missingShare = rows.length ? Math.round(missingRows / rows.length * 100) : null;
+
+  ui.methodologyObservedCount.textContent = numberFormatter.format(validRows.length);
+  ui.methodologyMissingCount.textContent = numberFormatter.format(missingRows);
+  ui.methodologyMissingNote.textContent = rows.length
+    ? `${Math.round(missingRows / rows.length * 100)}% of published observed values are null or non-numeric`
+    : "No observed rows are currently published";
+  ui.methodologyTemporalCoverage.textContent = years.length ? `${years[0]}–${years.at(-1)}` : "Not available";
+  ui.methodologyTemporalNote.textContent = years.length ? `${years.length} distinct observed years · ${numberFormatter.format(rows.length)} rows` : "No observed years are published";
+  ui.methodologyTerritorialCoverage.textContent = `${numberFormatter.format(validEntities.length)} / ${numberFormatter.format(representedEntities.length)}`;
+  ui.methodologyTerritorialNote.textContent = "Entities with a valid value / entities represented in observed rows";
+  ui.methodologySourceCoverage.textContent = `${numberFormatter.format(attributedRows.length)} / ${numberFormatter.format(rows.length)}`;
+  ui.methodologySourceCoverageNote.textContent = sourceFamilies.length
+    ? `${sourceFamilies.length} source ${sourceFamilies.length === 1 ? "family" : "families"} represented in published rows`
+    : "No source family is exposed in observed rows";
+  ui.methodologyForecastCount.textContent = `${numberFormatter.format(availableForecasts.length)} / ${numberFormatter.format(forecasts.length)}`;
+  const forecastStatuses = { available: 0, partial: 0, unavailable: 0 };
+  forecasts.forEach((row) => { forecastStatuses[methodologyForecastStatus(row)] += 1; });
+  ui.methodologyForecastNote.textContent = forecasts.length
+    ? `${forecastStatuses.available} available · ${forecastStatuses.partial} partial · ${forecastStatuses.unavailable} unavailable`
+    : "No forecast rows are currently published";
+  ui.methodologyMissingCount.title = missingShare === null ? "No observed rows" : `${missingShare}% of published observed rows have a missing or non-numeric value`;
+}
+
+function renderDataMethodologySourceOptions() {
+  const current = state.methodologySource;
+  const families = unique(methodologyObservedRows().map(methodologySourceLabel).filter(Boolean)).sort((a, b) => a.localeCompare(b));
+  const entries = [{ value: "all", label: "All published records" }, ...families.map((family) => ({ value: family, label: family }))];
+  replaceOptions(ui.methodologySourceFilter, entries);
+  ui.methodologySourceFilter.disabled = families.length === 0;
+  if (families.includes(current)) {
+    ui.methodologySourceFilter.value = current;
+  } else {
+    state.methodologySource = "all";
+    ui.methodologySourceFilter.value = "all";
+  }
+  ui.methodologyCoverageNote.textContent = families.length
+    ? "Available = every published row has a valid value; Partial = rows exist but some values are missing; No row = no observation for that entity-year."
+    : "Source-family filtering is unavailable: the published observed views do not expose a source-family field. Coverage is based on valid observed rows only.";
+}
+
+function renderDataMethodologyCoverage() {
+  const rows = methodologyCoverageRows();
+  const entities = new Map();
+  const years = unique(rows.map((row) => safeNumber(row.year)).filter((year) => year !== null)).sort((a, b) => a - b);
+  rows.forEach((row) => {
+    const id = String(row.entity_id ?? row.entity_name ?? "Unknown entity");
+    if (!entities.has(id)) entities.set(id, { id, name: String(row.entity_name ?? row.entity_id ?? "Unknown entity"), level: row.level ?? "unknown", rows: [] });
+    entities.get(id).rows.push(row);
+  });
+  ui.methodologyCoverageGrid.replaceChildren();
+  if (!entities.size || !years.length) {
+    const empty = document.createElement("p");
+    empty.className = "methodology-empty";
+    empty.textContent = "No observed entity-year rows match these filters.";
+    ui.methodologyCoverageGrid.append(empty);
+    return;
+  }
+
+  const table = document.createElement("table");
+  table.className = "methodology-coverage-table";
+  const caption = document.createElement("caption");
+  caption.className = "sr-only";
+  caption.textContent = "Observed record availability by entity and year";
+  table.append(caption);
+  const head = document.createElement("thead");
+  const headRow = document.createElement("tr");
+  const entityHeading = document.createElement("th");
+  entityHeading.scope = "col";
+  entityHeading.textContent = "Entity";
+  headRow.append(entityHeading);
+  years.forEach((year) => {
+    const th = document.createElement("th");
+    th.scope = "col";
+    th.textContent = String(year);
+    headRow.append(th);
+  });
+  head.append(headRow);
+  table.append(head);
+  const body = document.createElement("tbody");
+  [...entities.values()].sort((a, b) => a.name.localeCompare(b.name, "en")).forEach((entity) => {
+    const tr = document.createElement("tr");
+    const label = document.createElement("th");
+    label.scope = "row";
+    label.textContent = entity.name;
+    label.title = `${entity.name} · ${entity.level}`;
+    tr.append(label);
+    years.forEach((year) => {
+      const yearRows = entity.rows.filter((row) => safeNumber(row.year) === year);
+      const validCount = yearRows.filter((row) => safeNumber(row.value) !== null).length;
+      const status = !yearRows.length ? "unavailable" : validCount === yearRows.length ? "available" : "partial";
+      const cell = document.createElement("td");
+      const mark = document.createElement("span");
+      mark.className = `coverage-cell coverage-cell--${status}`;
+      mark.setAttribute("aria-label", status === "available" ? "Available" : status === "partial" ? "Partial value" : "No row");
+      mark.title = status === "available" ? `${year} · ${validCount} valid observation${validCount === 1 ? "" : "s"}`
+        : status === "partial" ? `${year} · ${yearRows.length - validCount} missing or non-numeric value${yearRows.length - validCount === 1 ? "" : "s"}`
+          : `${year} · no observed row`;
+      cell.append(mark);
+      tr.append(cell);
+    });
+    body.append(tr);
+  });
+  table.append(body);
+  ui.methodologyCoverageGrid.append(table);
+}
+
+function methodologyField(row, matcher) {
+  const key = Object.keys(row ?? {}).find((item) => matcher.test(item));
+  const value = key ? row[key] : null;
+  return typeof value === "string" || typeof value === "number" ? String(value) : "";
+}
+
+function methodologyForecastStatus(row) {
+  const explicitlyAvailable = row?.forecast_available === true || row?.forecast_available === "true";
+  const explicitlyUnavailable = row?.forecast_available === false || row?.forecast_available === "false";
+  const hasPrediction = safeNumber(row?.prediction) !== null;
+  const hasTarget = safeNumber(row?.target_year) !== null;
+  if (explicitlyAvailable && hasPrediction && hasTarget) return "available";
+  if (explicitlyAvailable || (!explicitlyUnavailable && (hasPrediction || hasTarget))) return "partial";
+  return "unavailable";
+}
+
+function methodologyRunReference(row) {
+  const value = row?.run_id ?? row?.run_label;
+  return typeof value === "string" || typeof value === "number" ? String(value) : "";
+}
+
+function methodologyRunReferences(row) {
+  return unique([row?.run_id, row?.run_label]
+    .filter((value) => typeof value === "string" || typeof value === "number")
+    .map(String));
+}
+
+function renderDataMethodologyRun() {
+  const latestRun = state.runs.find((run) => run.is_latest === true || run.is_latest === "true") ?? state.runs[0] ?? null;
+  ui.methodologyRunMetadata.replaceChildren();
+  const forecasts = [...state.forecasts, ...state.cityForecasts];
+  const runRef = latestRun ? methodologyRunReference(latestRun) : "";
+  const latestReferences = latestRun ? methodologyRunReferences(latestRun) : [];
+  const linkedForecasts = forecasts.filter((row) => methodologyRunReferences(row).some((reference) => latestReferences.includes(reference)));
+  const hasForecastRunLink = latestReferences.length > 0 && linkedForecasts.length > 0;
+  const matchingForecasts = hasForecastRunLink ? linkedForecasts : forecasts;
+  const latestModel = unique(matchingForecasts.map((row) => forecastModelLabel(row)).filter(Boolean)).join(" · ");
+  const timeValue = latestRun ? methodologyField(latestRun, /^(created_at|updated_at|started_at|finished_at|completed_at|run_at|timestamp)$/i) : "";
+  const timestamp = timeValue ? new Date(timeValue) : null;
+  const formattedTimestamp = timestamp && !Number.isNaN(timestamp.getTime())
+    ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(timestamp)
+    : "Not published";
+  const runLevel = latestRun ? methodologyField(latestRun, /^(level|updated_level|scope)$/i) : "";
+  const runStatus = latestRun ? methodologyField(latestRun, /^(status|run_status|state)$/i) : "";
+  const runVersion = latestRun ? methodologyField(latestRun, /^(version|pipeline_version|code_version)$/i) : "";
+  const runCommit = latestRun ? methodologyField(latestRun, /^(commit|commit_sha|git_commit)$/i) : "";
+  const metadata = [
+    { label: "Run reference", value: runRef || "Not published" },
+    { label: "Date & time", value: formattedTimestamp },
+    { label: "Updated level", value: runLevel || "Not published" },
+    { label: "Run status", value: runStatus || (latestRun ? "Not published" : "No run metadata") },
+    { label: "Model", value: latestModel || "Not published in linked rows" },
+    { label: "Pipeline version", value: runVersion || "Not published" },
+    { label: "Commit", value: runCommit || "Not published" },
+    { label: "Valid forecasts", value: numberFormatter.format(matchingForecasts.filter((row) => methodologyForecastStatus(row) === "available").length) },
+  ];
+  metadata.forEach(({ label, value }) => {
+    const item = document.createElement("article");
+    const term = document.createElement("span");
+    term.textContent = label;
+    const detail = document.createElement("strong");
+    detail.textContent = value;
+    item.append(term, detail);
+    ui.methodologyRunMetadata.append(item);
+  });
+  ui.methodologyRunNote.textContent = latestRun
+    ? `Fields marked “Not published” are not exposed by the current runs view. Forecast totals are counted from ${hasForecastRunLink ? "rows linked to this run" : "the current published rows; a run-level link is not exposed"}.`
+    : "The dashboard could not find a run row in the published runs view.";
+}
+
+function setMethodologyOptions(select, allLabel, entries) {
+  const previous = select.value;
+  replaceOptions(select, [{ value: "all", label: allLabel }, ...entries]);
+  if (entries.some((entry) => entry.value === previous)) select.value = previous;
+}
+
+function renderDataMethodologyStatus() {
+  const forecasts = [...state.forecasts, ...state.cityForecasts];
+  const level = ui.methodologyStatusLevel.value;
+  const scopedRows = forecasts.filter((row) => level === "all" || row.level === level);
+  const entities = new Map();
+  scopedRows.forEach((row) => {
+    const key = `${row.level ?? "unknown"}|${row.entity_id ?? row.entity_name ?? "unknown"}`;
+    if (!entities.has(key)) entities.set(key, `${row.entity_name ?? row.entity_id ?? "Unknown entity"} · ${row.level ?? "level unavailable"}`);
+  });
+  setMethodologyOptions(ui.methodologyEntityFilter, "All entities", [...entities].sort((a, b) => a[1].localeCompare(b[1], "en")).map(([value, label]) => ({ value, label })));
+
+  const horizons = unique(scopedRows.map((row) => safeNumber(row.horizon)).filter((value) => value !== null)).sort((a, b) => a - b);
+  setMethodologyOptions(ui.methodologyHorizonFilter, "All horizons", horizons.map((value) => ({ value: String(value), label: `${value}-year` })));
+  const statuses = unique(scopedRows.map(methodologyForecastStatus));
+  setMethodologyOptions(ui.methodologyStatusFilter, "All statuses", ["available", "partial", "unavailable"].filter((value) => statuses.includes(value)).map((value) => ({ value, label: value[0].toUpperCase() + value.slice(1) })));
+
+  const runValues = unique(scopedRows.map(methodologyRunReference).filter(Boolean));
+  const runRowsHaveReference = scopedRows.some((row) => methodologyRunReference(row));
+  setMethodologyOptions(ui.methodologyRunFilter, "All runs", runValues.map((value) => ({ value, label: value })));
+  ui.methodologyRunFilter.disabled = !runRowsHaveReference;
+
+  const entityValue = ui.methodologyEntityFilter.value;
+  const horizonValue = ui.methodologyHorizonFilter.value;
+  const statusValue = ui.methodologyStatusFilter.value;
+  const runValue = ui.methodologyRunFilter.value;
+  const filtered = scopedRows.filter((row) => {
+    const entityKey = `${row.level ?? "unknown"}|${row.entity_id ?? row.entity_name ?? "unknown"}`;
+    if (entityValue !== "all" && entityKey !== entityValue) return false;
+    if (horizonValue !== "all" && String(safeNumber(row.horizon)) !== horizonValue) return false;
+    if (statusValue !== "all" && methodologyForecastStatus(row) !== statusValue) return false;
+    if (runValue !== "all" && methodologyRunReference(row) !== runValue) return false;
+    return true;
+  });
+  ui.methodologyStatusRows.replaceChildren();
+  filtered.forEach((row) => {
+    const tr = document.createElement("tr");
+    const status = methodologyForecastStatus(row);
+    const hasPrediction = safeNumber(row.prediction) !== null;
+    const customNote = methodologyField(row, /^(notes?|status_note|forecast_note|message)$/i);
+    const note = customNote || (status === "available" ? "Prediction and target year are published."
+      : status === "partial" ? "Forecast is flagged, but its prediction or target year is missing."
+        : "No usable forecast value is published for this row.");
+    const originYear = methodologyField(row, /^(origin_year|forecast_origin_year|cutoff_year|training_cutoff_year|train_until_year|base_year)$/i);
+    const cells = [
+      String(row.entity_name ?? row.entity_id ?? "Unknown entity"),
+      String(row.level ?? "Not published"),
+      originYear || "Not published",
+      safeNumber(row.target_year) === null ? "Not published" : String(safeNumber(row.target_year)),
+      safeNumber(row.horizon) === null ? "Not published" : `${safeNumber(row.horizon)}-year`,
+      forecastModelLabel(row) || "Not published",
+      "",
+      note,
+    ];
+    cells.forEach((value, index) => {
+      const td = document.createElement("td");
+      if (index === 6) {
+        const badge = document.createElement("span");
+        badge.className = `methodology-status-badge methodology-status-badge--${status}`;
+        badge.textContent = status[0].toUpperCase() + status.slice(1);
+        td.append(badge);
+      } else {
+        td.textContent = value;
+      }
+      tr.append(td);
+    });
+    tr.title = hasPrediction ? `${row.entity_name ?? row.entity_id ?? "Entity"} · ${status}` : note;
+    ui.methodologyStatusRows.append(tr);
+  });
+  if (!filtered.length) {
+    const row = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = 8;
+    cell.className = "methodology-table-empty";
+    cell.textContent = "No published forecast rows match these filters.";
+    row.append(cell);
+    ui.methodologyStatusRows.append(row);
+  }
+  ui.methodologyStatusNote.textContent = runRowsHaveReference
+    ? `${numberFormatter.format(filtered.length)} of ${numberFormatter.format(scopedRows.length)} published forecast rows match these filters.`
+    : `${numberFormatter.format(filtered.length)} of ${numberFormatter.format(scopedRows.length)} published forecast rows match these filters. Run-level filtering is unavailable because forecast rows do not expose a run reference.`;
 }
 
 const benchmarkPalette = ["#fb984e", "#54b9e9", "#53c7a5", "#c77dff", "#f5c64d"];
