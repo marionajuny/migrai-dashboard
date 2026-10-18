@@ -7,7 +7,7 @@
     <meta name="description" content="Acceso privado al dashboard de migrAI." />
     <title>Acceso privado · migrAI</title>
     <link rel="icon" href="migrai-mark.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=country-benchmark-1" />
+    <link rel="stylesheet" href="styles.css?v=migration-context-1" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   </head>
   <body>
@@ -65,7 +65,7 @@
             <a id="navEuropeanOutlook" class="dashboard-nav__item is-active" aria-current="page" href="#european-outlook"><span class="nav-icon" aria-hidden="true">▥</span><span>European Outlook</span></a>
             <a id="navCountryIntelligence" class="dashboard-nav__item" href="#country-intelligence"><span class="nav-icon" aria-hidden="true">◎</span><span>Country Intelligence</span></a>
             <a id="navCountryBenchmark" class="dashboard-nav__item" href="#country-benchmark"><span class="nav-icon" aria-hidden="true">▤</span><span>Country Benchmark</span></a>
-            <span class="dashboard-nav__item is-upcoming" aria-disabled="true"><span class="nav-icon" aria-hidden="true">▣</span><span>Migration Context</span><small>Next</small></span>
+            <a id="navMigrationContext" class="dashboard-nav__item" href="#migration-context"><span class="nav-icon" aria-hidden="true">▣</span><span>Migration Context</span></a>
             <span class="dashboard-nav__item is-upcoming" aria-disabled="true"><span class="nav-icon" aria-hidden="true">⬡</span><span>Forecast Reliability</span><small>Next</small></span>
             <span class="dashboard-nav__item is-upcoming" aria-disabled="true"><span class="nav-icon" aria-hidden="true">⌖</span><span>City Intelligence</span><small>Next</small></span>
             <span class="dashboard-nav__item is-upcoming" aria-disabled="true"><span class="nav-icon" aria-hidden="true">▤</span><span>Data &amp; Methodology</span><small>Next</small></span>
@@ -249,6 +249,71 @@
             </div>
           </section>
 
+          <section id="migrationContextPage" class="dashboard-page migration-context-page" aria-labelledby="migrationContextPageHeading" hidden>
+            <section class="outlook-panel context-overview-panel" aria-labelledby="migrationContextPageHeading">
+              <div class="panel-heading panel-heading--wrap">
+                <div><h2 id="migrationContextPageHeading">Immigration and contextual indicator over time</h2><p id="migrationContextSubtitle">Explore observed immigration alongside a verified contextual series</p></div>
+                <div class="context-controls">
+                  <label><span>Country</span><select id="migrationCountrySelect" class="compact-select" aria-label="Select country for migration context"></select></label>
+                  <label><span>Historical window</span><select id="migrationPeriod" class="compact-select" aria-label="Select historical window"><option value="all">All available years</option><option value="10">Last 10 years</option><option value="5">Last 5 years</option></select></label>
+                </div>
+              </div>
+              <div class="context-overview-grid">
+                <div class="context-history-column">
+                  <div class="context-chart-legend"><span><i></i>Observed immigration · persons/year</span><span class="context-legend-unavailable"><i></i>Contextual indicator · not published</span></div>
+                  <div id="migrationHistoryChart" class="context-history-chart" role="img" aria-label="Observed immigration history for the selected country"></div>
+                  <p id="migrationHistoryNote" class="analysis-note"></p>
+                </div>
+                <aside class="context-indicator-card" aria-labelledby="contextIndicatorHeading">
+                  <p class="eyebrow">DATA AVAILABILITY</p>
+                  <h3 id="contextIndicatorHeading">Contextual indicator</h3>
+                  <p class="context-indicator-empty">No verified contextual series is available in the currently published Supabase views.</p>
+                  <dl class="context-metadata-list">
+                    <div><dt>Family</dt><dd>Not published</dd></div>
+                    <div><dt>Indicator and unit</dt><dd>Not published</dd></div>
+                    <div><dt>Source and coverage</dt><dd>Not published</dd></div>
+                    <div><dt>Definition and caveats</dt><dd>Require a documented data series</dd></div>
+                  </dl>
+                </aside>
+              </div>
+            </section>
+
+            <div class="context-analysis-grid">
+              <section class="outlook-panel context-scatter-panel" aria-labelledby="contextScatterTitle">
+                <div class="panel-heading"><div><h2 id="contextScatterTitle">Immigration vs. selected indicator</h2><p>Country-year observations · descriptive comparison only</p></div></div>
+                <div id="contextScatterEmpty" class="context-empty-state"><span class="context-empty-icon" aria-hidden="true">↗</span><strong>Comparison unavailable</strong><p>A scatter plot needs paired immigration and contextual values for the same country-years. Those contextual records are not in the published data contract yet.</p></div>
+              </section>
+              <section class="outlook-panel context-indicators-panel" aria-labelledby="contextIndicatorsTitle">
+                <div class="panel-heading"><div><h2 id="contextIndicatorsTitle">Other contextual indicators</h2><p>Small multiples will appear when verified series are published</p></div><span class="context-unavailable-tag">0 available</span></div>
+                <div class="context-family-list">
+                  <div><span class="context-family-icon">01</span><span><strong>Economy &amp; labour market</strong><small>Indicator names, units and coverage not available</small></span><b>—</b></div>
+                  <div><span class="context-family-icon">02</span><span><strong>Demography &amp; housing</strong><small>Indicator names, units and coverage not available</small></span><b>—</b></div>
+                  <div><span class="context-family-icon">03</span><span><strong>Information &amp; diaspora</strong><small>Indicator names, units and coverage not available</small></span><b>—</b></div>
+                </div>
+              </section>
+            </div>
+
+            <div class="context-analysis-grid context-bottom-grid">
+              <section class="outlook-panel context-diaspora-panel" aria-labelledby="contextDiasporaTitle">
+                <div class="panel-heading"><div><h2 id="contextDiasporaTitle">Diaspora network structure</h2><p>Origin composition and concentration of migrant populations</p></div></div>
+                <div class="context-diaspora-metrics">
+                  <article><strong>—</strong><span>Concentration</span><small>Requires origin-level shares</small></article>
+                  <article><strong>—</strong><span>Top-origin share</span><small>Requires a defined origin field</small></article>
+                  <article><strong>—</strong><span>Effective origin count</span><small>Requires comparable origin records</small></article>
+                </div>
+                <p class="analysis-note">Diaspora measures are not inferred from country-level immigration totals.</p>
+              </section>
+              <section class="outlook-panel context-caveats-panel" aria-labelledby="contextCaveatsTitle">
+                <div class="panel-heading"><div><h2 id="contextCaveatsTitle">Historical context, not causal explanation</h2><p>How to interpret contextual comparisons</p></div></div>
+                <ol class="context-caveats-list">
+                  <li><span>1</span><div><strong>Descriptive relationships only</strong><p>Co-movement does not establish that an indicator causes migration.</p></div></li>
+                  <li><span>2</span><div><strong>Definitions and coverage matter</strong><p>Each series needs a source, unit, country-year coverage and documented caveats.</p></div></li>
+                  <li><span>3</span><div><strong>No contextual forecasts shown</strong><p>Only independently produced, clearly labelled projections may extend beyond observed years.</p></div></li>
+                </ol>
+              </section>
+            </div>
+          </section>
+
           <p id="dashboardMessage" class="form-message" role="status" aria-live="polite"></p>
         </div>
 
@@ -265,6 +330,6 @@
     <footer class="site-footer site-footer--compact"><div class="container footer-bottom"><span>© migrAI · Migration intelligence</span><span>Acceso privado · Supabase Auth</span></div></footer>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-    <script src="app.js?v=country-benchmark-1" defer></script>
+    <script src="app.js?v=migration-context-1" defer></script>
   </body>
 </html>

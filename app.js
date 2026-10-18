@@ -45,9 +45,11 @@ const ui = {
   europeanPage: document.querySelector("#europeanOutlookPage"),
   countryPage: document.querySelector("#countryIntelligencePage"),
   benchmarkPage: document.querySelector("#countryBenchmarkPage"),
+  contextPage: document.querySelector("#migrationContextPage"),
   navEuropean: document.querySelector("#navEuropeanOutlook"),
   navCountry: document.querySelector("#navCountryIntelligence"),
   navBenchmark: document.querySelector("#navCountryBenchmark"),
+  navContext: document.querySelector("#navMigrationContext"),
   countrySearch: document.querySelector("#countrySearch"),
   countrySearchOptions: document.querySelector("#countrySearchOptions"),
   mapMeasure: document.querySelector("#mapMeasure"),
@@ -127,6 +129,11 @@ const ui = {
   benchmarkHorizon: document.querySelector("#benchmarkHorizon"),
   benchmarkDumbbell: document.querySelector("#benchmarkDumbbell"),
   benchmarkInsights: document.querySelector("#benchmarkInsights"),
+  migrationCountrySelect: document.querySelector("#migrationCountrySelect"),
+  migrationPeriod: document.querySelector("#migrationPeriod"),
+  migrationContextSubtitle: document.querySelector("#migrationContextSubtitle"),
+  migrationHistoryChart: document.querySelector("#migrationHistoryChart"),
+  migrationHistoryNote: document.querySelector("#migrationHistoryNote"),
 };
 
 const state = {
@@ -319,6 +326,10 @@ ui.navBenchmark.addEventListener("click", (event) => {
   event.preventDefault();
   navigateToDashboardPage("country-benchmark");
 });
+ui.navContext.addEventListener("click", (event) => {
+  event.preventDefault();
+  navigateToDashboardPage("migration-context");
+});
 ui.benchmarkSelectorToggle.addEventListener("click", () => {
   ui.benchmarkSelectorMenu.hidden = !ui.benchmarkSelectorMenu.hidden;
   ui.benchmarkSelectorToggle.setAttribute("aria-expanded", String(!ui.benchmarkSelectorMenu.hidden));
@@ -369,8 +380,14 @@ ui.benchmarkIndexButton.addEventListener("click", () => {
 ui.benchmarkRankingYear.addEventListener("change", renderCountryBenchmark);
 ui.benchmarkHeatmapMeasure.addEventListener("change", renderCountryBenchmark);
 ui.benchmarkHorizon.addEventListener("change", renderCountryBenchmark);
+ui.migrationCountrySelect.addEventListener("change", () => {
+  selectCountry(ui.migrationCountrySelect.value);
+  renderMigrationContext();
+});
+ui.migrationPeriod.addEventListener("change", renderMigrationHistoryChart);
 window.addEventListener("resize", () => {
   if (state.activePage === "country-benchmark") renderBenchmarkTrendChart();
+  if (state.activePage === "migration-context") renderMigrationHistoryChart();
 });
 ui.intelligenceCountrySelect.addEventListener("change", () => {
   selectCountry(ui.intelligenceCountrySelect.value);
@@ -478,6 +495,7 @@ async function loadDashboard() {
   populateBenchmarkCountryMenu();
   buildTimeline();
   populateIntelligenceCountryControl();
+  populateMigrationCountryControl();
   renderOutlook();
   applyDashboardRoute();
   renderCountryIntelligence();
@@ -728,33 +746,47 @@ function populateIntelligenceCountryControl() {
   }
 }
 
+function populateMigrationCountryControl() {
+  const countries = listCountries();
+  replaceOptions(ui.migrationCountrySelect, countries.map(({ id, name }) => ({ value: id, label: name })));
+  const preferred = countries.find((item) => item.id === state.selectedCountry)
+    ?? countries.find((item) => normalizeName(item.name) === "spain")
+    ?? countries[0];
+  if (preferred) ui.migrationCountrySelect.value = preferred.id;
+}
+
 function navigateToDashboardPage(page) {
   const hash = page === "country-intelligence" ? "#country-intelligence"
-    : page === "country-benchmark" ? "#country-benchmark" : "#european-outlook";
+    : page === "country-benchmark" ? "#country-benchmark"
+      : page === "migration-context" ? "#migration-context" : "#european-outlook";
   if (window.location.hash === hash) applyDashboardRoute();
   else window.location.hash = hash;
 }
 
 function applyDashboardRoute() {
   if (!state.initialized || ui.dashboardView.hidden) return;
+  const isContextPage = window.location.hash === "#migration-context";
   const isBenchmarkPage = window.location.hash === "#country-benchmark";
   const isCountryPage = window.location.hash === "#country-intelligence";
-  state.activePage = isBenchmarkPage ? "country-benchmark" : isCountryPage ? "country-intelligence" : "european-outlook";
-  if (isCountryPage && state.selectedCountry === "all") {
+  state.activePage = isContextPage ? "migration-context" : isBenchmarkPage ? "country-benchmark" : isCountryPage ? "country-intelligence" : "european-outlook";
+  if ((isCountryPage || isContextPage) && state.selectedCountry === "all") {
     const countries = listCountries();
     const preferred = countries.find((item) => normalizeName(item.name) === "spain") ?? countries[0];
     if (preferred) state.selectedCountry = preferred.id;
   }
-  ui.europeanPage.hidden = isCountryPage || isBenchmarkPage;
+  ui.europeanPage.hidden = isCountryPage || isBenchmarkPage || isContextPage;
   ui.countryPage.hidden = !isCountryPage;
   ui.benchmarkPage.hidden = !isBenchmarkPage;
-  ui.navEuropean.classList.toggle("is-active", !isCountryPage && !isBenchmarkPage);
+  ui.contextPage.hidden = !isContextPage;
+  ui.navEuropean.classList.toggle("is-active", !isCountryPage && !isBenchmarkPage && !isContextPage);
   ui.navCountry.classList.toggle("is-active", isCountryPage);
   ui.navBenchmark.classList.toggle("is-active", isBenchmarkPage);
+  ui.navContext.classList.toggle("is-active", isContextPage);
   if (isCountryPage) {
     ui.navCountry.setAttribute("aria-current", "page");
     ui.navEuropean.removeAttribute("aria-current");
     ui.navBenchmark.removeAttribute("aria-current");
+    ui.navContext.removeAttribute("aria-current");
     ui.dashboardTitle.textContent = "Country Intelligence";
     ui.dashboardEyebrow.textContent = "COUNTRY · MIGRATION INTELLIGENCE";
     ui.dashboardSubtitle.textContent = "Explore a country's historical trajectory and future outlook";
@@ -767,15 +799,28 @@ function applyDashboardRoute() {
     ui.navBenchmark.setAttribute("aria-current", "page");
     ui.navEuropean.removeAttribute("aria-current");
     ui.navCountry.removeAttribute("aria-current");
+    ui.navContext.removeAttribute("aria-current");
     ui.dashboardTitle.textContent = "Country Benchmark";
     ui.dashboardEyebrow.textContent = "COUNTRY COMPARISON · MIGRATION INTELLIGENCE";
     ui.dashboardSubtitle.textContent = "Compare historical and forecast immigration patterns across countries";
     document.title = "Country Benchmark · migrAI";
     renderCountryBenchmark();
+  } else if (isContextPage) {
+    ui.navContext.setAttribute("aria-current", "page");
+    ui.navEuropean.removeAttribute("aria-current");
+    ui.navCountry.removeAttribute("aria-current");
+    ui.navBenchmark.removeAttribute("aria-current");
+    ui.dashboardTitle.textContent = "Migration Context";
+    ui.dashboardEyebrow.textContent = "HISTORICAL CONTEXT · MIGRATION INTELLIGENCE";
+    ui.dashboardSubtitle.textContent = "Explore how observed migration moves alongside wider conditions";
+    document.title = "Migration Context · migrAI";
+    populateMigrationCountryControl();
+    renderMigrationContext();
   } else {
     ui.navEuropean.setAttribute("aria-current", "page");
     ui.navCountry.removeAttribute("aria-current");
     ui.navBenchmark.removeAttribute("aria-current");
+    ui.navContext.removeAttribute("aria-current");
     ui.dashboardTitle.textContent = "European Migration Outlook";
     ui.dashboardEyebrow.textContent = "EUROPE · MIGRATION INTELLIGENCE";
     ui.dashboardSubtitle.textContent = "Explore historical immigration and future forecasts";
@@ -1455,6 +1500,111 @@ function renderCountryBenchmark() {
   renderBenchmarkHeatmap();
   const dumbbellRows = renderBenchmarkDumbbell();
   renderBenchmarkInsights(dumbbellRows);
+}
+
+function renderMigrationContext() {
+  if (!state.initialized) return;
+  if (state.selectedCountry === "all") {
+    const countries = listCountries();
+    const preferred = countries.find((item) => normalizeName(item.name) === "spain") ?? countries[0];
+    if (preferred) state.selectedCountry = preferred.id;
+  }
+  populateMigrationCountryControl();
+  renderMigrationHistoryChart();
+}
+
+function renderMigrationHistoryChart() {
+  if (!state.initialized) return;
+  ui.migrationHistoryChart.replaceChildren();
+  const country = countryById(state.selectedCountry);
+  if (!country) {
+    benchmarkEmpty(ui.migrationHistoryChart, "No country-level observations are available for this selection.");
+    ui.migrationContextSubtitle.textContent = "Country-level migration observations are not available";
+    ui.migrationHistoryNote.textContent = "Contextual indicators are also absent from the current published views.";
+    return;
+  }
+
+  let observations = state.observed
+    .filter((row) => String(row.entity_id) === country.id)
+    .map((row) => ({ row, year: safeNumber(row.year), value: safeNumber(row.value) }))
+    .filter((point) => point.year !== null && point.value !== null)
+    .sort((a, b) => a.year - b.year);
+  const latestYear = observations.at(-1)?.year ?? null;
+  const period = ui.migrationPeriod.value;
+  if (period !== "all" && latestYear !== null) {
+    const startYear = latestYear - Number(period) + 1;
+    observations = observations.filter((point) => point.year >= startYear);
+  }
+
+  const allYears = state.observed
+    .filter((row) => String(row.entity_id) === country.id)
+    .map((row) => safeNumber(row.year))
+    .filter((year) => year !== null);
+  const totalPeriod = allYears.length ? `${Math.min(...allYears)}–${Math.max(...allYears)}` : "coverage unavailable";
+  ui.migrationContextSubtitle.textContent = `${country.name} · observed immigration only · ${totalPeriod}`;
+  ui.migrationHistoryNote.textContent = "This chart uses the observed immigration series from the published Country view. No economic, demographic or diaspora series is available to pair with it, so no association is calculated.";
+
+  if (!observations.length) {
+    benchmarkEmpty(ui.migrationHistoryChart, "There are no valid observed immigration values for this country and period.");
+    return;
+  }
+
+  const width = Math.max(320, Math.round(ui.migrationHistoryChart.getBoundingClientRect().width || 860));
+  const height = 330;
+  const margin = { top: 20, right: 22, bottom: 48, left: 72 };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  const minYear = Math.min(...observations.map((point) => point.year));
+  const maxYear = Math.max(...observations.map((point) => point.year));
+  const rawMin = Math.min(...observations.map((point) => point.value), 0);
+  const rawMax = Math.max(...observations.map((point) => point.value), 1);
+  const padding = Math.max((rawMax - rawMin) * .08, 1);
+  const minValue = rawMin < 0 ? rawMin - padding : 0;
+  const maxValue = rawMax + padding;
+  const x = (year) => margin.left + (maxYear === minYear ? plotWidth / 2 : (year - minYear) / (maxYear - minYear) * plotWidth);
+  const y = (value) => margin.top + (maxValue - value) / (maxValue - minValue) * plotHeight;
+  const svg = createSvg("svg", { viewBox: `0 0 ${width} ${height}`, role: "img", "aria-label": `Observed annual immigration to ${country.name}, in persons per year` });
+
+  for (let tick = 0; tick <= 4; tick += 1) {
+    const value = minValue + (maxValue - minValue) * (4 - tick) / 4;
+    const yPosition = margin.top + plotHeight * tick / 4;
+    svg.append(createSvg("line", { x1: margin.left, x2: width - margin.right, y1: yPosition, y2: yPosition, class: "benchmark-gridline" }));
+    const label = createSvg("text", { x: margin.left - 9, y: yPosition + 4, "text-anchor": "end", class: "benchmark-axis-label" });
+    label.textContent = formatAxisNumber(value);
+    svg.append(label);
+  }
+
+  const yearTicks = unique(observations.map((point) => point.year)).sort((a, b) => a - b);
+  const tickCount = Math.min(7, yearTicks.length);
+  const visibleTicks = tickCount === yearTicks.length || tickCount <= 1
+    ? yearTicks
+    : Array.from({ length: tickCount }, (_, index) => yearTicks[Math.round(index * (yearTicks.length - 1) / (tickCount - 1))]);
+  visibleTicks.forEach((year) => {
+    const label = createSvg("text", { x: x(year), y: height - 22, "text-anchor": "middle", class: "benchmark-axis-label" });
+    label.textContent = String(year);
+    svg.append(label);
+  });
+  svg.append(createSvg("line", { x1: margin.left, x2: width - margin.right, y1: height - margin.bottom, y2: height - margin.bottom, class: "benchmark-axis-line" }));
+  const yTitle = createSvg("text", { x: 16, y: height / 2, transform: `rotate(-90 16 ${height / 2})`, "text-anchor": "middle", class: "benchmark-axis-title" });
+  yTitle.textContent = "Persons per year";
+  svg.append(yTitle);
+  const xTitle = createSvg("text", { x: margin.left + plotWidth / 2, y: height - 3, "text-anchor": "middle", class: "benchmark-axis-title" });
+  xTitle.textContent = "Observed year";
+  svg.append(xTitle);
+
+  splitObservedSegments(observations.map(({ year, value }) => ({ year, value }))).forEach((segment) => {
+    if (segment.length < 2) return;
+    const path = segment.map((point, index) => `${index ? "L" : "M"} ${x(point.year)} ${y(point.value)}`).join(" ");
+    svg.append(createSvg("path", { d: path, class: "context-history-line" }));
+  });
+  observations.forEach(({ row, year, value }) => {
+    const point = createSvg("circle", { cx: x(year), cy: y(value), r: 4, class: "context-history-point" });
+    const title = createSvg("title");
+    title.textContent = `${country.name} · ${year} · ${formatNumber(value)} persons per year · Observed`;
+    point.append(title);
+    svg.append(point);
+  });
+  ui.migrationHistoryChart.replaceChildren(svg);
 }
 
 function currentCountry() {
@@ -2273,11 +2423,13 @@ function selectCountry(countryId) {
   state.selectedCountry = countryId;
   ui.mapCountrySelect.value = countryId;
   ui.intelligenceCountrySelect.value = countryId;
+  ui.migrationCountrySelect.value = countryId;
   const country = countryById(countryId);
   ui.countrySearch.value = country?.name ?? "";
   updateCountryQuery();
   renderOutlook();
   renderCountryIntelligence();
+  if (state.activePage === "migration-context") renderMigrationHistoryChart();
 }
 
 function showMapTooltip(event, name, point, value) {

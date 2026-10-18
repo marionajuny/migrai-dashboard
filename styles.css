@@ -860,3 +860,71 @@ body.dashboard-mode .access-shell { width: 100%; min-height: 100vh; margin: 0; p
   .benchmark-insights-list { grid-template-columns: 1fr; }
   .benchmark-dumbbell-label { font-size: 10px; }
 }
+
+/* Migration Context */
+.migration-context-page { display: grid; gap: 13px; }
+.context-overview-panel { padding-bottom: 12px; }
+.context-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; }
+.context-controls label { display: grid; gap: 4px; color: #8ea4b8; font-size: .57rem; }
+.context-controls select { min-width: 145px; }
+.context-overview-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(245px, .75fr); gap: 13px; }
+.context-history-column { min-width: 0; }
+.context-chart-legend { display: flex; flex-wrap: wrap; gap: 8px 16px; min-height: 24px; align-items: center; color: #a8b7c7; font-size: .61rem; }
+.context-chart-legend span { display: inline-flex; align-items: center; gap: 7px; }
+.context-chart-legend i { width: 14px; height: 3px; border-radius: 3px; background: #f5a16b; }
+.context-chart-legend .context-legend-unavailable { color: #71869a; }
+.context-chart-legend .context-legend-unavailable i { border: 1px dashed #71869a; background: transparent; }
+.context-history-chart { min-width: 0; min-height: 300px; }
+.context-history-chart svg { display: block; width: 100%; height: 330px; }
+.context-history-line { fill: none; stroke: #f5a16b; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 5px rgba(245, 161, 107, .2)); }
+.context-history-point { fill: #f5a16b; stroke: #071728; stroke-width: 1.8; }
+.context-history-column .analysis-note { margin: 0; }
+.context-indicator-card { min-width: 0; padding: 15px; border: 1px solid rgba(112, 141, 166, .22); border-radius: 9px; background: linear-gradient(150deg, rgba(16, 37, 57, .9), rgba(9, 25, 42, .9)); }
+.context-indicator-card .eyebrow { margin-bottom: 8px; font-size: .55rem; }
+.context-indicator-card h3 { margin: 0; color: #eff2f4; font-size: .85rem; }
+.context-indicator-empty { margin: 9px 0 14px; padding: 10px; border: 1px solid rgba(240, 123, 55, .22); border-radius: 7px; color: #d7c8bd; background: rgba(240, 123, 55, .055); font-size: .65rem; line-height: 1.55; }
+.context-metadata-list { display: grid; gap: 0; margin: 0; }
+.context-metadata-list div { display: grid; grid-template-columns: minmax(82px, .72fr) minmax(0, 1fr); gap: 10px; padding: 8px 0; border-top: 1px solid rgba(130, 156, 179, .12); }
+.context-metadata-list dt { color: #8198ac; font-size: .59rem; }
+.context-metadata-list dd { margin: 0; color: #b7c4cf; font-size: .59rem; line-height: 1.4; text-align: right; }
+.context-analysis-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: stretch; gap: 13px; }
+.context-empty-state { display: grid; min-height: 235px; align-content: center; justify-items: center; padding: 24px; border: 1px dashed rgba(137, 163, 187, .24); border-radius: 8px; color: #9bafc1; text-align: center; }
+.context-empty-icon { display: grid; width: 40px; height: 40px; place-items: center; margin-bottom: 12px; border: 1px solid rgba(240, 123, 55, .36); border-radius: 50%; color: #f5a16b; font-size: 1.2rem; }
+.context-empty-state strong { color: #e4ebf1; font-size: .76rem; }
+.context-empty-state p { max-width: 380px; margin: 8px 0 0; color: #8fa4b7; font-size: .63rem; line-height: 1.55; }
+.context-unavailable-tag { padding: 6px 8px; border: 1px solid rgba(139, 164, 187, .2); border-radius: 6px; color: #879caf; font-size: .58rem; white-space: nowrap; }
+.context-family-list { display: grid; }
+.context-family-list > div { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 58px; padding: 8px 1px; border-top: 1px solid rgba(130, 156, 179, .13); }
+.context-family-icon { display: grid; width: 26px; height: 26px; place-items: center; border-radius: 7px; color: #f0a16b; background: rgba(240, 123, 55, .12); font-size: .52rem; font-weight: 700; }
+.context-family-list strong, .context-family-list small { display: block; }
+.context-family-list strong { color: #dce5ec; font-size: .63rem; font-weight: 620; }
+.context-family-list small { margin-top: 4px; color: #8095a8; font-size: .54rem; line-height: 1.35; }
+.context-family-list b { color: #71869a; font-size: .8rem; font-weight: 500; }
+.context-diaspora-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.context-diaspora-metrics article { display: grid; min-height: 105px; align-content: center; justify-items: center; gap: 6px; padding: 10px 7px; border: 1px solid rgba(112, 141, 166, .17); border-radius: 8px; background: rgba(12, 29, 47, .56); text-align: center; }
+.context-diaspora-metrics strong { color: #f5a16b; font-size: 1.2rem; }
+.context-diaspora-metrics span { color: #dce5ec; font-size: .61rem; }
+.context-diaspora-metrics small { color: #8499ac; font-size: .52rem; line-height: 1.4; }
+.context-diaspora-panel > .analysis-note { margin-bottom: 0; }
+.context-caveats-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.context-caveats-list li { display: grid; grid-template-columns: 25px minmax(0, 1fr); align-items: start; gap: 9px; }
+.context-caveats-list li > span { display: grid; width: 23px; height: 23px; place-items: center; border: 1px solid rgba(240, 123, 55, .5); border-radius: 50%; color: #f5a16b; font-size: .59rem; }
+.context-caveats-list strong { color: #e1e8ee; font-size: .63rem; }
+.context-caveats-list p { margin: 3px 0 0; color: #8fa4b7; font-size: .57rem; line-height: 1.45; }
+
+@media (max-width: 1080px) {
+  .context-overview-grid { grid-template-columns: minmax(0, 1fr) minmax(230px, .7fr); }
+}
+@media (max-width: 760px) {
+  .context-overview-grid, .context-analysis-grid { grid-template-columns: 1fr; }
+  .context-history-chart, .context-history-chart svg { min-height: 290px; height: 290px; }
+}
+@media (max-width: 480px) {
+  .context-controls { width: 100%; }
+  .context-controls label { flex: 1; min-width: 120px; }
+  .context-controls select { width: 100%; min-width: 0; }
+  .context-metadata-list div { grid-template-columns: 1fr; gap: 4px; }
+  .context-metadata-list dd { text-align: left; }
+  .context-diaspora-metrics { grid-template-columns: 1fr; }
+  .context-diaspora-metrics article { min-height: 80px; }
+}
