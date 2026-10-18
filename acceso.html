@@ -7,7 +7,7 @@
     <meta name="description" content="Acceso privado al dashboard de migrAI." />
     <title>Acceso privado · migrAI</title>
     <link rel="icon" href="migrai-mark.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=european-outlook-1" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   </head>
   <body>
@@ -15,7 +15,6 @@
       <div class="container header-inner">
         <a class="brand" href="./" aria-label="migrAI, inicio"><img class="brand-mark" src="migrai-mark.svg" alt="" /><span class="brand-name">migr<span>AI</span></span></a>
         <nav class="site-nav" aria-label="Navegación principal"><a href="./">Producto</a><a href="planes.html">Planes</a><a href="equipo.html">Equipo</a></nav>
-        <div id="sessionControls" class="session-controls" hidden><span id="sessionEmail" class="session-email"></span><button id="logoutButton" class="button button--nav button--nav-quiet" type="button">Cerrar sesión</button></div>
       </div>
     </header>
 
@@ -56,30 +55,102 @@
         </div>
       </section>
 
-      <section id="dashboardView" class="dashboard" hidden aria-labelledby="dashboardTitle">
-        <div class="dashboard-heading"><div><p class="eyebrow"><span class="eyebrow-line"></span> Última ejecución disponible</p><h1 id="dashboardTitle">Panorama migratorio</h1><p id="runSummary" class="muted">Cargando información del pipeline…</p></div><span id="connectionBadge" class="status-badge">Conectando</span></div>
-        <section class="filter-bar" aria-label="Filtros">
-          <label>Nivel<select id="levelFilter"></select></label>
-          <label>Territorio<select id="entityFilter"></select></label>
-          <label>Horizonte<select id="horizonFilter"></select></label>
-        </section>
-        <section class="metrics-grid" aria-label="Indicadores principales">
-          <article class="metric-card"><span>Último valor observado</span><strong id="observedMetric">—</strong><small id="observedYear">Sin datos</small></article>
-          <article class="metric-card metric-card--accent"><span>Previsión</span><strong id="forecastMetric">—</strong><small id="forecastYear">Sin datos</small></article>
-          <article class="metric-card"><span>Variación prevista</span><strong id="changeMetric">—</strong><small>respecto al último observado</small></article>
-          <article class="metric-card"><span>Modelo</span><strong id="modelMetric" class="metric-card__model">—</strong><small id="availabilityMetric">Pendiente</small></article>
-        </section>
-        <section class="content-grid">
-          <article class="panel panel--chart"><div class="panel__heading"><div><p class="eyebrow">Evolución</p><h2 id="chartTitle">Observado y previsto</h2></div><div class="legend" aria-label="Leyenda"><span><i class="legend__dot legend__dot--observed"></i> Observado</span><span><i class="legend__dot legend__dot--forecast"></i> Previsión</span></div></div><div id="chart" class="chart" role="img" aria-label="Gráfico de evolución migratoria"></div></article>
-          <article class="panel"><div class="panel__heading"><div><p class="eyebrow">Pipeline</p><h2>Ejecución activa</h2></div></div><dl id="runDetails" class="run-details"></dl></article>
-        </section>
-        <section class="panel panel--table"><div class="panel__heading"><div><p class="eyebrow">Detalle</p><h2>Previsiones disponibles</h2></div></div><div class="table-wrap"><table><thead><tr><th>Año</th><th>Horizonte</th><th>Previsión</th><th>Intervalo 80 %</th><th>Intervalo 95 %</th><th>Estado</th></tr></thead><tbody id="forecastTableBody"></tbody></table></div></section>
-        <p id="dashboardMessage" class="form-message" role="status" aria-live="polite"></p>
+      <section id="dashboardView" class="dashboard-app" hidden aria-labelledby="dashboardTitle">
+        <aside class="dashboard-sidebar" aria-label="Dashboard navigation">
+          <a class="dashboard-brand" href="#european-outlook" aria-label="migrAI, European Outlook">
+            <img src="migrai-mark.svg" alt="" />
+            <span>migr<span>AI</span></span>
+          </a>
+          <nav class="dashboard-nav" aria-label="Dashboard pages">
+            <a class="dashboard-nav__item is-active" aria-current="page" href="#european-outlook"><span class="nav-icon" aria-hidden="true">▥</span><span>European Outlook</span></a>
+            <span class="dashboard-nav__item is-upcoming" aria-disabled="true"><span class="nav-icon" aria-hidden="true">◎</span><span>Country Intelligence</span><small>Next</small></span>
+            <span class="dashboard-nav__item is-upcoming" aria-disabled="true"><span class="nav-icon" aria-hidden="true">▤</span><span>Country Benchmark</span><small>Next</small></span>
+            <span class="dashboard-nav__item is-upcoming" aria-disabled="true"><span class="nav-icon" aria-hidden="true">▣</span><span>Migration Context</span><small>Next</small></span>
+            <span class="dashboard-nav__item is-upcoming" aria-disabled="true"><span class="nav-icon" aria-hidden="true">⬡</span><span>Forecast Reliability</span><small>Next</small></span>
+            <span class="dashboard-nav__item is-upcoming" aria-disabled="true"><span class="nav-icon" aria-hidden="true">⌖</span><span>City Intelligence</span><small>Next</small></span>
+            <span class="dashboard-nav__item is-upcoming" aria-disabled="true"><span class="nav-icon" aria-hidden="true">▤</span><span>Data &amp; Methodology</span><small>Next</small></span>
+          </nav>
+          <div class="sidebar-promise">
+            <span class="sidebar-promise__eyebrow">Evidence for</span>
+            <strong>People in Motion</strong>
+            <p>Smarter insights.<br />Stronger societies.</p>
+            <i aria-hidden="true"></i>
+          </div>
+        </aside>
+
+        <div class="dashboard-main" id="european-outlook">
+          <header class="dashboard-topbar">
+            <div class="dashboard-title">
+              <p class="eyebrow">EUROPE · MIGRATION INTELLIGENCE</p>
+              <h1 id="dashboardTitle">European Migration Outlook</h1>
+              <p>Explore historical immigration and future forecasts</p>
+            </div>
+            <div class="dashboard-tools">
+              <label class="global-search"><span aria-hidden="true">⌕</span><input id="countrySearch" type="search" list="countrySearchOptions" placeholder="Search countries…" aria-label="Search countries" /><datalist id="countrySearchOptions"></datalist></label>
+              <button id="helpToggle" class="icon-button" type="button" aria-label="About this dashboard" title="About this dashboard">?</button>
+              <div id="sessionControls" class="dashboard-profile" hidden>
+                <button id="profileToggle" class="profile-toggle" type="button" aria-expanded="false" aria-controls="profileMenu"><span class="profile-avatar" aria-hidden="true">M</span><span class="profile-chevron" aria-hidden="true">⌄</span></button>
+                <div id="profileMenu" class="profile-menu" hidden><span id="sessionEmail" class="session-email"></span><button id="logoutButton" class="button button--nav button--nav-quiet" type="button">Sign out</button></div>
+              </div>
+            </div>
+          </header>
+
+          <div class="dashboard-status-row"><span id="runSummary">Loading the latest pipeline run…</span><span id="connectionBadge" class="status-badge" data-state="loading">Connecting</span></div>
+
+          <div class="outlook-grid">
+            <section class="outlook-panel map-panel" aria-labelledby="mapTitle">
+              <div class="panel-heading">
+                <div><h2 id="mapTitle">Immigration to Europe</h2><p>Select a year to explore country-level patterns</p></div>
+                <div class="panel-controls"><label class="sr-only" for="mapMeasure">Map indicator</label><select id="mapMeasure"><option value="value">Total immigration</option><option value="change">Change vs. reference</option><option value="percent">% change vs. reference</option></select></div>
+              </div>
+              <div class="map-toolbar"><label class="sr-only" for="mapCountrySelect">Selected country</label><select id="mapCountrySelect"><option value="all">All available countries</option></select><div class="map-zoom" aria-label="Map controls"><button id="mapZoomIn" type="button" aria-label="Zoom in">+</button><button id="mapZoomOut" type="button" aria-label="Zoom out">−</button><button id="mapReset" type="button" aria-label="Reset map view">⤢</button></div></div>
+              <div class="map-wrap"><div id="europeMap" class="europe-map" role="region" aria-label="Map of Europe showing immigration by country"><div class="map-empty">Loading country boundaries…</div></div><div id="mapTooltip" class="map-tooltip" hidden></div></div>
+              <div class="map-footer"><div id="mapLegend" class="map-legend"><span class="legend-swatch legend-swatch--empty"></span><span>Waiting for data</span></div><span id="mapCoverage" class="coverage-note">—</span><span class="map-source">Boundaries: Natural Earth</span></div>
+            </section>
+
+            <div class="outlook-side">
+              <section class="outlook-panel timeline-panel" aria-labelledby="timelineTitle">
+                <div class="panel-heading"><div><h2 id="timelineTitle">Time explorer</h2><p>Move through observed years and available forecasts</p></div><span id="timelineYear" class="timeline-year">—</span></div>
+                <div class="time-periods"><span id="observedPeriod">Observed</span><span id="forecastPeriod">Forecast</span></div>
+                <div id="timelineMarkers" class="timeline-markers" aria-label="Available years"></div>
+                <div class="timeline-controls"><button id="timelineBack" class="small-control" type="button" aria-label="Previous available year">←</button><input id="timelineRange" type="range" min="0" max="0" value="0" aria-label="Choose year" /><button id="timelineForward" class="small-control" type="button" aria-label="Next available year">→</button><button id="timelinePlay" class="play-control" type="button" aria-pressed="false">▶ Play</button></div>
+              </section>
+              <section id="horizonCards" class="horizon-cards" aria-label="Forecast horizons"></section>
+            </div>
+
+            <section class="outlook-panel trend-panel" aria-labelledby="trendTitle">
+              <div class="panel-heading panel-heading--wrap"><div><h2 id="trendTitle">European immigration trend and forecast</h2><p id="trendDescription">Annual immigration across countries with available data</p></div><div class="chart-legend" aria-label="Chart legend"><span><i class="legend-dot legend-dot--observed"></i>Observed</span><span><i class="legend-dot legend-dot--forecast"></i>Forecast</span></div></div>
+              <div id="trendChart" class="trend-chart" role="img" aria-label="Historical and forecast immigration chart"></div>
+            </section>
+
+            <section class="outlook-panel ranking-panel" aria-labelledby="rankingTitle">
+              <div class="panel-heading panel-heading--wrap"><div><h2 id="rankingTitle">Countries by immigration</h2><p id="rankingSubtitle">Values for the selected year</p></div><div class="ranking-controls"><label class="sr-only" for="rankingLimit">Countries shown</label><select id="rankingLimit" class="compact-select"><option value="5">Top 5</option><option value="10">Top 10</option><option value="all">All</option></select><label class="sr-only" for="rankingOrder">Ranking order</label><select id="rankingOrder" class="compact-select"><option value="desc">Highest first</option><option value="asc">Lowest first</option></select></div></div>
+              <ol id="rankingList" class="ranking-list"></ol>
+              <p id="rankingEmpty" class="quiet-empty" hidden>No country values are available for this year.</p>
+            </section>
+
+            <section class="outlook-panel insights-panel" aria-labelledby="insightsTitle">
+              <div class="panel-heading"><div><h2 id="insightsTitle">Key insights</h2><p>Calculated from the available production data</p></div></div>
+              <div id="insightsList" class="insights-list"></div>
+            </section>
+          </div>
+
+          <p id="dashboardMessage" class="form-message" role="status" aria-live="polite"></p>
+        </div>
+
+        <dialog id="outlookHelp" class="help-dialog">
+          <form method="dialog"><button class="dialog-close" aria-label="Close">×</button></form>
+          <p class="eyebrow">ABOUT THIS VIEW</p><h2>Observed data and forecasts</h2>
+          <p>Country figures represent annual immigration flows, not the resident foreign-born population. Solid marks show observed values; hollow marks show forecasts.</p>
+          <p>Map colours and rankings use only values available for the selected year. Missing values are not treated as zero. The European total does not display an aggregated uncertainty band because no validated method for combining country bands is available here.</p>
+          <p id="helpRunNote" class="help-run-note"></p>
+        </dialog>
       </section>
     </main>
 
     <footer class="site-footer site-footer--compact"><div class="container footer-bottom"><span>© migrAI · Migration intelligence</span><span>Acceso privado · Supabase Auth</span></div></footer>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js?v=3" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+    <script src="app.js?v=european-outlook-1" defer></script>
   </body>
 </html>
