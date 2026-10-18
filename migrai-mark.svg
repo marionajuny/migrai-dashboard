@@ -1,5 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <path d="M18 8 29 11 36 8 44 13 51 14 54 20 51 25 54 30 51 36 48 40 45 46 40 49 36 55 31 58 27 55 24 51 19 50 16 46 12 44 11 39 8 36 10 31 9 26 13 23 14 18Z" stroke="#F28A4B" stroke-width="2.2" stroke-linejoin="round"/>
-  <path d="m15 39 9-9 8 4 10-13 7 1" stroke="#F9C8A7" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>
-  <circle cx="24" cy="30" r="2.3" fill="#F28A4B"/><circle cx="32" cy="34" r="2.3" fill="#F9C8A7"/><circle cx="42" cy="21" r="2.3" fill="#F28A4B"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" role="img" aria-label="migrAI">
+  <defs>
+    <linearGradient id="ring" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F9C8A7"/>
+      <stop offset=".55" stop-color="#F28A4B"/>
+      <stop offset="1" stop-color="#D9652C"/>
+    </linearGradient>
+    <linearGradient id="flow" x1="12" y1="43" x2="53" y2="20" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F9C8A7"/>
+      <stop offset="1" stop-color="#F28A4B"/>
+    </linearGradient>
+  </defs>
+  <circle cx="32" cy="32" r="29" stroke="url(#ring)" stroke-width="2.4"/>
+  <path d="M13 42.5 23.5 32l8 4.4 10.8-13 8.4 5.1 3.8-7.2" stroke="url(#flow)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m23.5 32 1.3-10.1 8.5-5.2 9 6.7M31.5 36.4l2.2 9.2 9.3 2.3M42.3 23.4l3.1-7.2" stroke="#F9C8A7" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity=".54"/>
+  <g fill="#F28A4B" stroke="#081426" stroke-width="1.7">
+    <circle cx="13" cy="42.5" r="3.1"/>
+    <circle cx="23.5" cy="32" r="3.2"/>
+    <circle cx="31.5" cy="36.4" r="3"/>
+    <circle cx="42.3" cy="23.4" r="3.2"/>
+    <circle cx="50.7" cy="28.5" r="2.7"/>
+    <circle cx="54.5" cy="21.3" r="2.5"/>
+  </g>
 </svg>
