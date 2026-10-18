@@ -7,7 +7,7 @@
     <meta name="description" content="Acceso privado al dashboard de migrAI." />
     <title>Acceso privado · migrAI</title>
     <link rel="icon" href="migrai-mark.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=european-outlook-1" />
+    <link rel="stylesheet" href="styles.css?v=country-intelligence-1" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   </head>
   <body>
@@ -57,13 +57,13 @@
 
       <section id="dashboardView" class="dashboard-app" hidden aria-labelledby="dashboardTitle">
         <aside class="dashboard-sidebar" aria-label="Dashboard navigation">
-          <a class="dashboard-brand" href="#european-outlook" aria-label="migrAI, European Outlook">
+          <a id="dashboardBrand" class="dashboard-brand" href="#european-outlook" aria-label="migrAI, European Outlook">
             <img src="migrai-mark.svg" alt="" />
             <span>migr<span>AI</span></span>
           </a>
           <nav class="dashboard-nav" aria-label="Dashboard pages">
-            <a class="dashboard-nav__item is-active" aria-current="page" href="#european-outlook"><span class="nav-icon" aria-hidden="true">▥</span><span>European Outlook</span></a>
-            <span class="dashboard-nav__item is-upcoming" aria-disabled="true"><span class="nav-icon" aria-hidden="true">◎</span><span>Country Intelligence</span><small>Next</small></span>
+            <a id="navEuropeanOutlook" class="dashboard-nav__item is-active" aria-current="page" href="#european-outlook"><span class="nav-icon" aria-hidden="true">▥</span><span>European Outlook</span></a>
+            <a id="navCountryIntelligence" class="dashboard-nav__item" href="#country-intelligence"><span class="nav-icon" aria-hidden="true">◎</span><span>Country Intelligence</span></a>
             <span class="dashboard-nav__item is-upcoming" aria-disabled="true"><span class="nav-icon" aria-hidden="true">▤</span><span>Country Benchmark</span><small>Next</small></span>
             <span class="dashboard-nav__item is-upcoming" aria-disabled="true"><span class="nav-icon" aria-hidden="true">▣</span><span>Migration Context</span><small>Next</small></span>
             <span class="dashboard-nav__item is-upcoming" aria-disabled="true"><span class="nav-icon" aria-hidden="true">⬡</span><span>Forecast Reliability</span><small>Next</small></span>
@@ -78,12 +78,12 @@
           </div>
         </aside>
 
-        <div class="dashboard-main" id="european-outlook">
+        <div class="dashboard-main" id="dashboard-main">
           <header class="dashboard-topbar">
             <div class="dashboard-title">
-              <p class="eyebrow">EUROPE · MIGRATION INTELLIGENCE</p>
+              <p id="dashboardEyebrow" class="eyebrow">EUROPE · MIGRATION INTELLIGENCE</p>
               <h1 id="dashboardTitle">European Migration Outlook</h1>
-              <p>Explore historical immigration and future forecasts</p>
+              <p id="dashboardSubtitle">Explore historical immigration and future forecasts</p>
             </div>
             <div class="dashboard-tools">
               <label class="global-search"><span aria-hidden="true">⌕</span><input id="countrySearch" type="search" list="countrySearchOptions" placeholder="Search countries…" aria-label="Search countries" /><datalist id="countrySearchOptions"></datalist></label>
@@ -97,6 +97,7 @@
 
           <div class="dashboard-status-row"><span id="runSummary">Loading the latest pipeline run…</span><span id="connectionBadge" class="status-badge" data-state="loading">Connecting</span></div>
 
+          <section id="europeanOutlookPage" class="dashboard-page" aria-label="European Migration Outlook">
           <div class="outlook-grid">
             <section class="outlook-panel map-panel" aria-labelledby="mapTitle">
               <div class="panel-heading">
@@ -134,6 +135,66 @@
               <div id="insightsList" class="insights-list"></div>
             </section>
           </div>
+          </section>
+
+          <section id="countryIntelligencePage" class="dashboard-page country-page" aria-labelledby="countryPageHeading" hidden>
+            <div class="country-kpi-grid">
+              <section class="outlook-panel country-selector-panel">
+                <div class="panel-heading"><div><h2 id="countryPageHeading">Selected country</h2><p>Explore a national migration trajectory</p></div></div>
+                <label class="country-select-wrap"><span aria-hidden="true" class="country-selector-icon">◎</span><span class="sr-only">Select country</span><select id="intelligenceCountrySelect" aria-label="Select country"></select></label>
+              </section>
+              <article class="outlook-panel country-kpi"><span class="country-kpi__icon" aria-hidden="true">▣</span><div><h2>Latest observed year</h2><strong id="countryLatestYear">Not available</strong><p>Latest valid historical record</p></div></article>
+              <article class="outlook-panel country-kpi"><span class="country-kpi__icon" aria-hidden="true">▥</span><div><h2>Latest observed immigration</h2><strong id="countryLatestValue">Not available</strong><p>Persons per year</p></div></article>
+              <div id="countryForecastCards" class="country-forecast-cards" aria-label="Country forecast horizons"></div>
+            </div>
+
+            <section class="outlook-panel country-history-panel" aria-labelledby="countryHistoryTitle">
+              <div class="panel-heading panel-heading--wrap country-history-heading">
+                <div><h2 id="countryHistoryTitle">Immigration trend and forecast</h2><p id="countryHistorySubtitle">Observed annual flow and available forecast horizons</p></div>
+                <div class="country-chart-tools">
+                  <label><span class="sr-only">Historical period</span><select id="countryChartPeriod" class="compact-select"><option value="all">All available years</option><option value="10">Last 10 years</option><option value="5">Last 5 years</option></select></label>
+                  <div class="chart-zoom" aria-label="Chart zoom controls"><button id="countryZoomIn" type="button" aria-label="Zoom in">+</button><button id="countryZoomOut" type="button" aria-label="Zoom out">−</button><button id="countryZoomReset" type="button" aria-label="Reset chart zoom">Reset</button></div>
+                  <button id="countryChartExport" class="small-control" type="button">Export chart</button>
+                </div>
+              </div>
+              <div class="country-chart-legend">
+                <span><i class="legend-line legend-line--observed"></i>Observed</span><span><i class="legend-line legend-line--forecast"></i>Forecast</span>
+                <label><input id="countryBand80" type="checkbox" checked />80% uncertainty band</label>
+                <label><input id="countryBand95" type="checkbox" checked />95% uncertainty band</label>
+                <span id="countryBandNote" class="country-band-note"></span>
+              </div>
+              <div id="countryHistoryChart" class="country-history-chart" role="img" aria-label="Observed and forecast immigration chart"></div>
+              <p class="country-chart-footnote">Observed values are shown as a solid line; forecast values use hollow markers. Uncertainty bands are shown only where the latest published data provides valid bounds.</p>
+            </section>
+
+            <div class="country-analysis-grid">
+              <section class="outlook-panel country-yoy-panel" aria-labelledby="countryYoyTitle">
+                <div class="panel-heading panel-heading--wrap"><div><h2 id="countryYoyTitle">Year-over-year change</h2><p>Calculated only for consecutive observed years</p></div><label class="sr-only" for="countryYoyMeasure">Change unit</label><select id="countryYoyMeasure" class="compact-select"><option value="absolute">Persons</option><option value="percent">Percent</option></select></div>
+                <div id="countryYoyChart" class="country-mini-chart" role="img" aria-label="Year-over-year immigration change chart"></div>
+                <p id="countryYoyNote" class="analysis-note"></p>
+              </section>
+              <section class="outlook-panel country-compare-panel" aria-labelledby="countryCompareTitle">
+                <div class="panel-heading"><div><h2 id="countryCompareTitle">Forecast vs. last observed</h2><p>Change relative to the latest valid observation</p></div></div>
+                <div id="countryForecastCompare" class="forecast-compare-list"></div>
+              </section>
+              <section class="outlook-panel country-reliability-panel" aria-labelledby="countryReliabilityTitle">
+                <div class="panel-heading"><div><h2 id="countryReliabilityTitle">Forecast reliability</h2><p>Model performance and backtesting</p></div></div>
+                <div class="reliability-metrics"><article><span>MAE</span><strong id="countryReliabilityMae">Not available</strong><small>Mean absolute error</small></article><article><span>WAPE</span><strong id="countryReliabilityWape">Not available</strong><small>Weighted absolute percentage error</small></article><article><span>Evaluation sample</span><strong id="countryReliabilityN">Not available</strong><small>Country-level backtesting records</small></article></div>
+                <p id="countryReliabilityNote" class="analysis-note">Backtesting metrics are not included in the currently published Country data views; no performance values are inferred here.</p>
+              </section>
+            </div>
+
+            <section class="outlook-panel city-explorer-panel" aria-labelledby="cityExplorerTitle">
+              <div class="panel-heading panel-heading--wrap"><div><p class="eyebrow">NATIONAL TO URBAN</p><h2 id="cityExplorerTitle">Main Cities Explorer</h2><p>Urban indicators available within the selected country's production scope</p></div><span id="cityExplorerCoverage" class="coverage-note">Checking city coverage…</span></div>
+              <div class="city-concept-note"><span aria-hidden="true">ⓘ</span><p>Country measures annual immigration flows (<strong>persons per year</strong>). City measures the share of foreign residents in the total resident population (<strong>% of residents</strong>). These are different indicators and are not directly comparable.</p></div>
+              <div id="cityExplorerContent" class="city-explorer-content"></div>
+            </section>
+
+            <section class="outlook-panel country-insights-panel" aria-labelledby="countryInsightsTitle">
+              <div class="panel-heading"><div><h2 id="countryInsightsTitle">Key insights</h2><p>Calculated from this country's available production records</p></div></div>
+              <div id="countryInsightsList" class="insights-list"></div>
+            </section>
+          </section>
 
           <p id="dashboardMessage" class="form-message" role="status" aria-live="polite"></p>
         </div>
@@ -151,6 +212,6 @@
     <footer class="site-footer site-footer--compact"><div class="container footer-bottom"><span>© migrAI · Migration intelligence</span><span>Acceso privado · Supabase Auth</span></div></footer>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-    <script src="app.js?v=european-outlook-1" defer></script>
+    <script src="app.js?v=country-intelligence-1" defer></script>
   </body>
 </html>
