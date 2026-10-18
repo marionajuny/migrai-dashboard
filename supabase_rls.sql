@@ -1,9 +1,9 @@
--- MigrAI dashboard: read-only access for authenticated users.
+-- migrAI dashboard: read-only access for authenticated users.
 -- Run once in the Supabase SQL Editor after reviewing the statements.
 
 begin;
 
--- The browser must never use anon access for MigrAI data.
+-- The browser must never use anon access for migrAI data.
 revoke all on schema migrai from anon;
 revoke all on all tables in schema migrai from anon;
 
@@ -52,4 +52,3 @@ create policy dashboard_authenticated_read
   using ((select auth.uid()) is not null);
 
 commit;
-

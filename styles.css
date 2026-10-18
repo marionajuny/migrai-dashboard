@@ -212,16 +212,15 @@ img, svg { max-width: 100%; }
 
 .page-intro--team { max-width: 900px; padding-bottom: 58px; }
 .team-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 17px; }
-.team-card { overflow: hidden; border: 1px solid var(--line); background: rgba(15,34,55,.85); }
+.team-card { display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--line); background: rgba(15,34,55,.85); }
 .portrait-placeholder { position: relative; display: grid; aspect-ratio: 1.16 / 1; place-items: center; overflow: hidden; border-bottom: 1px solid var(--line); background: #172b42; }
 .portrait-placeholder svg { width: min(100%, 250px); height: auto; align-self: end; transform: translateY(17px); transition: transform 250ms ease; }
 .team-card:hover .portrait-placeholder svg { transform: translateY(11px) scale(1.025); }
 .portrait-tag { position: absolute; right: 15px; bottom: 15px; display: grid; width: 30px; height: 30px; place-items: center; border: 1px solid rgba(255,255,255,.2); border-radius: 50%; color: var(--peach); background: rgba(8,20,38,.7); font-size: .7rem; font-weight: 750; }
-.team-card-body { padding: 23px; }
-.team-card-body .eyebrow { margin-bottom: 11px; font-size: .57rem; }
-.team-card h2 { min-height: 48px; margin: 0 0 16px; font-size: 1.15rem; font-weight: 600; letter-spacing: -.035em; }
-.linkedin-link { display: inline-flex; align-items: center; gap: 10px; color: var(--orange-light); font-size: .75rem; font-weight: 700; text-decoration: none; }
-.linkedin-link:hover { color: var(--peach); }
+.team-card-body { display: flex; flex: 1; flex-direction: column; padding: 23px; }
+.team-card h2 { margin: 0 0 8px; font-size: 1.12rem; font-weight: 600; letter-spacing: -.035em; }
+.team-role { margin: 0 0 16px; color: var(--orange-light); font-size: .7rem; font-weight: 700; line-height: 1.55; }
+.team-bio { margin: 0; color: var(--ink-muted); font-size: .75rem; line-height: 1.78; }
 .team-cta { margin-top: 70px; }
 .team-cta h2 { font-size: 1.9rem; }
 .portrait-disclaimer { margin: 20px 0 0; color: var(--ink-faint); font-size: .65rem; }
@@ -316,6 +315,7 @@ td { color: #d4dde5; font-variant-numeric: tabular-nums; }
   .access-copy h1 { font-size: clamp(2.5rem, 5vw, 3.8rem); }
   .content-grid { grid-template-columns: 1fr; }
   .metrics-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .team-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
 @media (max-width: 700px) {
   .container { width: min(100% - 36px, 560px); }

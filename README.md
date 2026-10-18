@@ -1,6 +1,6 @@
-# MigrAI Dashboard
+# migrAI Dashboard
 
-Dashboard estático y privado para consultar los resultados del pipeline de MigrAI almacenados en Supabase.
+Dashboard estático y privado para consultar los resultados del pipeline de migrAI almacenados en Supabase.
 
 ## Seguridad
 
