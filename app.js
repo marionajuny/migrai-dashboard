@@ -2219,7 +2219,7 @@ function renderMigrationHistoryChart() {
       ? "The protected contextual-data view is not yet configured or accessible. Observed immigration remains available; no context is inferred."
       : `No published ${selectedIndicator?.indicator_label ?? "contextual"} values match this country and time window. The observed immigration series remains visible; no values are imputed.`;
   } else {
-    ui.migrationHistoryNote.textContent = "The two lines use separate labelled axes and only source-reported observed years. Co-movement is descriptive; it does not establish causality. Eurostat quality flags are retained in the source records.";
+  ui.migrationHistoryNote.textContent = "The two lines use separate labelled axes and only source-reported observed years. Co-movement is descriptive; it does not establish causality. Source quality flags are shown only when providers supply them and are not an independent data-quality assessment.";
   }
 
   const width = Math.max(320, Math.round(ui.migrationHistoryChart.getBoundingClientRect().width || 860));
@@ -2340,7 +2340,7 @@ function renderContextIndicatorMetadata(indicator, rows) {
   }
   const flagged = rows.filter((row) => row.quality_flag).length;
   ui.contextIndicatorCoverage.textContent = indicator
-    ? `${firstYear ?? "—"}–${lastYear ?? "—"} · ${count} values · ${flagged} flagged` : "Not available";
+    ? `${firstYear ?? "—"}–${lastYear ?? "—"} · ${count} values · ${flagged ? `${flagged} source flags reported` : "no source flags supplied"}` : "Not available";
 }
 
 function renderContextScatter() {
