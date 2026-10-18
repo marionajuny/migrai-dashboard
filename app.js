@@ -136,16 +136,32 @@ const ui = {
   benchmarkDumbbell: document.querySelector("#benchmarkDumbbell"),
   benchmarkInsights: document.querySelector("#benchmarkInsights"),
   migrationCountrySelect: document.querySelector("#migrationCountrySelect"),
+  migrationIndicatorSelect: document.querySelector("#migrationIndicatorSelect"),
   migrationPeriod: document.querySelector("#migrationPeriod"),
   migrationContextSubtitle: document.querySelector("#migrationContextSubtitle"),
   migrationHistoryChart: document.querySelector("#migrationHistoryChart"),
   migrationHistoryNote: document.querySelector("#migrationHistoryNote"),
+  contextIndicatorLegend: document.querySelector("#contextIndicatorLegend"),
+  contextIndicatorHeading: document.querySelector("#contextIndicatorHeading"),
+  contextIndicatorDefinition: document.querySelector("#contextIndicatorDefinition"),
+  contextIndicatorFamily: document.querySelector("#contextIndicatorFamily"),
+  contextIndicatorUnit: document.querySelector("#contextIndicatorUnit"),
+  contextIndicatorSource: document.querySelector("#contextIndicatorSource"),
+  contextIndicatorCoverage: document.querySelector("#contextIndicatorCoverage"),
+  contextScatterEmpty: document.querySelector("#contextScatterEmpty"),
+  contextScatterChart: document.querySelector("#contextScatterChart"),
+  contextOtherIndicators: document.querySelector("#contextOtherIndicators"),
+  contextIndicatorCount: document.querySelector("#contextIndicatorCount"),
   reliabilityCountryScope: document.querySelector("#reliabilityCountryScope"),
   reliabilityCityScope: document.querySelector("#reliabilityCityScope"),
   reliabilityHorizon: document.querySelector("#reliabilityHorizon"),
   reliabilityModel: document.querySelector("#reliabilityModel"),
   reliabilityEntity: document.querySelector("#reliabilityEntity"),
   reliabilityHorizonCards: document.querySelector("#reliabilityHorizonCards"),
+  reliabilityScatterEmpty: document.querySelector("#reliabilityScatterEmpty"),
+  reliabilityScatterChart: document.querySelector("#reliabilityScatterChart"),
+  reliabilityBacktestEmpty: document.querySelector("#reliabilityBacktestEmpty"),
+  reliabilityBacktestChart: document.querySelector("#reliabilityBacktestChart"),
   reliabilityMetricStatus: document.querySelector("#reliabilityMetricStatus"),
   reliabilityModelProcess: document.querySelector("#reliabilityModelProcess"),
   reliabilityRankingTitle: document.querySelector("#reliabilityRankingTitle"),
@@ -153,6 +169,7 @@ const ui = {
   reliabilityRankingEmpty: document.querySelector("#reliabilityRankingEmpty"),
   reliabilityRankingEmptyTitle: document.querySelector("#reliabilityRankingEmptyTitle"),
   reliabilityRankingEmptyText: document.querySelector("#reliabilityRankingEmptyText"),
+  reliabilityRankingList: document.querySelector("#reliabilityRankingList"),
   reliabilityOpenCountry: document.querySelector("#reliabilityOpenCountry"),
   cityCountryFilter: document.querySelector("#cityCountryFilter"),
   citySearchInput: document.querySelector("#citySearchInput"),
@@ -218,6 +235,16 @@ const state = {
   observed: [],
   cityForecasts: [],
   cityObserved: [],
+  backtestPredictions: [],
+  backtestMetrics: [],
+  backtestEntityMetrics: [],
+  backtestViewsAvailable: true,
+  contextRows: [],
+  contextCache: new Map(),
+  contextCacheEpoch: 0,
+  contextViewsAvailable: true,
+  contextRequestId: 0,
+  selectedContextIndicator: null,
   initialized: false,
   years: [],
   selectedYear: null,
@@ -350,6 +377,15 @@ ui.logoutButton.addEventListener("click", async () => {
   state.observed = [];
   state.cityForecasts = [];
   state.cityObserved = [];
+  state.backtestPredictions = [];
+  state.backtestMetrics = [];
+  state.backtestEntityMetrics = [];
+  state.backtestViewsAvailable = true;
+  state.contextRows = [];
+  state.contextCache.clear();
+  state.contextCacheEpoch += 1;
+  state.contextRequestId += 1;
+  state.contextViewsAvailable = true;
   state.years = [];
   state.selectedYear = null;
   state.selectedCountry = "all";
@@ -483,6 +519,12 @@ ui.migrationCountrySelect.addEventListener("change", () => {
   selectCountry(ui.migrationCountrySelect.value);
   renderMigrationContext();
 });
+ui.migrationIndicatorSelect.addEventListener("change", () => {
+  state.selectedContextIndicator = ui.migrationIndicatorSelect.value || null;
+  renderMigrationHistoryChart();
+  renderContextScatter();
+  renderOtherContextIndicators();
+});
 ui.migrationPeriod.addEventListener("change", renderMigrationHistoryChart);
 ui.reliabilityCountryScope.addEventListener("click", () => {
   state.reliabilityScope = "country";
@@ -600,10 +642,14 @@ async function loadDashboard() {
   ui.connectionBadge.dataset.state = "loading";
   setMessage(ui.dashboardMessage);
 
-  const [runsResponse, forecastsResponse, observedResponse] = await Promise.all([
+  const [runsResponse, forecastsResponse, observedResponse, backtestPredictionsResponse,
+    backtestMetricsResponse, backtestEntityMetricsResponse] = await Promise.all([
     supabaseClient.from("runs").select("*").order("run_id", { ascending: false }).limit(25),
     supabaseClient.from("forecasts_latest").select("*").in("level", ["country", "city"]).order("entity_name").order("horizon"),
     supabaseClient.from("observed_latest").select("*").in("level", ["country", "city"]).order("year"),
+    supabaseClient.from("backtest_predictions_latest").select("*").order("target_year").limit(1000),
+    supabaseClient.from("backtest_metrics_latest").select("*"),
+    supabaseClient.from("backtest_entity_metrics_latest").select("*"),
   ]);
 
   const error = runsResponse.error ?? forecastsResponse.error ?? observedResponse.error;
@@ -626,6 +672,11 @@ async function loadDashboard() {
   state.observed = observedRows.filter((row) => row.level === "country");
   state.cityForecasts = forecastRows.filter((row) => row.level === "city");
   state.cityObserved = observedRows.filter((row) => row.level === "city");
+  state.backtestViewsAvailable = !backtestPredictionsResponse.error
+    && !backtestMetricsResponse.error && !backtestEntityMetricsResponse.error;
+  state.backtestPredictions = backtestPredictionsResponse.data ?? [];
+  state.backtestMetrics = backtestMetricsResponse.data ?? [];
+  state.backtestEntityMetrics = backtestEntityMetricsResponse.data ?? [];
   ui.connectionBadge.textContent = "Data connected";
   ui.connectionBadge.dataset.state = "ready";
 
@@ -2016,7 +2067,55 @@ function renderCountryBenchmark() {
   renderBenchmarkInsights(dumbbellRows);
 }
 
-function renderMigrationContext() {
+function contextEntityCacheKey(level, entityId, countryIso2 = "") {
+  return `${level}:${countryIso2}:${entityId}`;
+}
+
+async function loadContextRows(level, entityId, countryIso2 = "") {
+  const key = contextEntityCacheKey(level, entityId, countryIso2);
+  if (state.contextCache.has(key)) return state.contextCache.get(key);
+  const cacheEpoch = state.contextCacheEpoch;
+  let query = supabaseClient.from("context_observations_latest").select("*")
+    .eq("level", level).eq("entity_id", String(entityId)).order("year").limit(1000);
+  if (countryIso2) query = query.eq("country_iso2", countryIso2);
+  const { data, error } = await query;
+  if (cacheEpoch !== state.contextCacheEpoch) return [];
+  if (error) {
+    state.contextViewsAvailable = false;
+    state.contextCache.set(key, []);
+    return [];
+  }
+  state.contextViewsAvailable = true;
+  const rows = data ?? [];
+  state.contextCache.set(key, rows);
+  return rows;
+}
+
+function contextIndicatorRows(rows = state.contextRows) {
+  const byId = new Map();
+  rows.forEach((row) => {
+    if (!byId.has(row.indicator_id)) byId.set(row.indicator_id, row);
+  });
+  return [...byId.values()].sort((a, b) => a.family.localeCompare(b.family) || a.indicator_label.localeCompare(b.indicator_label));
+}
+
+function formatContextValue(value, unit) {
+  const number = safeNumber(value);
+  if (number === null) return "Not available";
+  const digits = Math.abs(number) >= 1000 ? 0 : Math.abs(number) >= 10 ? 1 : 2;
+  return `${new Intl.NumberFormat("en-GB", { maximumFractionDigits: digits }).format(number)} ${unit ?? ""}`.trim();
+}
+
+function officialContextSourceUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.hostname === "ec.europa.eu" ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
+async function renderMigrationContext() {
   if (!state.initialized) return;
   if (state.selectedCountry === "all") {
     const countries = listCountries();
@@ -2024,7 +2123,42 @@ function renderMigrationContext() {
     if (preferred) state.selectedCountry = preferred.id;
   }
   populateMigrationCountryControl();
+  const country = countryById(state.selectedCountry);
+  if (!country) {
+    state.contextRows = [];
+    populateMigrationIndicatorOptions();
+    renderMigrationHistoryChart();
+    return;
+  }
+  const requestId = ++state.contextRequestId;
+  const rows = await loadContextRows("country", country.id);
+  if (requestId !== state.contextRequestId || state.selectedCountry !== country.id) return;
+  state.contextRows = rows;
+  populateMigrationIndicatorOptions();
   renderMigrationHistoryChart();
+  renderContextScatter();
+  renderOtherContextIndicators();
+}
+
+function populateMigrationIndicatorOptions() {
+  const indicators = contextIndicatorRows();
+  const current = state.selectedContextIndicator;
+  replaceOptions(ui.migrationIndicatorSelect, indicators.map((row) => ({
+    value: row.indicator_id,
+    label: `${row.family} · ${row.indicator_label}`,
+  })));
+  ui.migrationIndicatorSelect.disabled = indicators.length === 0;
+  const selected = indicators.some((row) => row.indicator_id === current)
+    ? current
+    : indicators.find((row) => row.indicator_id === "country_gdp_per_capita_pps")?.indicator_id
+      ?? indicators[0]?.indicator_id
+      ?? null;
+  state.selectedContextIndicator = selected;
+  if (selected) ui.migrationIndicatorSelect.value = selected;
+}
+
+function selectedCountryContextIndicator() {
+  return state.contextRows.find((row) => row.indicator_id === state.selectedContextIndicator) ?? null;
 }
 
 function renderMigrationHistoryChart() {
@@ -2034,7 +2168,8 @@ function renderMigrationHistoryChart() {
   if (!country) {
     benchmarkEmpty(ui.migrationHistoryChart, "No country-level observations are available for this selection.");
     ui.migrationContextSubtitle.textContent = "Country-level migration observations are not available";
-    ui.migrationHistoryNote.textContent = "Contextual indicators are also absent from the current published views.";
+    ui.migrationHistoryNote.textContent = "No context values are inferred when a source series is unavailable.";
+    renderContextIndicatorMetadata(null, []);
     return;
   }
 
@@ -2043,82 +2178,254 @@ function renderMigrationHistoryChart() {
     .map((row) => ({ row, year: safeNumber(row.year), value: safeNumber(row.value) }))
     .filter((point) => point.year !== null && point.value !== null)
     .sort((a, b) => a.year - b.year);
-  const latestYear = observations.at(-1)?.year ?? null;
+  const fullContextSeries = state.contextRows
+    .filter((row) => row.indicator_id === state.selectedContextIndicator)
+    .map((row) => ({ row, year: safeNumber(row.year), value: safeNumber(row.value) }))
+    .filter((point) => point.year !== null && point.value !== null)
+    .sort((a, b) => a.year - b.year);
+  const selectedIndicator = fullContextSeries[0]?.row ?? null;
+  let contextSeries = fullContextSeries;
   const period = ui.migrationPeriod.value;
-  if (period !== "all" && latestYear !== null) {
-    const startYear = latestYear - Number(period) + 1;
+  const commonYearCeiling = Math.max(observations.at(-1)?.year ?? 0, contextSeries.at(-1)?.year ?? 0);
+  if (period !== "all" && commonYearCeiling) {
+    const startYear = commonYearCeiling - Number(period) + 1;
     observations = observations.filter((point) => point.year >= startYear);
+    contextSeries = contextSeries.filter((point) => point.year >= startYear);
   }
-
   const allYears = state.observed
     .filter((row) => String(row.entity_id) === country.id)
-    .map((row) => safeNumber(row.year))
-    .filter((year) => year !== null);
+    .map((row) => safeNumber(row.year)).filter((year) => year !== null);
   const totalPeriod = allYears.length ? `${Math.min(...allYears)}–${Math.max(...allYears)}` : "coverage unavailable";
-  ui.migrationContextSubtitle.textContent = `${country.name} · observed immigration only · ${totalPeriod}`;
-  ui.migrationHistoryNote.textContent = "This chart uses the observed immigration series from the published Country view. No economic, demographic or diaspora series is available to pair with it, so no association is calculated.";
+  ui.migrationContextSubtitle.textContent = `${country.name} · observed immigration and source-reported context · ${totalPeriod}`;
+  ui.contextIndicatorLegend.textContent = selectedIndicator
+    ? `${selectedIndicator.indicator_label} · ${selectedIndicator.unit}` : "Selected indicator · not available";
+  renderContextIndicatorMetadata(selectedIndicator, fullContextSeries);
 
   if (!observations.length) {
     benchmarkEmpty(ui.migrationHistoryChart, "There are no valid observed immigration values for this country and period.");
+    ui.migrationHistoryNote.textContent = "The contextual source remains descriptive; no migration value is generated from it.";
     return;
+  }
+  if (!contextSeries.length) {
+    ui.migrationHistoryNote.textContent = !state.contextViewsAvailable
+      ? "The protected contextual-data view is not yet configured or accessible. Observed immigration remains available; no context is inferred."
+      : `No published ${selectedIndicator?.indicator_label ?? "contextual"} values match this country and time window. The observed immigration series remains visible; no values are imputed.`;
+  } else {
+    ui.migrationHistoryNote.textContent = "The two lines use separate labelled axes and only source-reported observed years. Co-movement is descriptive; it does not establish causality. Eurostat quality flags are retained in the source records.";
   }
 
   const width = Math.max(320, Math.round(ui.migrationHistoryChart.getBoundingClientRect().width || 860));
   const height = 330;
-  const margin = { top: 20, right: 22, bottom: 48, left: 72 };
+  const margin = { top: 24, right: 82, bottom: 50, left: 74 };
   const plotWidth = width - margin.left - margin.right;
   const plotHeight = height - margin.top - margin.bottom;
-  const minYear = Math.min(...observations.map((point) => point.year));
-  const maxYear = Math.max(...observations.map((point) => point.year));
-  const rawMin = Math.min(...observations.map((point) => point.value), 0);
-  const rawMax = Math.max(...observations.map((point) => point.value), 1);
-  const padding = Math.max((rawMax - rawMin) * .08, 1);
-  const minValue = rawMin < 0 ? rawMin - padding : 0;
-  const maxValue = rawMax + padding;
+  const years = unique([...observations.map((point) => point.year), ...contextSeries.map((point) => point.year)]).sort((a, b) => a - b);
+  const minYear = years[0];
+  const maxYear = years.at(-1);
+  const immigrantValues = observations.map((point) => point.value);
+  const contextValues = contextSeries.map((point) => point.value);
+  const bounds = (values) => {
+    const low = Math.min(...values);
+    const high = Math.max(...values);
+    const padding = Math.max((high - low) * .1, Math.abs(high) * .02, 1);
+    return [low - padding, high + padding];
+  };
+  const [minImmigration, maxImmigration] = bounds(immigrantValues);
+  const [minContext, maxContext] = contextValues.length ? bounds(contextValues) : [0, 1];
   const x = (year) => margin.left + (maxYear === minYear ? plotWidth / 2 : (year - minYear) / (maxYear - minYear) * plotWidth);
-  const y = (value) => margin.top + (maxValue - value) / (maxValue - minValue) * plotHeight;
-  const svg = createSvg("svg", { viewBox: `0 0 ${width} ${height}`, role: "img", "aria-label": `Observed annual immigration to ${country.name}, in persons per year` });
+  const yImmigration = (value) => margin.top + (maxImmigration - value) / (maxImmigration - minImmigration) * plotHeight;
+  const yContext = (value) => margin.top + (maxContext - value) / (maxContext - minContext) * plotHeight;
+  const svg = createSvg("svg", { viewBox: `0 0 ${width} ${height}`, role: "img", "aria-label": `Observed immigration and ${selectedIndicator?.indicator_label ?? "context"} for ${country.name}` });
 
   for (let tick = 0; tick <= 4; tick += 1) {
-    const value = minValue + (maxValue - minValue) * (4 - tick) / 4;
-    const yPosition = margin.top + plotHeight * tick / 4;
+    const fraction = tick / 4;
+    const immigrationValue = maxImmigration - fraction * (maxImmigration - minImmigration);
+    const yPosition = margin.top + plotHeight * fraction;
     svg.append(createSvg("line", { x1: margin.left, x2: width - margin.right, y1: yPosition, y2: yPosition, class: "benchmark-gridline" }));
-    const label = createSvg("text", { x: margin.left - 9, y: yPosition + 4, "text-anchor": "end", class: "benchmark-axis-label" });
-    label.textContent = formatAxisNumber(value);
-    svg.append(label);
+    const leftLabel = createSvg("text", { x: margin.left - 8, y: yPosition + 4, "text-anchor": "end", class: "benchmark-axis-label" });
+    leftLabel.textContent = formatAxisNumber(immigrationValue);
+    svg.append(leftLabel);
+    if (contextValues.length) {
+      const contextValue = maxContext - fraction * (maxContext - minContext);
+      const rightLabel = createSvg("text", { x: width - margin.right + 9, y: yPosition + 4, "text-anchor": "start", class: "benchmark-axis-label" });
+      rightLabel.textContent = formatAxisNumber(contextValue);
+      svg.append(rightLabel);
+    }
   }
-
-  const yearTicks = unique(observations.map((point) => point.year)).sort((a, b) => a - b);
-  const tickCount = Math.min(7, yearTicks.length);
-  const visibleTicks = tickCount === yearTicks.length || tickCount <= 1
-    ? yearTicks
-    : Array.from({ length: tickCount }, (_, index) => yearTicks[Math.round(index * (yearTicks.length - 1) / (tickCount - 1))]);
+  const tickCount = Math.min(7, years.length);
+  const visibleTicks = tickCount === years.length || tickCount <= 1
+    ? years
+    : Array.from({ length: tickCount }, (_, index) => years[Math.round(index * (years.length - 1) / (tickCount - 1))]);
   visibleTicks.forEach((year) => {
     const label = createSvg("text", { x: x(year), y: height - 22, "text-anchor": "middle", class: "benchmark-axis-label" });
     label.textContent = String(year);
     svg.append(label);
   });
   svg.append(createSvg("line", { x1: margin.left, x2: width - margin.right, y1: height - margin.bottom, y2: height - margin.bottom, class: "benchmark-axis-line" }));
-  const yTitle = createSvg("text", { x: 16, y: height / 2, transform: `rotate(-90 16 ${height / 2})`, "text-anchor": "middle", class: "benchmark-axis-title" });
-  yTitle.textContent = "Persons per year";
-  svg.append(yTitle);
+  const leftTitle = createSvg("text", { x: 16, y: height / 2, transform: `rotate(-90 16 ${height / 2})`, "text-anchor": "middle", class: "benchmark-axis-title" });
+  leftTitle.textContent = "Immigration · persons/year";
+  svg.append(leftTitle);
+  if (contextValues.length) {
+    const rightTitle = createSvg("text", { x: width - 13, y: height / 2, transform: `rotate(-90 ${width - 13} ${height / 2})`, "text-anchor": "middle", class: "benchmark-axis-title" });
+    rightTitle.textContent = `${selectedIndicator.indicator_label} · ${selectedIndicator.unit}`;
+    svg.append(rightTitle);
+  }
   const xTitle = createSvg("text", { x: margin.left + plotWidth / 2, y: height - 3, "text-anchor": "middle", class: "benchmark-axis-title" });
   xTitle.textContent = "Observed year";
   svg.append(xTitle);
 
   splitObservedSegments(observations.map(({ year, value }) => ({ year, value }))).forEach((segment) => {
     if (segment.length < 2) return;
-    const path = segment.map((point, index) => `${index ? "L" : "M"} ${x(point.year)} ${y(point.value)}`).join(" ");
+    const path = segment.map((point, index) => `${index ? "L" : "M"} ${x(point.year)} ${yImmigration(point.value)}`).join(" ");
     svg.append(createSvg("path", { d: path, class: "context-history-line" }));
   });
-  observations.forEach(({ row, year, value }) => {
-    const point = createSvg("circle", { cx: x(year), cy: y(value), r: 4, class: "context-history-point" });
+  observations.forEach(({ year, value }) => {
+    const point = createSvg("circle", { cx: x(year), cy: yImmigration(value), r: 4, class: "context-history-point" });
     const title = createSvg("title");
-    title.textContent = `${country.name} · ${year} · ${formatNumber(value)} persons per year · Observed`;
+    title.textContent = `${country.name} · ${year} · ${formatNumber(value)} persons/year · observed`;
+    point.append(title);
+    svg.append(point);
+  });
+  splitObservedSegments(contextSeries.map(({ year, value }) => ({ year, value }))).forEach((segment) => {
+    if (segment.length < 2) return;
+    const path = segment.map((point, index) => `${index ? "L" : "M"} ${x(point.year)} ${yContext(point.value)}`).join(" ");
+    svg.append(createSvg("path", { d: path, class: "context-indicator-line" }));
+  });
+  contextSeries.forEach(({ year, value }) => {
+    const point = createSvg("circle", { cx: x(year), cy: yContext(value), r: 3.7, class: "context-indicator-point" });
+    const title = createSvg("title");
+    title.textContent = `${selectedIndicator.indicator_label} · ${year} · ${formatContextValue(value, selectedIndicator.unit)} · source-reported`;
     point.append(title);
     svg.append(point);
   });
   ui.migrationHistoryChart.replaceChildren(svg);
+}
+
+function renderContextIndicatorMetadata(indicator, rows) {
+  const count = rows.length;
+  const firstYear = count ? Math.min(...rows.map((row) => safeNumber(row.year)).filter((year) => year !== null)) : null;
+  const lastYear = count ? Math.max(...rows.map((row) => safeNumber(row.year)).filter((year) => year !== null)) : null;
+  ui.contextIndicatorHeading.textContent = indicator?.indicator_label ?? "No contextual series";
+  ui.contextIndicatorDefinition.textContent = !state.contextViewsAvailable
+    ? "The protected contextual-data view is not yet configured or accessible. The main dashboard data remains available."
+    : indicator
+    ? `${indicator.definition}${indicator.caveat ? ` ${indicator.caveat}` : ""}`
+    : "No verified contextual values are published for this country. Values are never inferred or filled in.";
+  ui.contextIndicatorFamily.textContent = indicator?.family ?? "Not available";
+  ui.contextIndicatorUnit.textContent = indicator?.unit ?? "Not available";
+  ui.contextIndicatorSource.replaceChildren();
+  if (!indicator) {
+    ui.contextIndicatorSource.textContent = "Not available";
+  } else {
+    const label = `${indicator.source_name} · ${indicator.source_dataset} · ${indicator.geography_level}`;
+    const href = officialContextSourceUrl(indicator.source_url);
+    if (href) {
+      const link = document.createElement("a");
+      link.href = href;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = label;
+      ui.contextIndicatorSource.append(link);
+    } else {
+      ui.contextIndicatorSource.textContent = label;
+    }
+  }
+  const flagged = rows.filter((row) => row.quality_flag).length;
+  ui.contextIndicatorCoverage.textContent = indicator
+    ? `${firstYear ?? "—"}–${lastYear ?? "—"} · ${count} values · ${flagged} flagged` : "Not available";
+}
+
+function renderContextScatter() {
+  const indicator = selectedCountryContextIndicator();
+  const country = countryById(state.selectedCountry);
+  ui.contextScatterChart.hidden = true;
+  ui.contextScatterChart.replaceChildren();
+  ui.contextScatterEmpty.hidden = false;
+  if (!indicator || !country) return;
+  const observedByYear = new Map(state.observed
+    .filter((row) => String(row.entity_id) === country.id)
+    .map((row) => [safeNumber(row.year), safeNumber(row.value)])
+    .filter(([year, value]) => year !== null && value !== null));
+  const pairs = state.contextRows.filter((row) => row.indicator_id === indicator.indicator_id)
+    .map((row) => ({ year: safeNumber(row.year), x: safeNumber(row.value), y: observedByYear.get(safeNumber(row.year)) }))
+    .filter((point) => point.year !== null && point.x !== null && point.y !== null);
+  if (pairs.length < 2) return;
+  ui.contextScatterEmpty.hidden = true;
+  ui.contextScatterChart.hidden = false;
+  const width = Math.max(320, Math.round(ui.contextScatterChart.getBoundingClientRect().width || 600));
+  const height = 270;
+  const margin = { top: 18, right: 18, bottom: 46, left: 66 };
+  let minX = Math.min(...pairs.map((point) => point.x));
+  let maxX = Math.max(...pairs.map((point) => point.x));
+  let minY = Math.min(...pairs.map((point) => point.y));
+  let maxY = Math.max(...pairs.map((point) => point.y));
+  if (minX === maxX) { minX -= 1; maxX += 1; }
+  if (minY === maxY) { minY -= 1; maxY += 1; }
+  const x = (value) => margin.left + (value - minX) / (maxX - minX) * (width - margin.left - margin.right);
+  const y = (value) => height - margin.bottom - (value - minY) / (maxY - minY) * (height - margin.top - margin.bottom);
+  const svg = createSvg("svg", { viewBox: `0 0 ${width} ${height}`, role: "img", "aria-label": `${indicator.indicator_label} compared with observed immigration in ${country.name}` });
+  svg.append(createSvg("line", { x1: margin.left, x2: width - margin.right, y1: height - margin.bottom, y2: height - margin.bottom, class: "benchmark-axis-line" }));
+  svg.append(createSvg("line", { x1: margin.left, x2: margin.left, y1: margin.top, y2: height - margin.bottom, class: "benchmark-axis-line" }));
+  pairs.forEach((pair) => {
+    const point = createSvg("circle", { cx: x(pair.x), cy: y(pair.y), r: 4, class: "context-scatter-point" });
+    const title = createSvg("title");
+    title.textContent = `${pair.year} · ${formatContextValue(pair.x, indicator.unit)} · ${formatNumber(pair.y)} persons/year`;
+    point.append(title);
+    svg.append(point);
+  });
+  const xLabel = createSvg("text", { x: margin.left + (width - margin.left - margin.right) / 2, y: height - 7, "text-anchor": "middle", class: "benchmark-axis-title" });
+  xLabel.textContent = `${indicator.indicator_label} · ${indicator.unit}`;
+  const yLabel = createSvg("text", { x: 15, y: height / 2, transform: `rotate(-90 15 ${height / 2})`, "text-anchor": "middle", class: "benchmark-axis-title" });
+  yLabel.textContent = "Immigration · persons/year";
+  svg.append(xLabel, yLabel);
+  ui.contextScatterChart.append(svg);
+}
+
+function renderOtherContextIndicators() {
+  const selectedId = state.selectedContextIndicator;
+  const latestByIndicator = new Map();
+  state.contextRows.forEach((row) => {
+    const current = latestByIndicator.get(row.indicator_id);
+    if (!current || safeNumber(row.year) > safeNumber(current.year)) latestByIndicator.set(row.indicator_id, row);
+  });
+  const items = [...latestByIndicator.values()].filter((row) => row.indicator_id !== selectedId)
+    .sort((a, b) => a.family.localeCompare(b.family) || a.indicator_label.localeCompare(b.indicator_label));
+  ui.contextOtherIndicators.replaceChildren();
+  ui.contextIndicatorCount.textContent = state.contextViewsAvailable ? `${items.length} available` : "Not connected";
+  if (!items.length) {
+    const empty = document.createElement("div");
+    empty.className = "context-family-empty";
+    empty.textContent = state.contextViewsAvailable
+      ? "No additional source-reported contextual indicators are available for this country."
+      : "The protected contextual-data view is not yet configured or accessible.";
+    ui.contextOtherIndicators.append(empty);
+    return;
+  }
+  items.forEach((row, index) => {
+    const item = document.createElement("div");
+    const number = document.createElement("span");
+    number.className = "context-family-icon";
+    number.textContent = String(index + 1).padStart(2, "0");
+    const description = document.createElement("span");
+    const title = document.createElement("strong");
+    title.textContent = row.indicator_label;
+    const details = document.createElement("small");
+    details.textContent = `${row.family} · ${row.source_name} · latest reported ${row.year}`;
+    const href = officialContextSourceUrl(row.source_url);
+    if (href) {
+      const link = document.createElement("a");
+      link.href = href;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = ` · ${row.source_dataset}`;
+      details.append(link);
+    }
+    description.append(title, details);
+    const value = document.createElement("b");
+    value.textContent = formatContextValue(row.value, row.unit);
+    item.append(number, description, value);
+    ui.contextOtherIndicators.append(item);
+  });
 }
 
 function reliabilityForecastRows(scope = state.reliabilityScope) {
@@ -2127,6 +2434,16 @@ function reliabilityForecastRows(scope = state.reliabilityScope) {
     && safeNumber(row.horizon) !== null
     && safeNumber(row.target_year) !== null
     && safeNumber(row.prediction) !== null);
+}
+
+function reliabilityEntityKey(row) {
+  const entityId = String(row?.entity_id ?? "");
+  return state.reliabilityScope === "city" ? `${String(row?.country_iso2 ?? "")}|${entityId}` : entityId;
+}
+
+function reliabilityEntityLabel(row) {
+  const name = row?.entity_name || row?.entity_id || "Unnamed entity";
+  return state.reliabilityScope === "city" && row?.country_iso2 ? `${name} · ${row.country_iso2}` : name;
 }
 
 function populateReliabilityFilters() {
@@ -2144,8 +2461,8 @@ function populateReliabilityFilters() {
   const entities = new Map();
   rows.forEach((row) => {
     if (row.entity_id === null || row.entity_id === undefined) return;
-    const id = String(row.entity_id);
-    entities.set(id, { id, name: row.entity_name || id });
+    const id = reliabilityEntityKey(row);
+    entities.set(id, { id, name: reliabilityEntityLabel(row) });
   });
   const sortedEntities = [...entities.values()].sort((a, b) => a.name.localeCompare(b.name));
   replaceOptions(ui.reliabilityEntity, [
@@ -2162,7 +2479,42 @@ function reliabilityFilteredForecastRows(horizon = null) {
   const selectedEntity = ui.reliabilityEntity.value;
   return reliabilityForecastRows().filter((row) => (selectedHorizon === null || safeNumber(row.horizon) === selectedHorizon)
     && (selectedModel === "all" || forecastModelLabel(row) === selectedModel)
-    && (selectedEntity === "all" || String(row.entity_id) === selectedEntity));
+    && (selectedEntity === "all" || reliabilityEntityKey(row) === selectedEntity));
+}
+
+function reliabilityFilteredBacktestRows(horizon = null) {
+  const selectedHorizon = horizon === null ? Number(ui.reliabilityHorizon.value) : Number(horizon);
+  const selectedModel = ui.reliabilityModel.value;
+  const selectedEntity = ui.reliabilityEntity.value;
+  return state.backtestPredictions.filter((row) => row.level === state.reliabilityScope
+    && safeNumber(row.horizon) === selectedHorizon
+    && (selectedModel === "all" || String(row.model_id) === selectedModel)
+    && (selectedEntity === "all" || reliabilityEntityKey(row) === selectedEntity));
+}
+
+function reliabilitySelectedMetric(horizon = Number(ui.reliabilityHorizon.value)) {
+  const selectedEntity = ui.reliabilityEntity.value;
+  const selectedModel = ui.reliabilityModel.value;
+  const source = selectedEntity === "all" ? state.backtestMetrics : state.backtestEntityMetrics;
+  return source.find((row) => row.level === state.reliabilityScope
+    && safeNumber(row.horizon) === Number(horizon)
+    && (selectedEntity === "all" || reliabilityEntityKey(row) === selectedEntity)
+    && (selectedModel === "all" || String(row.model_id) === selectedModel)) ?? null;
+}
+
+function reliabilityHorizonMetric(horizon) {
+  const selectedEntity = ui.reliabilityEntity.value;
+  const source = selectedEntity === "all" ? state.backtestMetrics : state.backtestEntityMetrics;
+  return source.find((row) => row.level === state.reliabilityScope
+    && safeNumber(row.horizon) === Number(horizon)
+    && (selectedEntity === "all" || reliabilityEntityKey(row) === selectedEntity)) ?? null;
+}
+
+function formatMetricValue(value, maximumFractionDigits = 2) {
+  const number = safeNumber(value);
+  return number === null
+    ? "Not available"
+    : new Intl.NumberFormat("en-GB", { maximumFractionDigits }).format(number);
 }
 
 function renderReliabilityHorizonCards() {
@@ -2170,6 +2522,7 @@ function renderReliabilityHorizonCards() {
   const unit = state.reliabilityScope === "city" ? "% of resident population" : "persons per year";
   [1, 3, 5].forEach((horizon) => {
     const rows = reliabilityFilteredForecastRows(horizon);
+    const metric = reliabilityHorizonMetric(horizon);
     const models = unique(rows.map((row) => forecastModelLabel(row)).filter(Boolean));
     const ranges80 = rows.filter((row) => intervalBounds(row, 80)).length;
     const ranges95 = rows.filter((row) => intervalBounds(row, 95)).length;
@@ -2198,7 +2551,11 @@ function renderReliabilityHorizonCards() {
     countRow.append(count, countLabel);
     const evidence = document.createElement("p");
     evidence.className = "reliability-horizon-card__evidence";
-    evidence.textContent = `Backtest metrics: not published · Folds: not published`;
+    evidence.textContent = metric
+      ? `Backtest MAE ${formatMetricValue(metric.mae)} ${state.reliabilityScope === "city" ? "pp" : "persons/year"} · WAPE ${formatMetricValue(metric.wape_pct, 1)}% · ${metric.n_folds} folds / ${metric.n_observations} pairs`
+      : state.backtestViewsAvailable
+        ? "Verified backtest metrics are not available for this horizon."
+        : "Protected backtest views are not yet configured or accessible.";
     const ranges = document.createElement("small");
     ranges.className = "reliability-horizon-card__ranges";
     ranges.textContent = rows.length
@@ -2211,17 +2568,142 @@ function renderReliabilityHorizonCards() {
 
 function renderReliabilityMetricStatus() {
   ui.reliabilityMetricStatus.replaceChildren();
-  ["MAE", "WAPE", "RMSE", "MASE"].forEach((metric) => {
+  const result = reliabilitySelectedMetric();
+  const errorUnit = state.reliabilityScope === "city" ? "pp" : "persons/year";
+  [
+    { label: "MAE", value: result ? `${formatMetricValue(result.mae)} ${errorUnit}` : "Not available", note: "Mean absolute error" },
+    { label: "WAPE", value: result ? `${formatMetricValue(result.wape_pct, 1)}%` : "Not available", note: "Weighted absolute percentage error" },
+    { label: "RMSE", value: result ? `${formatMetricValue(result.rmse)} ${errorUnit}` : "Not available", note: "Root mean squared error" },
+    { label: "Evaluation sample", value: result ? `${result.n_observations} pairs · ${result.n_folds} folds` : "Not available", note: "Selected horizon and scope" },
+  ].forEach((metric) => {
     const item = document.createElement("article");
     const label = document.createElement("span");
-    label.textContent = metric;
+    label.textContent = metric.label;
     const value = document.createElement("strong");
-    value.textContent = "Not available";
+    value.textContent = metric.value;
     const note = document.createElement("small");
-    note.textContent = "No verified backtest metric in published views";
+    note.textContent = metric.note;
     item.append(label, value, note);
     ui.reliabilityMetricStatus.append(item);
   });
+}
+
+function renderReliabilityScatter() {
+  const rows = reliabilityFilteredBacktestRows();
+  if (!rows.length) {
+    const title = ui.reliabilityScatterEmpty.querySelector("strong");
+    const note = ui.reliabilityScatterEmpty.querySelector("p");
+    title.textContent = state.backtestViewsAvailable ? "Backtesting pairs are not published" : "Backtest data view not connected";
+    note.textContent = state.backtestViewsAvailable
+      ? "This chart requires a row-level observed value and its matching historical prediction."
+      : "The dashboard's current country and city outputs remain available; this panel needs its protected backtest views and read access.";
+    ui.reliabilityScatterEmpty.hidden = false;
+    ui.reliabilityScatterChart.hidden = true;
+    return;
+  }
+  ui.reliabilityScatterEmpty.hidden = true;
+  ui.reliabilityScatterChart.hidden = false;
+  ui.reliabilityScatterChart.replaceChildren();
+
+  const width = 480;
+  const height = 275;
+  const margin = { top: 16, right: 18, bottom: 44, left: 54 };
+  const values = rows.flatMap((row) => [safeNumber(row.actual), safeNumber(row.prediction)]).filter((value) => value !== null);
+  let min = Math.min(...values);
+  let max = Math.max(...values);
+  if (min === max) { min -= 1; max += 1; }
+  const pad = (max - min) * 0.05;
+  min -= pad;
+  max += pad;
+  const x = (value) => margin.left + ((value - min) / (max - min)) * (width - margin.left - margin.right);
+  const y = (value) => height - margin.bottom - ((value - min) / (max - min)) * (height - margin.top - margin.bottom);
+  const svg = createSvg("svg", { viewBox: `0 0 ${width} ${height}`, role: "img", "aria-label": "Actual values versus backtest predictions" });
+  svg.append(createSvg("line", { x1: x(min), y1: y(min), x2: x(max), y2: y(max), class: "reliability-scatter-reference" }));
+  svg.append(createSvg("line", { x1: margin.left, y1: height - margin.bottom, x2: width - margin.right, y2: height - margin.bottom, class: "reliability-axis" }));
+  svg.append(createSvg("line", { x1: margin.left, y1: margin.top, x2: margin.left, y2: height - margin.bottom, class: "reliability-axis" }));
+  rows.forEach((row) => {
+    const actual = safeNumber(row.actual);
+    const prediction = safeNumber(row.prediction);
+    if (actual === null || prediction === null) return;
+    const point = createSvg("circle", { cx: x(actual), cy: y(prediction), r: 3.2, class: "reliability-scatter-point" });
+    const title = createSvg("title");
+    title.textContent = `${row.entity_name}: actual ${formatMetricValue(actual)} · predicted ${formatMetricValue(prediction)} · ${row.target_year}`;
+    point.append(title);
+    svg.append(point);
+  });
+  const xLabel = createSvg("text", { x: (margin.left + width - margin.right) / 2, y: height - 8, "text-anchor": "middle", class: "reliability-chart-label" });
+  xLabel.textContent = state.reliabilityScope === "city" ? "Actual population share (percentage points)" : "Actual immigration (persons/year)";
+  const yLabel = createSvg("text", { x: 15, y: height / 2, transform: `rotate(-90 15 ${height / 2})`, "text-anchor": "middle", class: "reliability-chart-label" });
+  yLabel.textContent = state.reliabilityScope === "city" ? "Predicted share (pp)" : "Predicted immigration (persons/year)";
+  svg.append(xLabel, yLabel);
+  ui.reliabilityScatterChart.append(svg);
+}
+
+function renderReliabilityBacktestTimeline() {
+  const rows = reliabilityFilteredBacktestRows();
+  const grouped = new Map();
+  rows.forEach((row) => {
+    const year = safeNumber(row.target_year);
+    const actual = safeNumber(row.actual);
+    const prediction = safeNumber(row.prediction);
+    if (year === null || actual === null || prediction === null) return;
+    const cell = grouped.get(year) ?? { year, actual: 0, prediction: 0, count: 0 };
+    cell.actual += actual;
+    cell.prediction += prediction;
+    cell.count += 1;
+    grouped.set(year, cell);
+  });
+  const points = [...grouped.values()].sort((a, b) => a.year - b.year).map((cell) => ({
+    year: cell.year,
+    actual: cell.actual / cell.count,
+    prediction: cell.prediction / cell.count,
+  }));
+  if (points.length < 2) {
+    const title = ui.reliabilityBacktestEmpty.querySelector("strong");
+    const note = ui.reliabilityBacktestEmpty.querySelector("p");
+    title.textContent = state.backtestViewsAvailable ? "No fold-level records in the published views" : "Backtest data view not connected";
+    note.textContent = state.backtestViewsAvailable
+      ? "No illustrative folds or synthetic prediction paths are drawn. A dated backtest result set is needed for this timeline."
+      : "The dashboard's current country and city outputs remain available; this panel needs its protected backtest views and read access.";
+    ui.reliabilityBacktestEmpty.hidden = false;
+    ui.reliabilityBacktestChart.hidden = true;
+    return;
+  }
+  ui.reliabilityBacktestEmpty.hidden = true;
+  ui.reliabilityBacktestChart.hidden = false;
+  ui.reliabilityBacktestChart.replaceChildren();
+  const width = 480;
+  const height = 275;
+  const margin = { top: 18, right: 18, bottom: 42, left: 48 };
+  const values = points.flatMap((point) => [point.actual, point.prediction]);
+  let min = Math.min(...values);
+  let max = Math.max(...values);
+  if (min === max) { min -= 1; max += 1; }
+  const pad = (max - min) * 0.08;
+  min -= pad;
+  max += pad;
+  const firstYear = points[0].year;
+  const lastYear = points.at(-1).year;
+  const x = (year) => margin.left + ((year - firstYear) / Math.max(lastYear - firstYear, 1)) * (width - margin.left - margin.right);
+  const y = (value) => height - margin.bottom - ((value - min) / (max - min)) * (height - margin.top - margin.bottom);
+  const svg = createSvg("svg", { viewBox: `0 0 ${width} ${height}`, role: "img", "aria-label": "Mean actual and predicted values by target year" });
+  svg.append(createSvg("line", { x1: margin.left, y1: height - margin.bottom, x2: width - margin.right, y2: height - margin.bottom, class: "reliability-axis" }));
+  svg.append(createSvg("line", { x1: margin.left, y1: margin.top, x2: margin.left, y2: height - margin.bottom, class: "reliability-axis" }));
+  ["actual", "prediction"].forEach((key) => {
+    const path = points.map((point, index) => `${index ? "L" : "M"}${x(point.year)},${y(point[key])}`).join(" ");
+    svg.append(createSvg("path", { d: path, class: `reliability-series reliability-series--${key}` }));
+    points.forEach((point) => {
+      const marker = createSvg("circle", { cx: x(point.year), cy: y(point[key]), r: 3.2, class: `reliability-series-point reliability-series-point--${key}` });
+      const title = createSvg("title");
+      title.textContent = `${point.year} · ${key === "actual" ? "actual" : "predicted"} mean ${formatMetricValue(point[key])}`;
+      marker.append(title);
+      svg.append(marker);
+    });
+  });
+  const legend = createSvg("text", { x: width / 2, y: height - 8, "text-anchor": "middle", class: "reliability-chart-label" });
+  legend.textContent = `Orange: actual · Teal: predicted · mean per entity · ${points.length} target years`;
+  svg.append(legend);
+  ui.reliabilityBacktestChart.append(svg);
 }
 
 function renderReliabilityModelProcess() {
@@ -2256,9 +2738,40 @@ function renderReliabilityRankingState() {
     ? "Selected model and horizon · error in percentage points with sample size"
     : "Selected model and horizon · error in persons/year with sample size";
   ui.reliabilityRankingEmptyTitle.textContent = cityScope ? "City error ranking unavailable" : "Country error ranking unavailable";
-  ui.reliabilityRankingEmptyText.textContent = cityScope
-    ? "A city ranking needs verified city-level backtest errors and evaluation counts. City percentage-point errors are not combined with country person-count errors."
-    : "Ranking countries requires verified country-level backtest errors and the number of evaluation observations behind each score.";
+  ui.reliabilityRankingEmptyText.textContent = !state.backtestViewsAvailable
+    ? "The protected backtest views are not yet configured or accessible. The existing published forecast outputs remain available."
+    : cityScope
+      ? "No verified city-level backtest errors are available for this horizon. Percentage-point errors are kept separate from country person-count errors."
+      : "No verified country-level backtest errors are available for this horizon.";
+  const horizon = Number(ui.reliabilityHorizon.value);
+  const selectedModel = ui.reliabilityModel.value;
+  const rows = state.backtestEntityMetrics
+    .filter((row) => row.level === state.reliabilityScope && safeNumber(row.horizon) === horizon
+      && (selectedModel === "all" || String(row.model_id) === selectedModel)
+      && safeNumber(row.mae) !== null)
+    .sort((a, b) => safeNumber(a.mae) - safeNumber(b.mae));
+  ui.reliabilityRankingEmpty.hidden = rows.length > 0;
+  ui.reliabilityRankingList.hidden = rows.length === 0;
+  ui.reliabilityRankingList.replaceChildren();
+  const maximum = Math.max(...rows.map((row) => safeNumber(row.mae)), 0);
+  rows.slice(0, 10).forEach((row, index) => {
+    const item = document.createElement("article");
+    item.className = "reliability-ranking-row";
+    const rank = document.createElement("span");
+    rank.className = "reliability-ranking-row__rank";
+    rank.textContent = String(index + 1);
+    const name = document.createElement("strong");
+    name.textContent = reliabilityEntityLabel(row);
+    const track = document.createElement("div");
+    track.className = "reliability-ranking-track";
+    const bar = document.createElement("i");
+    bar.style.width = `${maximum === 0 ? 100 : Math.max(4, 100 - safeNumber(row.mae) / maximum * 100)}%`;
+    track.append(bar);
+    const score = document.createElement("small");
+    score.textContent = `MAE ${formatMetricValue(row.mae)} ${cityScope ? "pp" : "persons/year"} · n=${row.n_observations}`;
+    item.append(rank, name, track, score);
+    ui.reliabilityRankingList.append(item);
+  });
   ui.reliabilityOpenCountry.disabled = cityScope || ui.reliabilityEntity.value === "all";
 }
 
@@ -2269,6 +2782,8 @@ function renderForecastReliability() {
   populateReliabilityFilters();
   renderReliabilityHorizonCards();
   renderReliabilityMetricStatus();
+  renderReliabilityScatter();
+  renderReliabilityBacktestTimeline();
   renderReliabilityModelProcess();
   renderReliabilityRankingState();
 }
@@ -2898,7 +3413,16 @@ function renderSelectedCity(city) {
   renderCityTrendChart(city);
   renderCityYearChange(city);
   renderCityForecastComparison(city, latest, forecasts);
-  renderCityProfile(city, observations, forecasts);
+  const cityContextKey = contextEntityCacheKey("city", city.id, city.countryId);
+  const cachedCityContext = state.contextCache.get(cityContextKey);
+  renderCityProfile(city, observations, forecasts, cachedCityContext ?? []);
+  if (!cachedCityContext) {
+    loadContextRows("city", city.id, city.countryId).then((contextRows) => {
+      if (state.selectedCity === city.id && state.selectedCountry === city.countryId) {
+        renderCityProfile(city, observations, forecasts, contextRows);
+      }
+    });
+  }
   renderCityInsights(city, observations, forecasts);
 }
 
@@ -3144,7 +3668,7 @@ function renderCityForecastComparison(city, latest, forecasts) {
   ui.cityForecastCompareNote.textContent = "Only horizons +1 and +3 are included. No +5 result is displayed.";
 }
 
-function renderCityProfile(city, observations, forecasts) {
+function renderCityProfile(city, observations, forecasts, contextRows = []) {
   ui.cityProfileContent.replaceChildren();
   const country = countryById(city.countryId);
   const coordinates = readCityCoordinates([...city.observed, ...city.forecasts]);
@@ -3165,6 +3689,24 @@ function renderCityProfile(city, observations, forecasts) {
     article.append(label, value, meta);
     ui.cityProfileContent.append(article);
   });
+  const latestByIndicator = new Map();
+  contextRows.forEach((row) => {
+    const prior = latestByIndicator.get(row.indicator_id);
+    if (!prior || safeNumber(row.year) > safeNumber(prior.year)) latestByIndicator.set(row.indicator_id, row);
+  });
+  [...latestByIndicator.values()]
+    .sort((a, b) => a.family.localeCompare(b.family) || a.indicator_label.localeCompare(b.indicator_label))
+    .forEach((row) => {
+      const article = document.createElement("article");
+      const label = document.createElement("span");
+      label.textContent = row.indicator_label;
+      const value = document.createElement("strong");
+      value.textContent = formatContextValue(row.value, row.unit);
+      const meta = document.createElement("small");
+      meta.textContent = `${row.year} · ${row.source_name} · ${row.geography_level}${row.caveat ? ` · ${row.caveat}` : ""}`;
+      article.append(label, value, meta);
+      ui.cityProfileContent.append(article);
+    });
   ui.cityProfileSubtitle.textContent = `${city.name}${country ? ` · ${country.name}` : ""} · source fields currently published by the City views`;
 }
 
