@@ -928,3 +928,67 @@ body.dashboard-mode .access-shell { width: 100%; min-height: 100vh; margin: 0; p
   .context-diaspora-metrics { grid-template-columns: 1fr; }
   .context-diaspora-metrics article { min-height: 80px; }
 }
+
+/* Forecast Reliability */
+.reliability-page { display: grid; gap: 13px; }
+.reliability-selector-panel { padding-bottom: 13px; }
+.reliability-scope-switch { display: inline-flex; overflow: hidden; border: 1px solid rgba(139, 164, 187, .24); border-radius: 7px; background: #0c1d30; }
+.reliability-scope-switch button { min-height: 35px; padding: 0 12px; border: 0; border-right: 1px solid rgba(139, 164, 187, .16); color: #9fb1c2; background: transparent; font-size: .62rem; }
+.reliability-scope-switch button:last-child { border-right: 0; }
+.reliability-scope-switch button[aria-pressed="true"] { color: #1d1b1b; background: linear-gradient(105deg, #f5a16b, #fa873d); font-weight: 700; }
+.reliability-filter-row { display: grid; grid-template-columns: minmax(100px, .55fr) minmax(170px, .9fr) minmax(190px, 1fr) minmax(250px, 1.4fr); align-items: end; gap: 10px; }
+.reliability-filter-row label { display: grid; gap: 5px; color: #8ea4b8; font-size: .57rem; }
+.reliability-filter-row select { width: 100%; min-height: 35px; }
+.reliability-scope-note { display: flex; align-items: center; gap: 8px; min-height: 35px; margin: 0; padding: 7px 9px; border: 1px solid rgba(240, 123, 55, .2); border-radius: 7px; color: #a8bac9; background: rgba(240, 123, 55, .045); font-size: .57rem; line-height: 1.45; }
+.reliability-scope-note span { color: #f5a16b; font-size: .78rem; }
+.reliability-horizon-section > .analysis-note { margin: 8px 2px 0; }
+.reliability-horizon-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.reliability-horizon-card { display: grid; align-content: start; gap: 7px; min-height: 190px; padding: 13px; }
+.reliability-horizon-card__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
+.reliability-horizon-card__head h3 { margin: 0; color: #e9edf1; font-size: .77rem; }
+.reliability-output-badge { padding: 5px 7px; border: 1px solid rgba(240, 123, 55, .28); border-radius: 6px; color: #e6a270; font-size: .51rem; white-space: nowrap; }
+.reliability-horizon-card__label { color: #8298ac; font-size: .55rem; }
+.reliability-horizon-card__model { overflow: hidden; color: #f0a16b; font-size: .78rem; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.reliability-horizon-card__count { display: flex; align-items: baseline; gap: 7px; margin-top: 3px; }
+.reliability-horizon-card__count strong { color: #edf1f4; font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+.reliability-horizon-card__count span { color: #9aacbb; font-size: .56rem; }
+.reliability-horizon-card__evidence, .reliability-horizon-card__ranges { margin: 0; color: #879caf; font-size: .54rem; line-height: 1.45; }
+.reliability-horizon-card__ranges { padding-top: 6px; border-top: 1px solid rgba(130, 156, 179, .12); }
+.reliability-chart-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 13px; }
+.reliability-chart-panel { min-width: 0; }
+.reliability-chart-panel .context-empty-state { min-height: 210px; }
+.reliability-metric-status { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.reliability-metric-status article { display: grid; min-width: 0; gap: 6px; padding: 10px; border: 1px solid rgba(112, 141, 166, .2); border-radius: 8px; background: rgba(12, 29, 47, .7); }
+.reliability-metric-status span { color: #f2a16a; font-size: .64rem; font-weight: 700; }
+.reliability-metric-status strong { color: #e6ebef; font-size: .68rem; }
+.reliability-metric-status small { color: #8499ac; font-size: .51rem; line-height: 1.4; }
+.reliability-open-country { display: block; margin: 10px 0 0 auto; }
+.reliability-open-country:disabled { opacity: .45; cursor: not-allowed; }
+.reliability-lower-grid { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); align-items: stretch; gap: 13px; }
+.reliability-model-process { display: grid; gap: 7px; }
+.reliability-model-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px; border: 1px solid rgba(112, 141, 166, .18); border-radius: 7px; background: rgba(12, 29, 47, .56); }
+.reliability-model-row strong { color: #f1a16b; font-size: .66rem; overflow-wrap: anywhere; }
+.reliability-model-row span { color: #91a5b7; font-size: .56rem; text-align: right; }
+.reliability-model-panel > .analysis-note { margin-bottom: 0; }
+.reliability-interpretation-panel .context-caveats-list { gap: 10px; }
+
+@media (max-width: 1080px) {
+  .reliability-filter-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .reliability-scope-note { grid-column: 1 / -1; }
+}
+@media (max-width: 760px) {
+  .reliability-chart-grid, .reliability-lower-grid { grid-template-columns: 1fr; }
+  .reliability-filter-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .reliability-scope-note { grid-column: 1 / -1; }
+}
+@media (max-width: 480px) {
+  .reliability-scope-switch { width: 100%; }
+  .reliability-scope-switch button { flex: 1; padding-inline: 7px; font-size: .55rem; }
+  .reliability-filter-row { grid-template-columns: 1fr; }
+  .reliability-scope-note { grid-column: auto; }
+  .reliability-horizon-cards { grid-template-columns: 1fr; }
+  .reliability-horizon-card { min-height: 0; }
+  .reliability-metric-status { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .reliability-model-row { align-items: flex-start; flex-direction: column; }
+  .reliability-model-row span { text-align: left; }
+}

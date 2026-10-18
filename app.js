@@ -46,10 +46,12 @@ const ui = {
   countryPage: document.querySelector("#countryIntelligencePage"),
   benchmarkPage: document.querySelector("#countryBenchmarkPage"),
   contextPage: document.querySelector("#migrationContextPage"),
+  reliabilityPage: document.querySelector("#forecastReliabilityPage"),
   navEuropean: document.querySelector("#navEuropeanOutlook"),
   navCountry: document.querySelector("#navCountryIntelligence"),
   navBenchmark: document.querySelector("#navCountryBenchmark"),
   navContext: document.querySelector("#navMigrationContext"),
+  navReliability: document.querySelector("#navForecastReliability"),
   countrySearch: document.querySelector("#countrySearch"),
   countrySearchOptions: document.querySelector("#countrySearchOptions"),
   mapMeasure: document.querySelector("#mapMeasure"),
@@ -134,6 +136,20 @@ const ui = {
   migrationContextSubtitle: document.querySelector("#migrationContextSubtitle"),
   migrationHistoryChart: document.querySelector("#migrationHistoryChart"),
   migrationHistoryNote: document.querySelector("#migrationHistoryNote"),
+  reliabilityCountryScope: document.querySelector("#reliabilityCountryScope"),
+  reliabilityCityScope: document.querySelector("#reliabilityCityScope"),
+  reliabilityHorizon: document.querySelector("#reliabilityHorizon"),
+  reliabilityModel: document.querySelector("#reliabilityModel"),
+  reliabilityEntity: document.querySelector("#reliabilityEntity"),
+  reliabilityHorizonCards: document.querySelector("#reliabilityHorizonCards"),
+  reliabilityMetricStatus: document.querySelector("#reliabilityMetricStatus"),
+  reliabilityModelProcess: document.querySelector("#reliabilityModelProcess"),
+  reliabilityRankingTitle: document.querySelector("#reliabilityRankingTitle"),
+  reliabilityRankingSubtitle: document.querySelector("#reliabilityRankingSubtitle"),
+  reliabilityRankingEmpty: document.querySelector("#reliabilityRankingEmpty"),
+  reliabilityRankingEmptyTitle: document.querySelector("#reliabilityRankingEmptyTitle"),
+  reliabilityRankingEmptyText: document.querySelector("#reliabilityRankingEmptyText"),
+  reliabilityOpenCountry: document.querySelector("#reliabilityOpenCountry"),
 };
 
 const state = {
@@ -154,6 +170,7 @@ const state = {
   selectedCity: null,
   selectedBenchmarkCountries: [],
   benchmarkMeasure: "absolute",
+  reliabilityScope: "country",
 };
 
 const numberFormatter = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 0 });
@@ -330,6 +347,10 @@ ui.navContext.addEventListener("click", (event) => {
   event.preventDefault();
   navigateToDashboardPage("migration-context");
 });
+ui.navReliability.addEventListener("click", (event) => {
+  event.preventDefault();
+  navigateToDashboardPage("forecast-reliability");
+});
 ui.benchmarkSelectorToggle.addEventListener("click", () => {
   ui.benchmarkSelectorMenu.hidden = !ui.benchmarkSelectorMenu.hidden;
   ui.benchmarkSelectorToggle.setAttribute("aria-expanded", String(!ui.benchmarkSelectorMenu.hidden));
@@ -385,6 +406,22 @@ ui.migrationCountrySelect.addEventListener("change", () => {
   renderMigrationContext();
 });
 ui.migrationPeriod.addEventListener("change", renderMigrationHistoryChart);
+ui.reliabilityCountryScope.addEventListener("click", () => {
+  state.reliabilityScope = "country";
+  renderForecastReliability();
+});
+ui.reliabilityCityScope.addEventListener("click", () => {
+  state.reliabilityScope = "city";
+  renderForecastReliability();
+});
+ui.reliabilityHorizon.addEventListener("change", renderForecastReliability);
+ui.reliabilityModel.addEventListener("change", renderForecastReliability);
+ui.reliabilityEntity.addEventListener("change", renderForecastReliability);
+ui.reliabilityOpenCountry.addEventListener("click", () => {
+  if (state.reliabilityScope !== "country" || ui.reliabilityEntity.value === "all") return;
+  selectCountry(ui.reliabilityEntity.value);
+  navigateToDashboardPage("country-intelligence");
+});
 window.addEventListener("resize", () => {
   if (state.activePage === "country-benchmark") renderBenchmarkTrendChart();
   if (state.activePage === "migration-context") renderMigrationHistoryChart();
@@ -758,35 +795,40 @@ function populateMigrationCountryControl() {
 function navigateToDashboardPage(page) {
   const hash = page === "country-intelligence" ? "#country-intelligence"
     : page === "country-benchmark" ? "#country-benchmark"
-      : page === "migration-context" ? "#migration-context" : "#european-outlook";
+      : page === "migration-context" ? "#migration-context"
+        : page === "forecast-reliability" ? "#forecast-reliability" : "#european-outlook";
   if (window.location.hash === hash) applyDashboardRoute();
   else window.location.hash = hash;
 }
 
 function applyDashboardRoute() {
   if (!state.initialized || ui.dashboardView.hidden) return;
+  const isReliabilityPage = window.location.hash === "#forecast-reliability";
   const isContextPage = window.location.hash === "#migration-context";
   const isBenchmarkPage = window.location.hash === "#country-benchmark";
   const isCountryPage = window.location.hash === "#country-intelligence";
-  state.activePage = isContextPage ? "migration-context" : isBenchmarkPage ? "country-benchmark" : isCountryPage ? "country-intelligence" : "european-outlook";
+  state.activePage = isReliabilityPage ? "forecast-reliability" : isContextPage ? "migration-context" : isBenchmarkPage ? "country-benchmark" : isCountryPage ? "country-intelligence" : "european-outlook";
   if ((isCountryPage || isContextPage) && state.selectedCountry === "all") {
     const countries = listCountries();
     const preferred = countries.find((item) => normalizeName(item.name) === "spain") ?? countries[0];
     if (preferred) state.selectedCountry = preferred.id;
   }
-  ui.europeanPage.hidden = isCountryPage || isBenchmarkPage || isContextPage;
+  ui.europeanPage.hidden = isCountryPage || isBenchmarkPage || isContextPage || isReliabilityPage;
   ui.countryPage.hidden = !isCountryPage;
   ui.benchmarkPage.hidden = !isBenchmarkPage;
   ui.contextPage.hidden = !isContextPage;
-  ui.navEuropean.classList.toggle("is-active", !isCountryPage && !isBenchmarkPage && !isContextPage);
+  ui.reliabilityPage.hidden = !isReliabilityPage;
+  ui.navEuropean.classList.toggle("is-active", !isCountryPage && !isBenchmarkPage && !isContextPage && !isReliabilityPage);
   ui.navCountry.classList.toggle("is-active", isCountryPage);
   ui.navBenchmark.classList.toggle("is-active", isBenchmarkPage);
   ui.navContext.classList.toggle("is-active", isContextPage);
+  ui.navReliability.classList.toggle("is-active", isReliabilityPage);
   if (isCountryPage) {
     ui.navCountry.setAttribute("aria-current", "page");
     ui.navEuropean.removeAttribute("aria-current");
     ui.navBenchmark.removeAttribute("aria-current");
     ui.navContext.removeAttribute("aria-current");
+    ui.navReliability.removeAttribute("aria-current");
     ui.dashboardTitle.textContent = "Country Intelligence";
     ui.dashboardEyebrow.textContent = "COUNTRY · MIGRATION INTELLIGENCE";
     ui.dashboardSubtitle.textContent = "Explore a country's historical trajectory and future outlook";
@@ -800,6 +842,7 @@ function applyDashboardRoute() {
     ui.navEuropean.removeAttribute("aria-current");
     ui.navCountry.removeAttribute("aria-current");
     ui.navContext.removeAttribute("aria-current");
+    ui.navReliability.removeAttribute("aria-current");
     ui.dashboardTitle.textContent = "Country Benchmark";
     ui.dashboardEyebrow.textContent = "COUNTRY COMPARISON · MIGRATION INTELLIGENCE";
     ui.dashboardSubtitle.textContent = "Compare historical and forecast immigration patterns across countries";
@@ -810,17 +853,30 @@ function applyDashboardRoute() {
     ui.navEuropean.removeAttribute("aria-current");
     ui.navCountry.removeAttribute("aria-current");
     ui.navBenchmark.removeAttribute("aria-current");
+    ui.navReliability.removeAttribute("aria-current");
     ui.dashboardTitle.textContent = "Migration Context";
     ui.dashboardEyebrow.textContent = "HISTORICAL CONTEXT · MIGRATION INTELLIGENCE";
     ui.dashboardSubtitle.textContent = "Explore how observed migration moves alongside wider conditions";
     document.title = "Migration Context · migrAI";
     populateMigrationCountryControl();
     renderMigrationContext();
+  } else if (isReliabilityPage) {
+    ui.navReliability.setAttribute("aria-current", "page");
+    ui.navEuropean.removeAttribute("aria-current");
+    ui.navCountry.removeAttribute("aria-current");
+    ui.navBenchmark.removeAttribute("aria-current");
+    ui.navContext.removeAttribute("aria-current");
+    ui.dashboardTitle.textContent = "Forecast Reliability";
+    ui.dashboardEyebrow.textContent = "MODEL VALIDATION · MIGRATION INTELLIGENCE";
+    ui.dashboardSubtitle.textContent = "See what the published validation evidence can—and cannot—support";
+    document.title = "Forecast Reliability · migrAI";
+    renderForecastReliability();
   } else {
     ui.navEuropean.setAttribute("aria-current", "page");
     ui.navCountry.removeAttribute("aria-current");
     ui.navBenchmark.removeAttribute("aria-current");
     ui.navContext.removeAttribute("aria-current");
+    ui.navReliability.removeAttribute("aria-current");
     ui.dashboardTitle.textContent = "European Migration Outlook";
     ui.dashboardEyebrow.textContent = "EUROPE · MIGRATION INTELLIGENCE";
     ui.dashboardSubtitle.textContent = "Explore historical immigration and future forecasts";
@@ -1605,6 +1661,158 @@ function renderMigrationHistoryChart() {
     svg.append(point);
   });
   ui.migrationHistoryChart.replaceChildren(svg);
+}
+
+function reliabilityForecastRows(scope = state.reliabilityScope) {
+  const rows = scope === "city" ? state.cityForecasts : state.forecasts;
+  return rows.filter((row) => forecastIsAvailable(row)
+    && safeNumber(row.horizon) !== null
+    && safeNumber(row.target_year) !== null
+    && safeNumber(row.prediction) !== null);
+}
+
+function populateReliabilityFilters() {
+  const rows = reliabilityForecastRows();
+  const previousModel = ui.reliabilityModel.value;
+  const models = unique(rows.map((row) => forecastModelLabel(row)).filter(Boolean)).sort((a, b) => a.localeCompare(b));
+  replaceOptions(ui.reliabilityModel, [
+    { value: "all", label: models.length ? "All published model labels" : "No model labels published" },
+    ...models.map((model) => ({ value: model, label: model })),
+  ]);
+  ui.reliabilityModel.disabled = models.length === 0;
+  ui.reliabilityModel.value = models.includes(previousModel) ? previousModel : "all";
+
+  const previousEntity = ui.reliabilityEntity.value;
+  const entities = new Map();
+  rows.forEach((row) => {
+    if (row.entity_id === null || row.entity_id === undefined) return;
+    const id = String(row.entity_id);
+    entities.set(id, { id, name: row.entity_name || id });
+  });
+  const sortedEntities = [...entities.values()].sort((a, b) => a.name.localeCompare(b.name));
+  replaceOptions(ui.reliabilityEntity, [
+    { value: "all", label: state.reliabilityScope === "city" ? "All cities with published forecasts" : "All countries with published forecasts" },
+    ...sortedEntities.map(({ id, name }) => ({ value: id, label: name })),
+  ]);
+  ui.reliabilityEntity.disabled = sortedEntities.length === 0;
+  ui.reliabilityEntity.value = entities.has(previousEntity) ? previousEntity : "all";
+}
+
+function reliabilityFilteredForecastRows(horizon = null) {
+  const selectedHorizon = horizon === null ? null : Number(horizon);
+  const selectedModel = ui.reliabilityModel.value;
+  const selectedEntity = ui.reliabilityEntity.value;
+  return reliabilityForecastRows().filter((row) => (selectedHorizon === null || safeNumber(row.horizon) === selectedHorizon)
+    && (selectedModel === "all" || forecastModelLabel(row) === selectedModel)
+    && (selectedEntity === "all" || String(row.entity_id) === selectedEntity));
+}
+
+function renderReliabilityHorizonCards() {
+  ui.reliabilityHorizonCards.replaceChildren();
+  const unit = state.reliabilityScope === "city" ? "% of resident population" : "persons per year";
+  [1, 3, 5].forEach((horizon) => {
+    const rows = reliabilityFilteredForecastRows(horizon);
+    const models = unique(rows.map((row) => forecastModelLabel(row)).filter(Boolean));
+    const ranges80 = rows.filter((row) => intervalBounds(row, 80)).length;
+    const ranges95 = rows.filter((row) => intervalBounds(row, 95)).length;
+    const card = document.createElement("article");
+    card.className = "outlook-panel reliability-horizon-card";
+    const head = document.createElement("div");
+    head.className = "reliability-horizon-card__head";
+    const title = document.createElement("h3");
+    title.textContent = `${horizon}-year outlook`;
+    const badge = document.createElement("span");
+    badge.className = "reliability-output-badge";
+    badge.textContent = "Production output";
+    head.append(title, badge);
+    const modelLabel = document.createElement("span");
+    modelLabel.className = "reliability-horizon-card__label";
+    modelLabel.textContent = "Model label";
+    const model = document.createElement("strong");
+    model.className = "reliability-horizon-card__model";
+    model.textContent = models.length === 1 ? models[0] : models.length > 1 ? `${models.length} model labels in selected records` : "Not published in output records";
+    const countRow = document.createElement("div");
+    countRow.className = "reliability-horizon-card__count";
+    const count = document.createElement("strong");
+    count.textContent = String(rows.length);
+    const countLabel = document.createElement("span");
+    countLabel.textContent = `available forecast outputs · ${unit}`;
+    countRow.append(count, countLabel);
+    const evidence = document.createElement("p");
+    evidence.className = "reliability-horizon-card__evidence";
+    evidence.textContent = `Backtest metrics: not published · Folds: not published`;
+    const ranges = document.createElement("small");
+    ranges.className = "reliability-horizon-card__ranges";
+    ranges.textContent = rows.length
+      ? `Published bounds on output rows · 80%: ${ranges80}/${rows.length} · 95%: ${ranges95}/${rows.length}`
+      : "No output rows match the current filters.";
+    card.append(head, modelLabel, model, countRow, evidence, ranges);
+    ui.reliabilityHorizonCards.append(card);
+  });
+}
+
+function renderReliabilityMetricStatus() {
+  ui.reliabilityMetricStatus.replaceChildren();
+  ["MAE", "WAPE", "RMSE", "MASE"].forEach((metric) => {
+    const item = document.createElement("article");
+    const label = document.createElement("span");
+    label.textContent = metric;
+    const value = document.createElement("strong");
+    value.textContent = "Not available";
+    const note = document.createElement("small");
+    note.textContent = "No verified backtest metric in published views";
+    item.append(label, value, note);
+    ui.reliabilityMetricStatus.append(item);
+  });
+}
+
+function renderReliabilityModelProcess() {
+  ui.reliabilityModelProcess.replaceChildren();
+  const horizon = Number(ui.reliabilityHorizon.value);
+  const rows = reliabilityFilteredForecastRows(horizon);
+  if (!rows.length) {
+    benchmarkEmpty(ui.reliabilityModelProcess, "No production forecast records match this scope, horizon and filter selection.");
+    return;
+  }
+  const groups = new Map();
+  rows.forEach((row) => {
+    const label = forecastModelLabel(row) || "Model label not published";
+    groups.set(label, (groups.get(label) ?? 0) + 1);
+  });
+  [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0])).forEach(([label, count]) => {
+    const row = document.createElement("div");
+    row.className = "reliability-model-row";
+    const name = document.createElement("strong");
+    name.textContent = label;
+    const detail = document.createElement("span");
+    detail.textContent = `${count} production forecast output${count === 1 ? "" : "s"} at ${horizon}-year horizon`;
+    row.append(name, detail);
+    ui.reliabilityModelProcess.append(row);
+  });
+}
+
+function renderReliabilityRankingState() {
+  const cityScope = state.reliabilityScope === "city";
+  ui.reliabilityRankingTitle.textContent = cityScope ? "City error ranking" : "Country error ranking";
+  ui.reliabilityRankingSubtitle.textContent = cityScope
+    ? "Selected model and horizon · error in percentage points with sample size"
+    : "Selected model and horizon · error in persons/year with sample size";
+  ui.reliabilityRankingEmptyTitle.textContent = cityScope ? "City error ranking unavailable" : "Country error ranking unavailable";
+  ui.reliabilityRankingEmptyText.textContent = cityScope
+    ? "A city ranking needs verified city-level backtest errors and evaluation counts. City percentage-point errors are not combined with country person-count errors."
+    : "Ranking countries requires verified country-level backtest errors and the number of evaluation observations behind each score.";
+  ui.reliabilityOpenCountry.disabled = cityScope || ui.reliabilityEntity.value === "all";
+}
+
+function renderForecastReliability() {
+  if (!state.initialized) return;
+  ui.reliabilityCountryScope.setAttribute("aria-pressed", String(state.reliabilityScope === "country"));
+  ui.reliabilityCityScope.setAttribute("aria-pressed", String(state.reliabilityScope === "city"));
+  populateReliabilityFilters();
+  renderReliabilityHorizonCards();
+  renderReliabilityMetricStatus();
+  renderReliabilityModelProcess();
+  renderReliabilityRankingState();
 }
 
 function currentCountry() {

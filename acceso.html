@@ -7,7 +7,7 @@
     <meta name="description" content="Acceso privado al dashboard de migrAI." />
     <title>Acceso privado · migrAI</title>
     <link rel="icon" href="migrai-mark.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=migration-context-1" />
+    <link rel="stylesheet" href="styles.css?v=forecast-reliability-1" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   </head>
   <body>
@@ -66,7 +66,7 @@
             <a id="navCountryIntelligence" class="dashboard-nav__item" href="#country-intelligence"><span class="nav-icon" aria-hidden="true">◎</span><span>Country Intelligence</span></a>
             <a id="navCountryBenchmark" class="dashboard-nav__item" href="#country-benchmark"><span class="nav-icon" aria-hidden="true">▤</span><span>Country Benchmark</span></a>
             <a id="navMigrationContext" class="dashboard-nav__item" href="#migration-context"><span class="nav-icon" aria-hidden="true">▣</span><span>Migration Context</span></a>
-            <span class="dashboard-nav__item is-upcoming" aria-disabled="true"><span class="nav-icon" aria-hidden="true">⬡</span><span>Forecast Reliability</span><small>Next</small></span>
+            <a id="navForecastReliability" class="dashboard-nav__item" href="#forecast-reliability"><span class="nav-icon" aria-hidden="true">⬡</span><span>Forecast Reliability</span></a>
             <span class="dashboard-nav__item is-upcoming" aria-disabled="true"><span class="nav-icon" aria-hidden="true">⌖</span><span>City Intelligence</span><small>Next</small></span>
             <span class="dashboard-nav__item is-upcoming" aria-disabled="true"><span class="nav-icon" aria-hidden="true">▤</span><span>Data &amp; Methodology</span><small>Next</small></span>
           </nav>
@@ -314,6 +314,66 @@
             </div>
           </section>
 
+          <section id="forecastReliabilityPage" class="dashboard-page reliability-page" aria-labelledby="reliabilityPageHeading" hidden>
+            <section class="outlook-panel reliability-selector-panel" aria-labelledby="reliabilityPageHeading">
+              <div class="panel-heading panel-heading--wrap">
+                <div><h2 id="reliabilityPageHeading">Validation scope</h2><p>Select a production scope and inspect the forecast metadata currently available</p></div>
+                <div id="reliabilityScopeSwitch" class="reliability-scope-switch" role="group" aria-label="Select forecast scope">
+                  <button id="reliabilityCountryScope" type="button" aria-pressed="true">Country · persons/year</button>
+                  <button id="reliabilityCityScope" type="button" aria-pressed="false">City · % of residents</button>
+                </div>
+              </div>
+              <div class="reliability-filter-row">
+                <label><span>Horizon</span><select id="reliabilityHorizon" class="compact-select"><option value="1">1-year</option><option value="3">3-year</option><option value="5">5-year</option></select></label>
+                <label><span>Model label</span><select id="reliabilityModel" class="compact-select"></select></label>
+                <label><span>Country / city</span><select id="reliabilityEntity" class="compact-select"></select></label>
+                <p class="reliability-scope-note"><span aria-hidden="true">ⓘ</span>Country errors are measured in persons/year. City errors, when published, use percentage points; the two scopes stay separate.</p>
+              </div>
+            </section>
+
+            <section class="reliability-horizon-section" aria-label="Published model metadata by forecast horizon">
+              <div class="reliability-horizon-cards" id="reliabilityHorizonCards"></div>
+              <p class="analysis-note">These cards describe current production forecast outputs only. They are not backtesting results, and output counts are not evaluation sample sizes.</p>
+            </section>
+
+            <div class="reliability-chart-grid">
+              <section class="outlook-panel reliability-chart-panel" aria-labelledby="reliabilityScatterTitle">
+                <div class="panel-heading"><div><h2 id="reliabilityScatterTitle">Actual vs. predicted</h2><p>Out-of-sample observations · selected horizon and scope</p></div></div>
+                <div id="reliabilityScatterEmpty" class="context-empty-state"><span class="context-empty-icon" aria-hidden="true">◎</span><strong>Backtesting pairs are not published</strong><p>This chart requires a row-level observed value and its matching historical prediction. The current views contain observed history and future forecasts, not those evaluation pairs.</p></div>
+              </section>
+              <section class="outlook-panel reliability-chart-panel" aria-labelledby="reliabilityBacktestTitle">
+                <div class="panel-heading"><div><h2 id="reliabilityBacktestTitle">Backtesting performance</h2><p>Origin year, target year, prediction, actual and error</p></div></div>
+                <div id="reliabilityBacktestEmpty" class="context-empty-state"><span class="context-empty-icon" aria-hidden="true">⌁</span><strong>No fold-level records in the published views</strong><p>No illustrative folds or synthetic prediction paths are drawn. A dated backtest result set is needed for this timeline.</p></div>
+              </section>
+              <section class="outlook-panel reliability-chart-panel" aria-labelledby="reliabilityHorizonTitle">
+                <div class="panel-heading"><div><h2 id="reliabilityHorizonTitle">Horizon performance</h2><p>Only comparable, verified evaluation metrics belong here</p></div></div>
+                <div class="reliability-metric-status" id="reliabilityMetricStatus"></div>
+                <p class="analysis-note">Evaluation windows may differ by horizon, so metric comparisons require a comparable sample and an explicit period.</p>
+              </section>
+              <section class="outlook-panel reliability-chart-panel" aria-labelledby="reliabilityRankingTitle">
+                <div class="panel-heading"><div><h2 id="reliabilityRankingTitle">Country error ranking</h2><p id="reliabilityRankingSubtitle">Selected model and horizon · error with evaluation sample size</p></div></div>
+                <div id="reliabilityRankingEmpty" class="context-empty-state"><span class="context-empty-icon" aria-hidden="true">↕</span><strong id="reliabilityRankingEmptyTitle">Country error ranking unavailable</strong><p id="reliabilityRankingEmptyText">Ranking countries requires verified country-level backtest errors and the number of evaluation observations behind each score.</p></div>
+                <button id="reliabilityOpenCountry" class="small-control reliability-open-country" type="button" disabled>Open selected country in Country Intelligence</button>
+              </section>
+            </div>
+
+            <div class="reliability-lower-grid">
+              <section class="outlook-panel reliability-model-panel" aria-labelledby="reliabilityModelTitle">
+                <div class="panel-heading"><div><h2 id="reliabilityModelTitle">Model selection process</h2><p>Selection labels observed in current production forecasts</p></div></div>
+                <div id="reliabilityModelProcess" class="reliability-model-process"></div>
+                <p class="analysis-note">The candidate-comparison table is not available in the app's current published views. No unverified model families are added.</p>
+              </section>
+              <section class="outlook-panel reliability-interpretation-panel" aria-labelledby="reliabilityInterpretationTitle">
+                <div class="panel-heading"><div><h2 id="reliabilityInterpretationTitle">What this means for decision-makers</h2><p>Read forecast evidence in context</p></div></div>
+                <ol class="context-caveats-list">
+                  <li><span>1</span><div><strong>Out-of-sample validation</strong><p>Reliability should be judged on predictions made for data not used to fit the model.</p></div></li>
+                  <li><span>2</span><div><strong>Error depends on the horizon and sample</strong><p>Compare models only on comparable countries, target years and evaluation windows.</p></div></li>
+                  <li><span>3</span><div><strong>Uncertainty is not a guarantee</strong><p>Forecast intervals communicate a range under the model assumptions; they do not ensure future values fall inside it.</p></div></li>
+                </ol>
+              </section>
+            </div>
+          </section>
+
           <p id="dashboardMessage" class="form-message" role="status" aria-live="polite"></p>
         </div>
 
@@ -330,6 +390,6 @@
     <footer class="site-footer site-footer--compact"><div class="container footer-bottom"><span>© migrAI · Migration intelligence</span><span>Acceso privado · Supabase Auth</span></div></footer>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-    <script src="app.js?v=migration-context-1" defer></script>
+    <script src="app.js?v=forecast-reliability-1" defer></script>
   </body>
 </html>
