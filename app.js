@@ -201,6 +201,14 @@ const ui = {
   cityProfileSubtitle: document.querySelector("#cityProfileSubtitle"),
   cityProfileContent: document.querySelector("#cityProfileContent"),
   cityInsights: document.querySelector("#cityInsights"),
+  cityReliabilityMae: document.querySelector("#cityReliabilityMae"),
+  cityReliabilityMaeNote: document.querySelector("#cityReliabilityMaeNote"),
+  cityReliabilityWape: document.querySelector("#cityReliabilityWape"),
+  cityReliabilityWapeNote: document.querySelector("#cityReliabilityWapeNote"),
+  cityReliabilityR2: document.querySelector("#cityReliabilityR2"),
+  cityReliabilityR2Note: document.querySelector("#cityReliabilityR2Note"),
+  cityReliabilitySample: document.querySelector("#cityReliabilitySample"),
+  cityReliabilitySampleNote: document.querySelector("#cityReliabilitySampleNote"),
   cityReliabilityInterval: document.querySelector("#cityReliabilityInterval"),
   cityReliabilityIntervalNote: document.querySelector("#cityReliabilityIntervalNote"),
   methodologyObservedCount: document.querySelector("#methodologyObservedCount"),
@@ -3386,6 +3394,37 @@ function clearCityIntelligenceDetails() {
   [ui.cityTrendNote, ui.cityRankingSubtitle, ui.cityRankingNote, ui.cityYoyNote, ui.cityForecastCompareNote, ui.cityProfileSubtitle].forEach((element) => { element.textContent = ""; });
   ui.cityReliabilityInterval.textContent = "Not published";
   ui.cityReliabilityIntervalNote.textContent = "No verified City forecast interval is available for this selection";
+  renderCityReliability(null);
+}
+
+function renderCityReliability(city) {
+  const metricsAvailable = state.backtestViewsAvailable;
+  const rows = city && metricsAvailable
+    ? state.backtestEntityMetrics
+      .filter((row) => row.level === "city"
+        && String(row.country_iso2 ?? "") === String(city.countryId)
+        && String(row.entity_id ?? "") === String(city.id))
+      .sort((a, b) => safeNumber(a.horizon) - safeNumber(b.horizon))
+    : [];
+  const emptyValue = metricsAvailable ? "Not published" : "Unavailable";
+  const emptyNote = metricsAvailable
+    ? "No verified selection-backtest metric for this city"
+    : "Protected backtest views are not accessible";
+
+  ui.cityReliabilityMae.textContent = rows.length
+    ? `${rows.map((row) => `${safeNumber(row.horizon)}y ${formatMetricValue(row.mae)}`).join(" · ")} pp`
+    : emptyValue;
+  ui.cityReliabilityMaeNote.textContent = rows.length ? "Selection-backtest mean absolute error by horizon" : emptyNote;
+  ui.cityReliabilityWape.textContent = rows.length
+    ? rows.map((row) => `${safeNumber(row.horizon)}y ${formatMetricValue(row.wape_pct, 1)}%`).join(" · ")
+    : emptyValue;
+  ui.cityReliabilityWapeNote.textContent = rows.length ? "Weighted absolute percentage error by horizon" : emptyNote;
+  ui.cityReliabilityR2.textContent = "Not published";
+  ui.cityReliabilityR2Note.textContent = "R² is not part of the published metric contract";
+  ui.cityReliabilitySample.textContent = rows.length
+    ? rows.map((row) => `${safeNumber(row.horizon)}y ${formatNumber(row.n_observations)}/${formatNumber(row.n_folds)}`).join(" · ")
+    : emptyValue;
+  ui.cityReliabilitySampleNote.textContent = rows.length ? "Evaluation pairs / folds by horizon" : emptyNote;
 }
 
 function renderSelectedCity(city) {
@@ -3394,6 +3433,7 @@ function renderSelectedCity(city) {
   const latest = observations.at(-1) ?? null;
   const forecasts = cityForecastSeries(city);
   const availableForecasts = forecasts.filter(Boolean);
+  renderCityReliability(city);
   ui.cityKpiName.textContent = city.name;
   ui.cityKpiCountry.textContent = country?.name ?? "Verified country";
   ui.cityKpiYear.textContent = latest ? String(latest.year) : "Not available";
