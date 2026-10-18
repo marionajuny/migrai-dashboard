@@ -44,8 +44,10 @@ const ui = {
   dashboardBrand: document.querySelector("#dashboardBrand"),
   europeanPage: document.querySelector("#europeanOutlookPage"),
   countryPage: document.querySelector("#countryIntelligencePage"),
+  benchmarkPage: document.querySelector("#countryBenchmarkPage"),
   navEuropean: document.querySelector("#navEuropeanOutlook"),
   navCountry: document.querySelector("#navCountryIntelligence"),
+  navBenchmark: document.querySelector("#navCountryBenchmark"),
   countrySearch: document.querySelector("#countrySearch"),
   countrySearchOptions: document.querySelector("#countrySearchOptions"),
   mapMeasure: document.querySelector("#mapMeasure"),
@@ -101,6 +103,30 @@ const ui = {
   cityExplorerCoverage: document.querySelector("#cityExplorerCoverage"),
   cityExplorerContent: document.querySelector("#cityExplorerContent"),
   countryInsightsList: document.querySelector("#countryInsightsList"),
+  benchmarkSelectionCount: document.querySelector("#benchmarkSelectionCount"),
+  benchmarkReset: document.querySelector("#benchmarkReset"),
+  benchmarkSelectorToggle: document.querySelector("#benchmarkSelectorToggle"),
+  benchmarkSelectorMenu: document.querySelector("#benchmarkSelectorMenu"),
+  benchmarkSelectedCountries: document.querySelector("#benchmarkSelectedCountries"),
+  benchmarkSelectionNote: document.querySelector("#benchmarkSelectionNote"),
+  benchmarkPeriod: document.querySelector("#benchmarkPeriod"),
+  benchmarkAbsoluteButton: document.querySelector("#benchmarkAbsoluteButton"),
+  benchmarkIndexButton: document.querySelector("#benchmarkIndexButton"),
+  benchmarkChartLegend: document.querySelector("#benchmarkChartLegend"),
+  benchmarkTrendChart: document.querySelector("#benchmarkTrendChart"),
+  benchmarkTrendSubtitle: document.querySelector("#benchmarkTrendSubtitle"),
+  benchmarkTrendNote: document.querySelector("#benchmarkTrendNote"),
+  benchmarkRankingYear: document.querySelector("#benchmarkRankingYear"),
+  benchmarkRankingSubtitle: document.querySelector("#benchmarkRankingSubtitle"),
+  benchmarkRankingList: document.querySelector("#benchmarkRankingList"),
+  benchmarkRankingEmpty: document.querySelector("#benchmarkRankingEmpty"),
+  benchmarkHeatmapMeasure: document.querySelector("#benchmarkHeatmapMeasure"),
+  benchmarkHeatmap: document.querySelector("#benchmarkHeatmap"),
+  benchmarkHeatmapLegend: document.querySelector("#benchmarkHeatmapLegend"),
+  benchmarkHeatmapNote: document.querySelector("#benchmarkHeatmapNote"),
+  benchmarkHorizon: document.querySelector("#benchmarkHorizon"),
+  benchmarkDumbbell: document.querySelector("#benchmarkDumbbell"),
+  benchmarkInsights: document.querySelector("#benchmarkInsights"),
 };
 
 const state = {
@@ -119,6 +145,8 @@ const state = {
   activePage: "european-outlook",
   countryChartZoom: 1,
   selectedCity: null,
+  selectedBenchmarkCountries: [],
+  benchmarkMeasure: "absolute",
 };
 
 const numberFormatter = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 0 });
@@ -240,6 +268,7 @@ ui.logoutButton.addEventListener("click", async () => {
   state.selectedYear = null;
   state.selectedCountry = "all";
   state.selectedCity = null;
+  state.selectedBenchmarkCountries = [];
   showView("auth");
 });
 
@@ -285,6 +314,63 @@ ui.dashboardBrand.addEventListener("click", (event) => {
 ui.navCountry.addEventListener("click", (event) => {
   event.preventDefault();
   navigateToDashboardPage("country-intelligence");
+});
+ui.navBenchmark.addEventListener("click", (event) => {
+  event.preventDefault();
+  navigateToDashboardPage("country-benchmark");
+});
+ui.benchmarkSelectorToggle.addEventListener("click", () => {
+  ui.benchmarkSelectorMenu.hidden = !ui.benchmarkSelectorMenu.hidden;
+  ui.benchmarkSelectorToggle.setAttribute("aria-expanded", String(!ui.benchmarkSelectorMenu.hidden));
+});
+ui.benchmarkSelectorMenu.addEventListener("change", (event) => {
+  const checkbox = event.target.closest("input[data-country-id]");
+  if (!checkbox) return;
+  const countryId = checkbox.dataset.countryId;
+  if (checkbox.checked) {
+    if (state.selectedBenchmarkCountries.length >= 5) {
+      checkbox.checked = false;
+      setMessage(ui.benchmarkSelectionNote, "You can compare up to five countries at a time.", "error");
+      return;
+    }
+    if (!state.selectedBenchmarkCountries.includes(countryId)) state.selectedBenchmarkCountries.push(countryId);
+  } else {
+    state.selectedBenchmarkCountries = state.selectedBenchmarkCountries.filter((id) => id !== countryId);
+  }
+  renderCountryBenchmark();
+});
+ui.benchmarkSelectedCountries.addEventListener("click", (event) => {
+  const remove = event.target.closest("button[data-remove-country]");
+  if (!remove) return;
+  state.selectedBenchmarkCountries = state.selectedBenchmarkCountries.filter((id) => id !== remove.dataset.removeCountry);
+  renderCountryBenchmark();
+});
+ui.benchmarkReset.addEventListener("click", () => {
+  state.selectedBenchmarkCountries = defaultBenchmarkCountries();
+  ui.benchmarkPeriod.value = "all";
+  state.benchmarkMeasure = "absolute";
+  renderCountryBenchmark();
+});
+document.addEventListener("click", (event) => {
+  if (!event.target.closest(".benchmark-selector")) {
+    ui.benchmarkSelectorMenu.hidden = true;
+    ui.benchmarkSelectorToggle.setAttribute("aria-expanded", "false");
+  }
+});
+ui.benchmarkPeriod.addEventListener("change", renderCountryBenchmark);
+ui.benchmarkAbsoluteButton.addEventListener("click", () => {
+  state.benchmarkMeasure = "absolute";
+  renderCountryBenchmark();
+});
+ui.benchmarkIndexButton.addEventListener("click", () => {
+  state.benchmarkMeasure = "index";
+  renderCountryBenchmark();
+});
+ui.benchmarkRankingYear.addEventListener("change", renderCountryBenchmark);
+ui.benchmarkHeatmapMeasure.addEventListener("change", renderCountryBenchmark);
+ui.benchmarkHorizon.addEventListener("change", renderCountryBenchmark);
+window.addEventListener("resize", () => {
+  if (state.activePage === "country-benchmark") renderBenchmarkTrendChart();
 });
 ui.intelligenceCountrySelect.addEventListener("change", () => {
   selectCountry(ui.intelligenceCountrySelect.value);
@@ -388,6 +474,8 @@ async function loadDashboard() {
     : "Run metadata is not available.";
 
   populateCountryControls();
+  if (!state.selectedBenchmarkCountries.length) state.selectedBenchmarkCountries = defaultBenchmarkCountries();
+  populateBenchmarkCountryMenu();
   buildTimeline();
   populateIntelligenceCountryControl();
   renderOutlook();
@@ -641,27 +729,32 @@ function populateIntelligenceCountryControl() {
 }
 
 function navigateToDashboardPage(page) {
-  const hash = page === "country-intelligence" ? "#country-intelligence" : "#european-outlook";
+  const hash = page === "country-intelligence" ? "#country-intelligence"
+    : page === "country-benchmark" ? "#country-benchmark" : "#european-outlook";
   if (window.location.hash === hash) applyDashboardRoute();
   else window.location.hash = hash;
 }
 
 function applyDashboardRoute() {
   if (!state.initialized || ui.dashboardView.hidden) return;
+  const isBenchmarkPage = window.location.hash === "#country-benchmark";
   const isCountryPage = window.location.hash === "#country-intelligence";
-  state.activePage = isCountryPage ? "country-intelligence" : "european-outlook";
+  state.activePage = isBenchmarkPage ? "country-benchmark" : isCountryPage ? "country-intelligence" : "european-outlook";
   if (isCountryPage && state.selectedCountry === "all") {
     const countries = listCountries();
     const preferred = countries.find((item) => normalizeName(item.name) === "spain") ?? countries[0];
     if (preferred) state.selectedCountry = preferred.id;
   }
-  ui.europeanPage.hidden = isCountryPage;
+  ui.europeanPage.hidden = isCountryPage || isBenchmarkPage;
   ui.countryPage.hidden = !isCountryPage;
-  ui.navEuropean.classList.toggle("is-active", !isCountryPage);
+  ui.benchmarkPage.hidden = !isBenchmarkPage;
+  ui.navEuropean.classList.toggle("is-active", !isCountryPage && !isBenchmarkPage);
   ui.navCountry.classList.toggle("is-active", isCountryPage);
+  ui.navBenchmark.classList.toggle("is-active", isBenchmarkPage);
   if (isCountryPage) {
     ui.navCountry.setAttribute("aria-current", "page");
     ui.navEuropean.removeAttribute("aria-current");
+    ui.navBenchmark.removeAttribute("aria-current");
     ui.dashboardTitle.textContent = "Country Intelligence";
     ui.dashboardEyebrow.textContent = "COUNTRY · MIGRATION INTELLIGENCE";
     ui.dashboardSubtitle.textContent = "Explore a country's historical trajectory and future outlook";
@@ -670,15 +763,698 @@ function applyDashboardRoute() {
     ui.mapCountrySelect.value = state.selectedCountry;
     ui.countrySearch.value = countryById(state.selectedCountry)?.name ?? "";
     renderCountryIntelligence();
+  } else if (isBenchmarkPage) {
+    ui.navBenchmark.setAttribute("aria-current", "page");
+    ui.navEuropean.removeAttribute("aria-current");
+    ui.navCountry.removeAttribute("aria-current");
+    ui.dashboardTitle.textContent = "Country Benchmark";
+    ui.dashboardEyebrow.textContent = "COUNTRY COMPARISON · MIGRATION INTELLIGENCE";
+    ui.dashboardSubtitle.textContent = "Compare historical and forecast immigration patterns across countries";
+    document.title = "Country Benchmark · migrAI";
+    renderCountryBenchmark();
   } else {
     ui.navEuropean.setAttribute("aria-current", "page");
     ui.navCountry.removeAttribute("aria-current");
+    ui.navBenchmark.removeAttribute("aria-current");
     ui.dashboardTitle.textContent = "European Migration Outlook";
     ui.dashboardEyebrow.textContent = "EUROPE · MIGRATION INTELLIGENCE";
     ui.dashboardSubtitle.textContent = "Explore historical immigration and future forecasts";
     document.title = "European Migration Outlook · migrAI";
     renderOutlook();
   }
+}
+
+const benchmarkPalette = ["#fb984e", "#54b9e9", "#53c7a5", "#c77dff", "#f5c64d"];
+const benchmarkFlags = {
+  austria: "🇦🇹", belgium: "🇧🇪", bulgaria: "🇧🇬", croatia: "🇭🇷", cyprus: "🇨🇾", czechia: "🇨🇿",
+  czechrepublic: "🇨🇿", denmark: "🇩🇰", estonia: "🇪🇪", finland: "🇫🇮", france: "🇫🇷", germany: "🇩🇪",
+  greece: "🇬🇷", hungary: "🇭🇺", iceland: "🇮🇸", ireland: "🇮🇪", italy: "🇮🇹", latvia: "🇱🇻",
+  lithuania: "🇱🇹", luxembourg: "🇱🇺", malta: "🇲🇹", netherlands: "🇳🇱", norway: "🇳🇴", poland: "🇵🇱",
+  portugal: "🇵🇹", romania: "🇷🇴", slovakia: "🇸🇰", slovenia: "🇸🇮", spain: "🇪🇸", sweden: "🇸🇪",
+  switzerland: "🇨🇭", turkey: "🇹🇷", turkiye: "🇹🇷", unitedkingdom: "🇬🇧", uk: "🇬🇧",
+};
+
+function benchmarkFlag(country) {
+  return benchmarkFlags[normalizeName(country?.name)] ?? "";
+}
+
+function benchmarkColor(countryId) {
+  const selectedIndex = state.selectedBenchmarkCountries.findIndex((id) => String(id) === String(countryId));
+  const index = selectedIndex >= 0 ? selectedIndex : listCountries().findIndex((country) => country.id === String(countryId));
+  return benchmarkPalette[(index < 0 ? 0 : index) % benchmarkPalette.length];
+}
+
+function benchmarkCountryCoverage(countryId) {
+  const observedYears = new Set(state.observed
+    .filter((row) => String(row.entity_id) === String(countryId) && safeNumber(row.year) !== null && safeNumber(row.value) !== null)
+    .map((row) => safeNumber(row.year)));
+  const forecastCount = state.forecasts.filter((row) => String(row.entity_id) === String(countryId)
+    && forecastIsAvailable(row) && safeNumber(row.target_year) !== null && safeNumber(row.prediction) !== null).length;
+  return { observed: observedYears.size, forecasts: forecastCount };
+}
+
+function defaultBenchmarkCountries() {
+  return listCountries()
+    .map((country) => ({ ...country, coverage: benchmarkCountryCoverage(country.id) }))
+    .sort((a, b) => b.coverage.observed - a.coverage.observed
+      || b.coverage.forecasts - a.coverage.forecasts
+      || a.name.localeCompare(b.name, "en"))
+    .slice(0, 5)
+    .map((country) => country.id);
+}
+
+function selectedBenchmarkCountries() {
+  return state.selectedBenchmarkCountries
+    .slice(0, 5)
+    .map((id) => countryById(id))
+    .filter(Boolean);
+}
+
+function benchmarkObservationMap(countryId) {
+  const rows = state.observed
+    .filter((row) => String(row.entity_id) === String(countryId))
+    .map((row) => ({ row, year: safeNumber(row.year), value: safeNumber(row.value) }))
+    .filter((item) => item.year !== null && item.value !== null)
+    .sort((a, b) => a.year - b.year);
+  const byYear = new Map();
+  rows.forEach((item) => {
+    if (!byYear.has(item.year)) byYear.set(item.year, item.row);
+    else if (safeNumber(byYear.get(item.year).value) !== item.value) byYear.set(item.year, null);
+  });
+  return new Map([...byYear.entries()].filter(([, row]) => row));
+}
+
+function benchmarkObservations(countryId) {
+  return [...benchmarkObservationMap(countryId).values()]
+    .sort((a, b) => safeNumber(a.year) - safeNumber(b.year));
+}
+
+function benchmarkLatestObservation(countryId) {
+  return benchmarkObservations(countryId).at(-1) ?? null;
+}
+
+function benchmarkForecastRows(countryId) {
+  const rows = state.forecasts
+    .filter((row) => String(row.entity_id) === String(countryId))
+    .filter((row) => forecastIsAvailable(row) && safeNumber(row.horizon) !== null
+      && safeNumber(row.target_year) !== null && safeNumber(row.prediction) !== null)
+    .sort((a, b) => safeNumber(a.horizon) - safeNumber(b.horizon) || safeNumber(a.target_year) - safeNumber(b.target_year));
+  const byHorizon = new Map();
+  rows.forEach((row) => {
+    if (!byHorizon.has(safeNumber(row.horizon))) byHorizon.set(safeNumber(row.horizon), row);
+  });
+  return [...byHorizon.values()].sort((a, b) => safeNumber(a.horizon) - safeNumber(b.horizon));
+}
+
+function benchmarkComparableForecast(countryId, horizon) {
+  const latest = benchmarkLatestObservation(countryId);
+  if (!latest) return null;
+  const row = benchmarkForecastRows(countryId).find((item) => safeNumber(item.horizon) === Number(horizon));
+  if (!row) return null;
+  const recordedBaseline = safeNumber(row.last_observed_value);
+  const baseline = safeNumber(latest.value);
+  if (recordedBaseline === null || baseline === null || Math.abs(recordedBaseline - baseline) > 0.000001) return null;
+  return { row, latest, baseline, prediction: safeNumber(row.prediction), change: safeNumber(row.prediction) - baseline };
+}
+
+function benchmarkCommonYears(countryIds = state.selectedBenchmarkCountries) {
+  if (!countryIds.length) return [];
+  const yearSets = countryIds.map((id) => new Set(benchmarkObservationMap(id).keys()));
+  if (yearSets.some((years) => years.size === 0)) return [];
+  return [...yearSets[0]].filter((year) => yearSets.every((years) => years.has(year))).sort((a, b) => a - b);
+}
+
+function benchmarkSelectedYearWindow() {
+  const years = benchmarkCommonYears();
+  const length = ui.benchmarkPeriod.value === "all" ? years.length : Number(ui.benchmarkPeriod.value);
+  return years.slice(Math.max(0, years.length - length));
+}
+
+function populateBenchmarkCountryMenu() {
+  ui.benchmarkSelectorMenu.replaceChildren();
+  listCountries().forEach((country) => {
+    const coverage = benchmarkCountryCoverage(country.id);
+    const label = document.createElement("label");
+    label.className = "benchmark-country-option";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.dataset.countryId = country.id;
+    checkbox.checked = state.selectedBenchmarkCountries.includes(country.id);
+    checkbox.disabled = !checkbox.checked && state.selectedBenchmarkCountries.length >= 5;
+    checkbox.setAttribute("aria-label", `Compare ${country.name}`);
+    const flag = document.createElement("span");
+    flag.className = "benchmark-country-option__flag";
+    flag.textContent = benchmarkFlag(country);
+    flag.setAttribute("aria-hidden", "true");
+    const name = document.createElement("span");
+    name.className = "benchmark-country-option__name";
+    name.textContent = country.name;
+    const meta = document.createElement("small");
+    meta.textContent = `${coverage.observed} observed years`;
+    label.append(checkbox, flag, name, meta);
+    ui.benchmarkSelectorMenu.append(label);
+  });
+}
+
+function benchmarkYearsForSelection() {
+  const years = [];
+  state.selectedBenchmarkCountries.forEach((id) => {
+    benchmarkObservationMap(id).forEach((row, year) => years.push(year));
+    benchmarkForecastRows(id).forEach((row) => years.push(safeNumber(row.target_year)));
+  });
+  return unique(years).filter((year) => year !== null).sort((a, b) => a - b);
+}
+
+function syncBenchmarkSelect(select, entries, preferredValue) {
+  const previous = select.value;
+  replaceOptions(select, entries.length ? entries : [{ value: "", label: "Not available" }]);
+  select.disabled = entries.length === 0;
+  const next = [previous, preferredValue].find((value) => value !== undefined && entries.some((entry) => String(entry.value) === String(value)));
+  if (next !== undefined) select.value = String(next);
+}
+
+function benchmarkPointForYear(countryId, year) {
+  const observed = benchmarkObservationMap(countryId).get(Number(year));
+  if (observed) return { value: safeNumber(observed.value), type: "Observed", row: observed };
+  const forecasts = benchmarkForecastRows(countryId)
+    .filter((row) => safeNumber(row.target_year) === Number(year))
+    .sort((a, b) => safeNumber(a.horizon) - safeNumber(b.horizon));
+  const forecast = forecasts[0];
+  return forecast ? { value: safeNumber(forecast.prediction), type: "Forecast", row: forecast } : null;
+}
+
+function renderBenchmarkSelection() {
+  state.selectedBenchmarkCountries = unique(state.selectedBenchmarkCountries).filter((id) => countryById(id)).slice(0, 5);
+  populateBenchmarkCountryMenu();
+  ui.benchmarkSelectionCount.textContent = `${state.selectedBenchmarkCountries.length} of 5 selected`;
+  ui.benchmarkSelectorToggle.querySelector("span:first-child").textContent = state.selectedBenchmarkCountries.length
+    ? "Add or remove countries…" : "Select countries…";
+  ui.benchmarkSelectedCountries.replaceChildren();
+  selectedBenchmarkCountries().forEach((country) => {
+    const chip = document.createElement("span");
+    chip.className = "benchmark-country-chip";
+    chip.style.setProperty("--series-color", benchmarkColor(country.id));
+    const flag = document.createElement("span");
+    flag.className = "benchmark-country-chip__flag";
+    flag.textContent = benchmarkFlag(country);
+    flag.setAttribute("aria-hidden", "true");
+    const name = document.createElement("span");
+    name.textContent = country.name;
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.dataset.removeCountry = country.id;
+    remove.setAttribute("aria-label", `Remove ${country.name}`);
+    remove.title = `Remove ${country.name}`;
+    remove.textContent = "×";
+    chip.append(flag, name, remove);
+    ui.benchmarkSelectedCountries.append(chip);
+  });
+  ui.benchmarkSelectionNote.textContent = state.selectedBenchmarkCountries.length
+    ? "The initial set uses countries with the broadest observed coverage. You can change it at any time."
+    : "Select at least one country to display the comparison.";
+}
+
+function renderBenchmarkControls() {
+  const selectedIds = state.selectedBenchmarkCountries;
+  const availableYears = benchmarkYearsForSelection();
+  const commonYears = benchmarkCommonYears();
+  const preferredYear = commonYears.at(-1) ?? availableYears.filter((year) => selectedIds.some((id) => benchmarkObservationMap(id).has(year))).at(-1);
+  syncBenchmarkSelect(ui.benchmarkRankingYear, availableYears.map((year) => ({ value: year, label: String(year) })), preferredYear);
+  const horizons = unique(selectedIds.flatMap((id) => benchmarkForecastRows(id).map((row) => safeNumber(row.horizon))))
+    .filter((horizon) => horizon !== null).sort((a, b) => a - b);
+  const preferredHorizon = horizons.includes(3) ? 3 : horizons.includes(1) ? 1 : horizons[0];
+  syncBenchmarkSelect(ui.benchmarkHorizon, horizons.map((horizon) => ({ value: horizon, label: `${horizon}-year` })), preferredHorizon);
+  ui.benchmarkAbsoluteButton.setAttribute("aria-pressed", String(state.benchmarkMeasure === "absolute"));
+  ui.benchmarkIndexButton.setAttribute("aria-pressed", String(state.benchmarkMeasure === "index"));
+}
+
+function benchmarkEmpty(container, message) {
+  const empty = document.createElement("div");
+  empty.className = "benchmark-empty-state";
+  empty.textContent = message;
+  container.replaceChildren(empty);
+}
+
+function benchmarkCompactNumber(value) {
+  return new Intl.NumberFormat("en-GB", { notation: "compact", maximumFractionDigits: 1 }).format(value);
+}
+
+function benchmarkSeriesPath(points, x, y, splitGaps = false) {
+  const paths = [];
+  let segment = [];
+  points.slice().sort((a, b) => a.year - b.year).forEach((point) => {
+    if (splitGaps && segment.length && point.year - segment.at(-1).year > 1) {
+      if (segment.length > 1) paths.push(segment);
+      segment = [];
+    }
+    segment.push(point);
+  });
+  if (segment.length > 1) paths.push(segment);
+  return paths.map((items) => items.map((point, index) => `${index ? "L" : "M"} ${x(point.year)} ${y(point.value)}`).join(" "));
+}
+
+function renderBenchmarkTrendChart() {
+  ui.benchmarkTrendChart.replaceChildren();
+  const countries = selectedBenchmarkCountries();
+  const commonYears = benchmarkSelectedYearWindow();
+  if (!countries.length) {
+    ui.benchmarkTrendSubtitle.textContent = "Choose up to five countries to compare their annual flows";
+    benchmarkEmpty(ui.benchmarkTrendChart, "Select one or more countries above to start the comparison.");
+    ui.benchmarkChartLegend.replaceChildren();
+    ui.benchmarkTrendNote.textContent = "";
+    return;
+  }
+  if (!commonYears.length) {
+    ui.benchmarkTrendSubtitle.textContent = "No common valid observed year is available for this selection";
+    benchmarkEmpty(ui.benchmarkTrendChart, "The selected countries do not share a valid observed year in the published data.");
+    ui.benchmarkChartLegend.replaceChildren();
+    ui.benchmarkTrendNote.textContent = "Try a different country selection. Forecasts remain visible in the heatmap where a comparable baseline exists.";
+    return;
+  }
+
+  const startYear = commonYears[0];
+  const endYear = commonYears.at(-1);
+  const indexBaseYear = commonYears.find((year) => countries.every((country) => {
+    const row = benchmarkObservationMap(country.id).get(year);
+    return row && safeNumber(row.value) !== 0;
+  }));
+  const indexed = state.benchmarkMeasure === "index";
+  const baseValues = new Map(countries.map((country) => [country.id, indexBaseYear === undefined
+    ? null : safeNumber(benchmarkObservationMap(country.id).get(indexBaseYear)?.value)]));
+  const chartRows = countries.map((country) => {
+    const observed = benchmarkObservations(country.id)
+      .filter((row) => safeNumber(row.year) >= startYear && safeNumber(row.year) <= endYear)
+      .map((row) => ({ year: safeNumber(row.year), value: safeNumber(row.value), row, type: "observed" }))
+      .map((point) => ({ ...point, value: indexed ? (baseValues.get(country.id) ? point.value / baseValues.get(country.id) * 100 : null) : point.value }))
+      .filter((point) => point.value !== null);
+    const forecasts = benchmarkForecastRows(country.id)
+      .map((row) => ({ year: safeNumber(row.target_year), value: safeNumber(row.prediction), row, type: "forecast", horizon: safeNumber(row.horizon) }))
+      .map((point) => ({ ...point, value: indexed ? (baseValues.get(country.id) ? point.value / baseValues.get(country.id) * 100 : null) : point.value }))
+      .filter((point) => point.year !== null && point.value !== null);
+    const latest = benchmarkLatestObservation(country.id);
+    const forecastsComparable = latest && forecasts.some((point) => {
+      const baseline = safeNumber(point.row.last_observed_value);
+      return baseline !== null && Math.abs(baseline - safeNumber(latest.value)) <= 0.000001;
+    });
+    const anchor = forecastsComparable && safeNumber(latest.year) >= startYear && safeNumber(latest.year) <= endYear
+      ? [{ year: safeNumber(latest.year), value: indexed ? (baseValues.get(country.id) ? safeNumber(latest.value) / baseValues.get(country.id) * 100 : null) : safeNumber(latest.value), row: latest, type: "observed" }]
+      : [];
+    return { country, observed, forecasts, anchor };
+  });
+  const values = chartRows.flatMap((series) => [...series.observed, ...series.forecasts, ...series.anchor].map((point) => point.value));
+  const years = chartRows.flatMap((series) => [...series.observed, ...series.forecasts, ...series.anchor].map((point) => point.year));
+  if (!values.length || !years.length) {
+    benchmarkEmpty(ui.benchmarkTrendChart, indexed && indexBaseYear === undefined
+      ? "A historical index cannot be calculated because the selected countries have no shared non-zero base year."
+      : "No historical or forecast values are available for this selection.");
+    ui.benchmarkChartLegend.replaceChildren();
+    return;
+  }
+
+  const width = Math.max(320, Math.round(ui.benchmarkTrendChart.getBoundingClientRect().width || 1000));
+  const height = 365;
+  const margin = { top: 20, right: 24, bottom: 48, left: 68 };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  const minYear = Math.min(...years);
+  const maxYear = Math.max(...years);
+  const x = (year) => margin.left + (maxYear === minYear ? plotWidth / 2 : (year - minYear) / (maxYear - minYear) * plotWidth);
+  let minValue = Math.min(...values);
+  let maxValue = Math.max(...values);
+  const padding = maxValue === minValue ? Math.max(Math.abs(maxValue) * .1, 1) : (maxValue - minValue) * .1;
+  minValue -= padding;
+  maxValue += padding;
+  const y = (value) => margin.top + (maxValue - value) / (maxValue - minValue) * plotHeight;
+  const svg = createSvg("svg", { viewBox: `0 0 ${width} ${height}`, role: "img", "aria-label": `Historical and forecast immigration comparison, ${countries.map((country) => country.name).join(", ")}` });
+  for (let tick = 0; tick <= 4; tick += 1) {
+    const value = minValue + (maxValue - minValue) * tick / 4;
+    const yPos = y(value);
+    svg.append(createSvg("line", { x1: margin.left, x2: width - margin.right, y1: yPos, y2: yPos, class: "benchmark-gridline" }));
+    const label = createSvg("text", { x: margin.left - 9, y: yPos + 4, "text-anchor": "end", class: "benchmark-axis-label" });
+    label.textContent = indexed ? value.toFixed(0) : benchmarkCompactNumber(value);
+    svg.append(label);
+  }
+  const yearTicks = unique(years).sort((a, b) => a - b);
+  const tickCount = Math.min(8, yearTicks.length);
+  const visibleTicks = tickCount === yearTicks.length || tickCount <= 1 ? yearTicks : Array.from({ length: tickCount }, (_, index) => yearTicks[Math.round(index * (yearTicks.length - 1) / (tickCount - 1))]);
+  visibleTicks.forEach((year) => {
+    const label = createSvg("text", { x: x(year), y: height - 23, "text-anchor": "middle", class: "benchmark-axis-label" });
+    label.textContent = String(year);
+    svg.append(label);
+  });
+  svg.append(createSvg("line", { x1: margin.left, x2: width - margin.right, y1: height - margin.bottom, y2: height - margin.bottom, class: "benchmark-axis-line" }));
+  const yTitle = createSvg("text", { x: 17, y: height / 2, transform: `rotate(-90 17 ${height / 2})`, "text-anchor": "middle", class: "benchmark-axis-title" });
+  yTitle.textContent = indexed ? `Index (base ${indexBaseYear} = 100)` : "Persons per year";
+  svg.append(yTitle);
+  const xTitle = createSvg("text", { x: margin.left + plotWidth / 2, y: height - 4, "text-anchor": "middle", class: "benchmark-axis-title" });
+  xTitle.textContent = "Year";
+  svg.append(xTitle);
+
+  const forecastYears = chartRows.flatMap((series) => series.forecasts.map((point) => point.year));
+  const firstForecastYear = forecastYears.length ? Math.min(...forecastYears) : null;
+  if (firstForecastYear !== null && firstForecastYear > minYear && firstForecastYear <= maxYear) {
+    const divider = createSvg("line", { x1: x(firstForecastYear), x2: x(firstForecastYear), y1: margin.top, y2: margin.top + plotHeight, class: "benchmark-forecast-divider" });
+    svg.append(divider);
+    const label = createSvg("text", { x: x(firstForecastYear) + 5, y: margin.top + 11, class: "benchmark-divider-label" });
+    label.textContent = "Forecast";
+    svg.append(label);
+  }
+
+  chartRows.forEach((series) => {
+    const color = benchmarkColor(series.country.id);
+    benchmarkSeriesPath(series.observed, x, y, true).forEach((pathData) => {
+      svg.append(createSvg("path", { d: pathData, class: "benchmark-series-line", stroke: color }));
+    });
+    const comparableForecastPoints = series.forecasts.filter((point) => {
+      const latest = benchmarkLatestObservation(series.country.id);
+      const baseline = safeNumber(point.row.last_observed_value);
+      return latest && baseline !== null && Math.abs(baseline - safeNumber(latest.value)) <= 0.000001;
+    });
+    const forecastPathPoints = [...series.anchor, ...comparableForecastPoints].sort((a, b) => a.year - b.year);
+    if (forecastPathPoints.length > 1) {
+      const d = forecastPathPoints.map((point, index) => `${index ? "L" : "M"} ${x(point.year)} ${y(point.value)}`).join(" ");
+      svg.append(createSvg("path", { d, class: "benchmark-series-line is-forecast", stroke: color }));
+    }
+    series.observed.forEach((point) => {
+      const circle = createSvg("circle", { cx: x(point.year), cy: y(point.value), r: 3.4, class: "benchmark-series-point", fill: color });
+      const title = createSvg("title");
+      title.textContent = `${series.country.name} · ${point.year} · Observed · ${formatNumber(point.row.value)} persons/year${indexed ? ` · chart index ${point.value.toFixed(1)}` : ""}`;
+      circle.append(title);
+      svg.append(circle);
+    });
+    series.forecasts.forEach((point) => {
+      const circle = createSvg("circle", { cx: x(point.year), cy: y(point.value), r: 4.6, class: "benchmark-series-point is-forecast", stroke: color });
+      const title = createSvg("title");
+      title.textContent = `${series.country.name} · ${point.year} · ${safeNumber(point.row.horizon)}-year forecast · ${formatNumber(point.row.prediction)} persons/year${indexed ? ` · chart index ${point.value.toFixed(1)}` : ""}`;
+      circle.append(title);
+      svg.append(circle);
+    });
+  });
+  ui.benchmarkTrendChart.replaceChildren(svg);
+
+  ui.benchmarkChartLegend.replaceChildren();
+  countries.forEach((country) => {
+    const item = document.createElement("span");
+    item.className = "benchmark-chart-legend__item";
+    const swatch = document.createElement("i");
+    swatch.style.setProperty("--series-color", benchmarkColor(country.id));
+    const flag = document.createElement("span");
+    flag.textContent = benchmarkFlag(country);
+    flag.setAttribute("aria-hidden", "true");
+    const name = document.createElement("span");
+    name.textContent = country.name;
+    item.append(swatch, flag, name);
+    ui.benchmarkChartLegend.append(item);
+  });
+  ui.benchmarkTrendSubtitle.textContent = indexed
+    ? `Historical index normalized to 100 in ${indexBaseYear ?? "a shared base year"}; forecasts use the same country-specific base`
+    : `Annual immigration flows · ${startYear}–${endYear} common observed window`;
+  ui.benchmarkTrendNote.textContent = "The historical index changes only the chart scale; original values are unchanged. Forecasts are displayed as published; heatmap and dumbbell changes require a matching observed baseline.";
+}
+
+function renderBenchmarkRanking() {
+  ui.benchmarkRankingList.replaceChildren();
+  const year = safeNumber(ui.benchmarkRankingYear.value);
+  if (year === null) {
+    ui.benchmarkRankingSubtitle.textContent = "No observed or forecast years are available";
+    ui.benchmarkRankingEmpty.hidden = false;
+    return;
+  }
+  const ranked = selectedBenchmarkCountries()
+    .map((country) => ({ country, point: benchmarkPointForYear(country.id, year) }))
+    .filter((item) => item.point && item.point.value !== null)
+    .sort((a, b) => b.point.value - a.point.value);
+  ui.benchmarkRankingSubtitle.textContent = `${year} · annual immigration flow (persons/year)`;
+  ui.benchmarkRankingEmpty.hidden = ranked.length > 0;
+  if (!ranked.length) return;
+  const max = Math.max(...ranked.map((item) => Math.abs(item.point.value)), 1);
+  ranked.forEach((item, index) => {
+    const row = document.createElement("li");
+    row.className = "benchmark-ranking-row";
+    const rank = document.createElement("span");
+    rank.className = "benchmark-ranking-row__rank";
+    rank.textContent = String(index + 1);
+    const flag = document.createElement("span");
+    flag.className = "benchmark-ranking-row__flag";
+    flag.textContent = benchmarkFlag(item.country);
+    flag.setAttribute("aria-hidden", "true");
+    const name = document.createElement("span");
+    name.className = "benchmark-ranking-row__name";
+    name.textContent = item.country.name;
+    name.style.setProperty("--series-color", benchmarkColor(item.country.id));
+    const track = document.createElement("span");
+    track.className = "benchmark-ranking-row__track";
+    const bar = document.createElement("i");
+    bar.style.width = `${Math.max(Math.abs(item.point.value) / max * 100, item.point.value === 0 ? 0 : 2)}%`;
+    bar.style.setProperty("--series-color", benchmarkColor(item.country.id));
+    track.append(bar);
+    const value = document.createElement("strong");
+    value.textContent = formatNumber(item.point.value);
+    const kind = document.createElement("small");
+    kind.textContent = item.point.type === "Forecast" ? `${safeNumber(item.point.row.horizon)}-year forecast` : "Observed";
+    row.append(rank, flag, name, track, value, kind);
+    ui.benchmarkRankingList.append(row);
+  });
+}
+
+function renderBenchmarkHeatmap() {
+  ui.benchmarkHeatmap.replaceChildren();
+  ui.benchmarkHeatmapLegend.replaceChildren();
+  const countries = selectedBenchmarkCountries();
+  const horizons = unique(countries.flatMap((country) => benchmarkForecastRows(country.id).map((row) => safeNumber(row.horizon))))
+    .filter((horizon) => horizon !== null).sort((a, b) => a - b);
+  if (!countries.length || !horizons.length) {
+    benchmarkEmpty(ui.benchmarkHeatmap, "Forecast horizons are not available for the selected countries.");
+    ui.benchmarkHeatmapNote.textContent = "";
+    return;
+  }
+  const measure = ui.benchmarkHeatmapMeasure.value;
+  const cells = countries.map((country) => ({ country, items: horizons.map((horizon) => {
+    const comparable = benchmarkComparableForecast(country.id, horizon);
+    if (!comparable) return { horizon, comparable: null, value: null };
+    const percent = comparable.baseline === 0 ? null : comparable.change / Math.abs(comparable.baseline) * 100;
+    return { horizon, comparable, value: measure === "percent" ? percent : comparable.change };
+  }) }));
+  const values = cells.flatMap((row) => row.items.map((item) => item.value)).filter((value) => value !== null);
+  const observedMaxAbs = values.length ? Math.max(...values.map(Math.abs)) : 0;
+  const maxAbs = Math.max(observedMaxAbs, 1);
+  const table = document.createElement("table");
+  table.className = "benchmark-heatmap";
+  const thead = document.createElement("thead");
+  const headRow = document.createElement("tr");
+  const countryHead = document.createElement("th");
+  countryHead.scope = "col";
+  countryHead.textContent = "Country";
+  headRow.append(countryHead);
+  horizons.forEach((horizon) => {
+    const th = document.createElement("th");
+    th.scope = "col";
+    th.textContent = `${horizon}y`;
+    headRow.append(th);
+  });
+  thead.append(headRow);
+  const tbody = document.createElement("tbody");
+  cells.forEach(({ country, items }) => {
+    const row = document.createElement("tr");
+    const header = document.createElement("th");
+    header.scope = "row";
+    header.className = "benchmark-heatmap__country";
+    const flag = document.createElement("span");
+    flag.textContent = benchmarkFlag(country);
+    flag.setAttribute("aria-hidden", "true");
+    const name = document.createElement("span");
+    name.textContent = country.name;
+    header.append(flag, name);
+    row.append(header);
+    items.forEach(({ horizon, comparable, value }) => {
+      const cell = document.createElement("td");
+      const content = document.createElement("span");
+      content.className = "benchmark-heat-cell";
+      if (value === null) {
+        content.classList.add("is-unavailable");
+        content.textContent = "N/A";
+        content.title = comparable ? "Percentage change is undefined because the observed baseline is zero." : "No available forecast with a baseline matching the latest observed value.";
+      } else {
+        const intensity = Math.min(Math.abs(value) / maxAbs, 1);
+        content.classList.add(value > 0 ? "is-positive" : value < 0 ? "is-negative" : "is-neutral");
+        content.style.setProperty("--heat-intensity", String(intensity));
+        content.textContent = measure === "percent" ? formatSignedPercent(value) : formatSigned(value);
+        const current = comparable.latest;
+        content.title = `${country.name} · ${safeNumber(comparable.row.target_year)} target (${horizon}-year) · Observed ${safeNumber(current.year)}: ${formatNumber(comparable.baseline)} · Forecast: ${formatNumber(comparable.prediction)} persons/year · Change: ${formatSigned(comparable.change, { suffix: " persons" })}${comparable.baseline === 0 ? " · Percentage change undefined (zero baseline)" : ` · ${formatSignedPercent(comparable.change / Math.abs(comparable.baseline) * 100)}`}`;
+      }
+      cell.append(content);
+      row.append(cell);
+    });
+    tbody.append(row);
+  });
+  table.append(thead, tbody);
+  ui.benchmarkHeatmap.append(table);
+  if (values.length) {
+    const unit = measure === "percent" ? "%" : " persons/year";
+    const legend = document.createElement("div");
+    legend.className = "benchmark-diverging-legend";
+    const low = document.createElement("span");
+    low.textContent = measure === "percent" ? formatSignedPercent(-observedMaxAbs) : `${formatSigned(-observedMaxAbs)}${unit}`;
+    const scale = document.createElement("i");
+    const zero = document.createElement("span");
+    zero.textContent = "0";
+    const high = document.createElement("span");
+    high.textContent = measure === "percent" ? formatSignedPercent(observedMaxAbs) : `${formatSigned(observedMaxAbs)}${unit}`;
+    legend.append(low, scale, zero, high);
+    ui.benchmarkHeatmapLegend.append(legend);
+  } else {
+    ui.benchmarkHeatmapLegend.textContent = "No comparable forecast changes are available to scale.";
+  }
+  ui.benchmarkHeatmapNote.textContent = measure === "percent"
+    ? "The color scale is centered on zero. N/A includes unavailable or stale forecasts; percentage change is undefined for a zero baseline."
+    : "The color scale is centered on zero. N/A includes unavailable or stale forecasts; cells compare annual flow with the latest observed flow.";
+}
+
+function renderBenchmarkDumbbell() {
+  ui.benchmarkDumbbell.replaceChildren();
+  const horizon = safeNumber(ui.benchmarkHorizon.value);
+  if (horizon === null) {
+    benchmarkEmpty(ui.benchmarkDumbbell, "No forecast horizons are available for this selection.");
+    return [];
+  }
+  const rows = selectedBenchmarkCountries().map((country) => ({ country, comparison: benchmarkComparableForecast(country.id, horizon) }))
+    .filter((item) => item.comparison);
+  if (!rows.length) {
+    benchmarkEmpty(ui.benchmarkDumbbell, `No ${horizon}-year forecasts have a baseline that matches the latest observed value.`);
+    return [];
+  }
+  const width = Math.max(680, Math.round(ui.benchmarkDumbbell.getBoundingClientRect().width || 900));
+  const height = Math.max(155, rows.length * 42 + 48);
+  const margin = { left: 165, right: 26, top: 12, bottom: 30 };
+  const values = rows.flatMap(({ comparison }) => [comparison.baseline, comparison.prediction]);
+  let min = Math.min(...values);
+  let max = Math.max(...values);
+  const padding = max === min ? Math.max(Math.abs(max) * .08, 1) : (max - min) * .08;
+  min -= padding;
+  max += padding;
+  const plotWidth = width - margin.left - margin.right;
+  const x = (value) => margin.left + (value - min) / (max - min) * plotWidth;
+  const svg = createSvg("svg", { viewBox: `0 0 ${width} ${height}`, role: "img", "aria-label": `${horizon}-year forecast compared with latest observed immigration for ${rows.map(({ country }) => country.name).join(", ")}` });
+  for (let tick = 0; tick <= 4; tick += 1) {
+    const value = min + (max - min) * tick / 4;
+    svg.append(createSvg("line", { x1: x(value), x2: x(value), y1: margin.top, y2: height - margin.bottom, class: "benchmark-gridline" }));
+    const label = createSvg("text", { x: x(value), y: height - 9, "text-anchor": "middle", class: "benchmark-axis-label" });
+    label.textContent = benchmarkCompactNumber(value);
+    svg.append(label);
+  }
+  rows.forEach(({ country, comparison }, index) => {
+    const y = margin.top + 17 + index * 42;
+    const color = benchmarkColor(country.id);
+    const label = createSvg("text", { x: margin.left - 12, y: y + 4, "text-anchor": "end", class: "benchmark-dumbbell-label", fill: color });
+    label.textContent = `${benchmarkFlag(country)} ${country.name}`;
+    svg.append(label);
+    svg.append(createSvg("line", { x1: x(comparison.baseline), x2: x(comparison.prediction), y1: y, y2: y, class: "benchmark-dumbbell-connector", stroke: color }));
+    const observed = createSvg("circle", { cx: x(comparison.baseline), cy: y, r: 5.2, class: "benchmark-dumbbell-point", fill: color });
+    const observedTitle = createSvg("title");
+    observedTitle.textContent = `${country.name} · observed ${safeNumber(comparison.latest.year)} · ${formatNumber(comparison.baseline)} persons/year`;
+    observed.append(observedTitle);
+    const forecast = createSvg("circle", { cx: x(comparison.prediction), cy: y, r: 5.2, class: "benchmark-dumbbell-point is-forecast", stroke: color });
+    const forecastTitle = createSvg("title");
+    forecastTitle.textContent = `${country.name} · ${safeNumber(comparison.row.target_year)} ${horizon}-year forecast · ${formatNumber(comparison.prediction)} persons/year`;
+    forecast.append(forecastTitle);
+    svg.append(observed, forecast);
+  });
+  ui.benchmarkDumbbell.append(svg);
+  return rows;
+}
+
+function benchmarkHistoricalChanges() {
+  const years = benchmarkSelectedYearWindow();
+  if (years.length < 2) return [];
+  const from = years[0];
+  const to = years.at(-1);
+  return selectedBenchmarkCountries().map((country) => {
+    const base = safeNumber(benchmarkObservationMap(country.id).get(from)?.value);
+    const last = safeNumber(benchmarkObservationMap(country.id).get(to)?.value);
+    if (base === null || last === null || base === 0) return null;
+    return { country, from, to, base, last, change: last - base, percent: (last - base) / Math.abs(base) * 100 };
+  }).filter(Boolean);
+}
+
+function renderBenchmarkInsights(dumbbellRows) {
+  ui.benchmarkInsights.replaceChildren();
+  const history = benchmarkHistoricalChanges();
+  const highestHistory = history.slice().sort((a, b) => b.percent - a.percent)[0];
+  const lowestHistory = history.slice().sort((a, b) => a.percent - b.percent)[0];
+  const historicalRange = history.length > 1
+    ? Math.max(...history.map((item) => item.percent)) - Math.min(...history.map((item) => item.percent)) : null;
+  const forecastChanges = dumbbellRows.slice().filter((item) => item.comparison.baseline !== 0).map((item) => ({
+    ...item,
+    percent: item.comparison.change / Math.abs(item.comparison.baseline) * 100,
+  })).sort((a, b) => b.percent - a.percent);
+  const highestForecast = forecastChanges[0];
+  const hasProjectedIncrease = highestForecast?.percent > 0;
+  const mildestDecline = forecastChanges.find((item) => item.percent < 0);
+  const zeroBaselineIncrease = dumbbellRows.filter((item) => item.comparison.baseline === 0 && item.comparison.change > 0)
+    .sort((a, b) => b.comparison.change - a.comparison.change)[0];
+  const zeroBaselineDecline = dumbbellRows.find((item) => item.comparison.baseline === 0 && item.comparison.change < 0);
+  const forecastHorizon = safeNumber(ui.benchmarkHorizon.value);
+  let forecastInsight;
+  if (hasProjectedIncrease) {
+    forecastInsight = { title: "Largest projected increase", value: `${highestForecast.country.name} · ${formatSignedPercent(highestForecast.percent)}`, detail: `${safeNumber(highestForecast.comparison.row.horizon)}-year forecast to ${safeNumber(highestForecast.comparison.row.target_year)}; ${formatSigned(highestForecast.comparison.change, { suffix: " persons/year" })} vs. latest observation.` };
+  } else if (mildestDecline) {
+    forecastInsight = { title: "Largest projected increase", value: "No increase at selected horizon", detail: `No selected forecast is higher than baseline; the smallest decline is ${mildestDecline.country.name} (${formatSignedPercent(mildestDecline.percent)} at ${forecastHorizon}-year horizon).` };
+  } else if (zeroBaselineIncrease) {
+    forecastInsight = { title: "Largest projected increase", value: `${zeroBaselineIncrease.country.name} · ${formatSigned(zeroBaselineIncrease.comparison.change, { suffix: " persons/year" })}`, detail: `Forecast to ${safeNumber(zeroBaselineIncrease.comparison.row.target_year)}; percentage change is undefined because the latest observed baseline is zero.` };
+  } else if (zeroBaselineDecline) {
+    forecastInsight = { title: "Largest projected increase", value: "No increase at selected horizon", detail: `${zeroBaselineDecline.country.name}: forecast difference ${formatSigned(zeroBaselineDecline.comparison.change, { suffix: " persons/year" })}; percentage change is undefined because its baseline is zero.` };
+  } else if (forecastChanges.length || dumbbellRows.length) {
+    forecastInsight = { title: "Largest projected increase", value: "No increase at selected horizon", detail: "All comparable selected forecasts are unchanged from their latest observations." };
+  } else {
+    forecastInsight = { title: "Largest projected increase", value: "Not available", detail: "No selected forecast has a valid, matching observed baseline for the chosen horizon." };
+  }
+  const commonYears = benchmarkSelectedYearWindow();
+  const latestYear = commonYears.at(-1);
+  const latestValues = selectedBenchmarkCountries().map((country) => ({ country, value: safeNumber(benchmarkObservationMap(country.id).get(latestYear)?.value) }))
+    .filter((item) => item.value !== null);
+  const spread = latestValues.length > 1 ? Math.max(...latestValues.map((item) => item.value)) - Math.min(...latestValues.map((item) => item.value)) : null;
+  const lowest = latestValues.slice().sort((a, b) => a.value - b.value)[0];
+  const highest = latestValues.slice().sort((a, b) => b.value - a.value)[0];
+  const items = [
+    highestHistory
+      ? { title: "Strongest historical growth", value: `${highestHistory.country.name} · ${formatSignedPercent(highestHistory.percent)}`, detail: `${formatSigned(highestHistory.change, { suffix: " persons/year" })} from ${highestHistory.from} to ${highestHistory.to}.` }
+      : { title: "Strongest historical growth", value: "Not available", detail: "At least two shared observed years and a non-zero baseline are required." },
+    forecastInsight,
+    historicalRange !== null
+      ? { title: "Different historical evolution", value: `${countryChangeFormatter.format(historicalRange)} percentage points`, detail: `${lowestHistory.country.name} (${formatSignedPercent(lowestHistory.percent)}) to ${highestHistory.country.name} (${formatSignedPercent(highestHistory.percent)}) from ${commonYears[0]} to ${commonYears.at(-1)}.` }
+      : { title: "Different historical evolution", value: "Not available", detail: "More than one country with comparable, non-zero historical baselines is required." },
+    spread !== null
+      ? { title: `Dispersion in ${latestYear}`, value: `${formatNumber(spread)} persons/year`, detail: `Observed range from ${lowest.country.name} (${formatNumber(lowest.value)}) to ${highest.country.name} (${formatNumber(highest.value)}). Descriptive comparison, not causal.` }
+      : { title: "Dispersion of observed values", value: "Not available", detail: "At least two selected countries need an observed value in a shared year." },
+  ];
+  items.forEach((item, index) => {
+    const article = document.createElement("article");
+    article.className = "benchmark-insight-card";
+    const number = document.createElement("span");
+    number.className = "benchmark-insight-card__number";
+    number.textContent = String(index + 1);
+    const content = document.createElement("div");
+    const heading = document.createElement("h3");
+    heading.textContent = item.title;
+    const value = document.createElement("strong");
+    value.textContent = item.value;
+    const detail = document.createElement("p");
+    detail.textContent = item.detail;
+    content.append(heading, value, detail);
+    article.append(number, content);
+    ui.benchmarkInsights.append(article);
+  });
+}
+
+function renderCountryBenchmark() {
+  if (!state.initialized) return;
+  renderBenchmarkSelection();
+  renderBenchmarkControls();
+  renderBenchmarkTrendChart();
+  renderBenchmarkRanking();
+  renderBenchmarkHeatmap();
+  const dumbbellRows = renderBenchmarkDumbbell();
+  renderBenchmarkInsights(dumbbellRows);
 }
 
 function currentCountry() {

@@ -7,7 +7,7 @@
     <meta name="description" content="Acceso privado al dashboard de migrAI." />
     <title>Acceso privado · migrAI</title>
     <link rel="icon" href="migrai-mark.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=country-intelligence-1" />
+    <link rel="stylesheet" href="styles.css?v=country-benchmark-1" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   </head>
   <body>
@@ -64,7 +64,7 @@
           <nav class="dashboard-nav" aria-label="Dashboard pages">
             <a id="navEuropeanOutlook" class="dashboard-nav__item is-active" aria-current="page" href="#european-outlook"><span class="nav-icon" aria-hidden="true">▥</span><span>European Outlook</span></a>
             <a id="navCountryIntelligence" class="dashboard-nav__item" href="#country-intelligence"><span class="nav-icon" aria-hidden="true">◎</span><span>Country Intelligence</span></a>
-            <span class="dashboard-nav__item is-upcoming" aria-disabled="true"><span class="nav-icon" aria-hidden="true">▤</span><span>Country Benchmark</span><small>Next</small></span>
+            <a id="navCountryBenchmark" class="dashboard-nav__item" href="#country-benchmark"><span class="nav-icon" aria-hidden="true">▤</span><span>Country Benchmark</span></a>
             <span class="dashboard-nav__item is-upcoming" aria-disabled="true"><span class="nav-icon" aria-hidden="true">▣</span><span>Migration Context</span><small>Next</small></span>
             <span class="dashboard-nav__item is-upcoming" aria-disabled="true"><span class="nav-icon" aria-hidden="true">⬡</span><span>Forecast Reliability</span><small>Next</small></span>
             <span class="dashboard-nav__item is-upcoming" aria-disabled="true"><span class="nav-icon" aria-hidden="true">⌖</span><span>City Intelligence</span><small>Next</small></span>
@@ -196,6 +196,59 @@
             </section>
           </section>
 
+          <section id="countryBenchmarkPage" class="dashboard-page benchmark-page" aria-labelledby="benchmarkPageHeading" hidden>
+            <section class="outlook-panel benchmark-selector-panel" aria-labelledby="benchmarkPageHeading">
+              <div class="panel-heading panel-heading--wrap">
+                <div><h2 id="benchmarkPageHeading">Select countries to compare</h2><p>Choose up to five countries with published Country data</p></div>
+                <div class="benchmark-selector-actions"><span id="benchmarkSelectionCount" class="coverage-note">0 of 5 selected</span><button id="benchmarkReset" class="small-control" type="button">Reset selection</button></div>
+              </div>
+              <div class="benchmark-selector">
+                <button id="benchmarkSelectorToggle" class="benchmark-selector__toggle" type="button" aria-expanded="false" aria-controls="benchmarkSelectorMenu"><span>Select countries…</span><span aria-hidden="true">⌄</span></button>
+                <div id="benchmarkSelectorMenu" class="benchmark-selector__menu" role="group" aria-label="Available countries" hidden></div>
+              </div>
+              <div id="benchmarkSelectedCountries" class="benchmark-selected-countries" aria-label="Selected countries"></div>
+              <p id="benchmarkSelectionNote" class="analysis-note" aria-live="polite"></p>
+            </section>
+
+            <div class="benchmark-controls-row">
+              <div class="benchmark-period-control"><label for="benchmarkPeriod">Historical window</label><select id="benchmarkPeriod" class="compact-select"><option value="all">All common years</option><option value="10">Last 10 common years</option><option value="5">Last 5 common years</option></select></div>
+              <div class="benchmark-measure-control"><span>Historical chart</span><div class="benchmark-segmented" role="group" aria-label="Historical chart measure"><button id="benchmarkAbsoluteButton" type="button" aria-pressed="true">Absolute values</button><button id="benchmarkIndexButton" type="button" aria-pressed="false">Historical index</button></div></div>
+              <p class="benchmark-concept-note"><strong>Country</strong> values are annual immigration flows (persons/year). They are not the same measure as the resident-population share shown for cities.</p>
+            </div>
+
+            <section class="outlook-panel benchmark-trend-panel" aria-labelledby="benchmarkTrendTitle">
+              <div class="panel-heading panel-heading--wrap"><div><h2 id="benchmarkTrendTitle">Immigration trajectories and forecasts</h2><p id="benchmarkTrendSubtitle">Compare observed annual flows and available forecast horizons</p></div><div class="benchmark-chart-legend" id="benchmarkChartLegend" aria-label="Selected countries"></div></div>
+              <div id="benchmarkTrendChart" class="benchmark-trend-chart" role="img" aria-label="Country comparison of historical and forecast annual immigration"></div>
+              <p id="benchmarkTrendNote" class="analysis-note"></p>
+            </section>
+
+            <div class="benchmark-analysis-grid">
+              <section class="outlook-panel benchmark-ranking-panel" aria-labelledby="benchmarkRankingTitle">
+                <div class="panel-heading panel-heading--wrap"><div><h2 id="benchmarkRankingTitle">Countries by immigration</h2><p id="benchmarkRankingSubtitle">Rank selected countries for a year</p></div><label class="benchmark-inline-control"><span>Year</span><select id="benchmarkRankingYear" class="compact-select"></select></label></div>
+                <ol id="benchmarkRankingList" class="benchmark-ranking-list"></ol>
+                <p id="benchmarkRankingEmpty" class="quiet-empty" hidden>No comparable country values for this year.</p>
+              </section>
+
+              <section class="outlook-panel benchmark-heatmap-panel" aria-labelledby="benchmarkHeatmapTitle">
+                <div class="panel-heading panel-heading--wrap"><div><h2 id="benchmarkHeatmapTitle">Projected change by horizon</h2><p>Compared with each country's latest observed value</p></div><label class="benchmark-inline-control"><span>Change</span><select id="benchmarkHeatmapMeasure" class="compact-select"><option value="percent">Percent</option><option value="absolute">Persons</option></select></label></div>
+                <div id="benchmarkHeatmap" class="benchmark-heatmap-wrap"></div>
+                <div id="benchmarkHeatmapLegend" class="benchmark-heatmap-legend"></div>
+                <p id="benchmarkHeatmapNote" class="analysis-note"></p>
+              </section>
+
+              <section class="outlook-panel benchmark-dumbbell-panel" aria-labelledby="benchmarkDumbbellTitle">
+                <div class="panel-heading panel-heading--wrap"><div><h2 id="benchmarkDumbbellTitle">Last observed vs. forecast</h2><p>Only forecasts with a matching observed baseline are shown</p></div><label class="benchmark-inline-control"><span>Horizon</span><select id="benchmarkHorizon" class="compact-select"></select></label></div>
+                <div class="benchmark-dumbbell-legend"><span><i class="benchmark-dumbbell-dot"></i>Last observed</span><span><i class="benchmark-dumbbell-dot is-forecast"></i>Forecast</span></div>
+                <div id="benchmarkDumbbell" class="benchmark-dumbbell-chart" role="img" aria-label="Comparison between latest observed and forecast immigration by country"></div>
+              </section>
+
+              <section class="outlook-panel benchmark-insights-panel" aria-labelledby="benchmarkInsightsTitle">
+                <div class="panel-heading"><div><h2 id="benchmarkInsightsTitle">Key insights</h2><p>Calculated from the selected countries and available records</p></div></div>
+                <div id="benchmarkInsights" class="benchmark-insights-list"></div>
+              </section>
+            </div>
+          </section>
+
           <p id="dashboardMessage" class="form-message" role="status" aria-live="polite"></p>
         </div>
 
@@ -212,6 +265,6 @@
     <footer class="site-footer site-footer--compact"><div class="container footer-bottom"><span>© migrAI · Migration intelligence</span><span>Acceso privado · Supabase Auth</span></div></footer>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-    <script src="app.js?v=country-intelligence-1" defer></script>
+    <script src="app.js?v=country-benchmark-1" defer></script>
   </body>
 </html>
