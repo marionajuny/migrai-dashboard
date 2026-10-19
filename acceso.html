@@ -7,7 +7,7 @@
     <meta name="description" content="Acceso privado al dashboard de migrAI." />
     <title>Acceso privado · migrAI</title>
     <link rel="icon" href="migrai-mark.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=verified-data-20261019" />
+    <link rel="stylesheet" href="styles.css?v=map-marker-click-20261019" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   </head>
   <body>
@@ -107,7 +107,7 @@
               </div>
               <div class="map-toolbar"><label class="sr-only" for="mapCountrySelect">Selected country</label><select id="mapCountrySelect"><option value="all">All available countries</option></select><div class="map-controls"><div class="map-zoom" role="group" aria-label="Map zoom"><button id="mapZoomIn" type="button" aria-label="Zoom in">+</button><button id="mapZoomOut" type="button" aria-label="Zoom out" disabled>−</button><button id="mapReset" type="button" aria-label="Reset map view">⤢</button></div><div class="map-pan-controls" role="group" aria-label="Move map"><span aria-hidden="true"></span><button id="mapPanUp" type="button" aria-label="Move map up" title="Move map up" disabled>↑</button><span aria-hidden="true"></span><button id="mapPanLeft" type="button" aria-label="Move map left" title="Move map left" disabled>←</button><span class="map-pan-center" aria-hidden="true">·</span><button id="mapPanRight" type="button" aria-label="Move map right" title="Move map right" disabled>→</button><span aria-hidden="true"></span><button id="mapPanDown" type="button" aria-label="Move map down" title="Move map down" disabled>↓</button><span aria-hidden="true"></span></div></div></div>
               <div class="map-wrap"><div id="europeMap" class="europe-map" role="region" aria-label="Map of Europe showing immigration by country"><div class="map-empty">Loading country boundaries…</div></div><div id="mapTooltip" class="map-tooltip" hidden></div></div>
-              <p class="map-interaction-note">Zoom in to move the map by dragging or with the arrows. From the third zoom level, capitals show their names on hover; double-click a city marker (currently 12 in Spain and Italy) to open its City Intelligence page. City locations are geographic references, not coordinates published by the data views. More major cities will be added over time.</p>
+              <p class="map-interaction-note">Zoom in to move the map by dragging or with the arrows. From the third zoom level, capitals show their names on hover; click a city marker (currently 12 in Spain and Italy) to open its City Intelligence page. City locations are geographic references, not coordinates published by the data views. More major cities will be added over time.</p>
               <div class="map-footer"><div id="mapLegend" class="map-legend"><span class="legend-swatch legend-swatch--empty"></span><span>Waiting for data</span></div><span id="mapCoverage" class="coverage-note">—</span><span class="map-source">Boundaries: Natural Earth</span></div>
             </section>
 
@@ -570,6 +570,6 @@
     <footer class="site-footer site-footer--compact"><div class="container footer-bottom"><span>© migrAI · Migration intelligence</span><span>Acceso privado · Supabase Auth</span></div></footer>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-    <script src="app.js?v=verified-data-20261019" defer></script>
+    <script src="app.js?v=map-marker-click-20261019" defer></script>
   </body>
 </html>
