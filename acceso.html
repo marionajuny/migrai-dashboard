@@ -7,7 +7,7 @@
     <meta name="description" content="Acceso privado al dashboard de migrAI." />
     <title>Acceso privado · migrAI</title>
     <link rel="icon" href="migrai-mark.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=data-methodology-1" />
+    <link rel="stylesheet" href="styles.css?v=verified-data-20261019" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   </head>
   <body>
@@ -180,8 +180,8 @@
               </section>
               <section class="outlook-panel country-reliability-panel" aria-labelledby="countryReliabilityTitle">
                 <div class="panel-heading"><div><h2 id="countryReliabilityTitle">Forecast reliability</h2><p>Model performance and backtesting</p></div></div>
-                <div class="reliability-metrics"><article><span>MAE</span><strong id="countryReliabilityMae">Not available</strong><small>Mean absolute error</small></article><article><span>WAPE</span><strong id="countryReliabilityWape">Not available</strong><small>Weighted absolute percentage error</small></article><article><span>Evaluation sample</span><strong id="countryReliabilityN">Not available</strong><small>Country-level backtesting records</small></article></div>
-                <p id="countryReliabilityNote" class="analysis-note">Backtesting metrics are not included in the currently published Country data views; no performance values are inferred here.</p>
+                <div class="reliability-metrics"><article><span>MAE</span><strong id="countryReliabilityMae">Not available</strong><small>Mean absolute error · persons/year by horizon</small></article><article><span>WAPE</span><strong id="countryReliabilityWape">Not available</strong><small>Weighted absolute percentage error by horizon</small></article><article><span>Evaluation sample</span><strong id="countryReliabilityN">Not available</strong><small>Evaluation pairs / folds by horizon</small></article></div>
+                <p id="countryReliabilityNote" class="analysis-note">Country-level selection-backtest diagnostics are shown by horizon when available. They are not independent holdout results.</p>
               </section>
             </div>
 
@@ -256,24 +256,25 @@
                 <div><h2 id="migrationContextPageHeading">Immigration and contextual indicator over time</h2><p id="migrationContextSubtitle">Explore observed immigration alongside a verified contextual series</p></div>
                 <div class="context-controls">
                   <label><span>Country</span><select id="migrationCountrySelect" class="compact-select" aria-label="Select country for migration context"></select></label>
+                  <label><span>Indicator</span><select id="migrationIndicatorSelect" class="compact-select" aria-label="Select verified contextual indicator"></select></label>
                   <label><span>Historical window</span><select id="migrationPeriod" class="compact-select" aria-label="Select historical window"><option value="all">All available years</option><option value="10">Last 10 years</option><option value="5">Last 5 years</option></select></label>
                 </div>
               </div>
               <div class="context-overview-grid">
                 <div class="context-history-column">
-                  <div class="context-chart-legend"><span><i></i>Observed immigration · persons/year</span><span class="context-legend-unavailable"><i></i>Contextual indicator · not published</span></div>
+                  <div class="context-chart-legend"><span><i></i>Observed immigration · persons/year</span><span class="context-legend-indicator"><i></i><span id="contextIndicatorLegend">Selected indicator · not available</span></span></div>
                   <div id="migrationHistoryChart" class="context-history-chart" role="img" aria-label="Observed immigration history for the selected country"></div>
                   <p id="migrationHistoryNote" class="analysis-note"></p>
                 </div>
                 <aside class="context-indicator-card" aria-labelledby="contextIndicatorHeading">
                   <p class="eyebrow">DATA AVAILABILITY</p>
-                  <h3 id="contextIndicatorHeading">Contextual indicator</h3>
-                  <p class="context-indicator-empty">No verified contextual series is available in the currently published Supabase views.</p>
+                  <h3 id="contextIndicatorHeading">Select an indicator</h3>
+                  <p id="contextIndicatorDefinition" class="context-indicator-empty">No contextual series is available for this country.</p>
                   <dl class="context-metadata-list">
-                    <div><dt>Family</dt><dd>Not published</dd></div>
-                    <div><dt>Indicator and unit</dt><dd>Not published</dd></div>
-                    <div><dt>Source and coverage</dt><dd>Not published</dd></div>
-                    <div><dt>Definition and caveats</dt><dd>Require a documented data series</dd></div>
+                    <div><dt>Family</dt><dd id="contextIndicatorFamily">Not available</dd></div>
+                    <div><dt>Unit</dt><dd id="contextIndicatorUnit">Not available</dd></div>
+                    <div><dt>Source and geography</dt><dd id="contextIndicatorSource">Not available</dd></div>
+                    <div><dt>Coverage and quality</dt><dd id="contextIndicatorCoverage">Not available</dd></div>
                   </dl>
                 </aside>
               </div>
@@ -282,15 +283,12 @@
             <div class="context-analysis-grid">
               <section class="outlook-panel context-scatter-panel" aria-labelledby="contextScatterTitle">
                 <div class="panel-heading"><div><h2 id="contextScatterTitle">Immigration vs. selected indicator</h2><p>Country-year observations · descriptive comparison only</p></div></div>
-                <div id="contextScatterEmpty" class="context-empty-state"><span class="context-empty-icon" aria-hidden="true">↗</span><strong>Comparison unavailable</strong><p>A scatter plot needs paired immigration and contextual values for the same country-years. Those contextual records are not in the published data contract yet.</p></div>
+                <div id="contextScatterEmpty" class="context-empty-state"><span class="context-empty-icon" aria-hidden="true">↗</span><strong>Comparison unavailable</strong><p>A scatter plot needs paired immigration and contextual values for the same country-years.</p></div>
+                <div id="contextScatterChart" class="context-scatter-chart" hidden></div>
               </section>
               <section class="outlook-panel context-indicators-panel" aria-labelledby="contextIndicatorsTitle">
-                <div class="panel-heading"><div><h2 id="contextIndicatorsTitle">Other contextual indicators</h2><p>Small multiples will appear when verified series are published</p></div><span class="context-unavailable-tag">0 available</span></div>
-                <div class="context-family-list">
-                  <div><span class="context-family-icon">01</span><span><strong>Economy &amp; labour market</strong><small>Indicator names, units and coverage not available</small></span><b>—</b></div>
-                  <div><span class="context-family-icon">02</span><span><strong>Demography &amp; housing</strong><small>Indicator names, units and coverage not available</small></span><b>—</b></div>
-                  <div><span class="context-family-icon">03</span><span><strong>Information &amp; diaspora</strong><small>Indicator names, units and coverage not available</small></span><b>—</b></div>
-                </div>
+                <div class="panel-heading"><div><h2 id="contextIndicatorsTitle">Other contextual indicators</h2><p>Verified series available for the selected destination</p></div><span id="contextIndicatorCount" class="context-unavailable-tag">0 available</span></div>
+                <div id="contextOtherIndicators" class="context-family-list"></div>
               </section>
             </div>
 
@@ -302,7 +300,7 @@
                   <article><strong>—</strong><span>Top-origin share</span><small>Requires a defined origin field</small></article>
                   <article><strong>—</strong><span>Effective origin count</span><small>Requires comparable origin records</small></article>
                 </div>
-                <p class="analysis-note">Diaspora measures are not inferred from country-level immigration totals.</p>
+                <p class="analysis-note">No origin-by-destination network artifact is present in the production pipeline. Diaspora measures are not inferred from country-level immigration totals.</p>
               </section>
               <section class="outlook-panel context-caveats-panel" aria-labelledby="contextCaveatsTitle">
                 <div class="panel-heading"><div><h2 id="contextCaveatsTitle">Historical context, not causal explanation</h2><p>How to interpret contextual comparisons</p></div></div>
@@ -332,19 +330,27 @@
               </div>
             </section>
 
-            <section class="reliability-horizon-section" aria-label="Published model metadata by forecast horizon">
+            <section class="reliability-horizon-section" aria-label="Verified backtest performance by forecast horizon">
               <div class="reliability-horizon-cards" id="reliabilityHorizonCards"></div>
-              <p class="analysis-note">These cards describe current production forecast outputs only. They are not backtesting results, and output counts are not evaluation sample sizes.</p>
+              <p class="analysis-note">Evaluation scores come from the registered candidate's selection backtest. They are useful diagnostics, not an independent holdout or a guarantee of future accuracy.</p>
+            </section>
+
+            <section class="outlook-panel reliability-evaluations-panel" aria-labelledby="reliabilityEvaluationsTitle">
+              <div class="panel-heading"><div><h2 id="reliabilityEvaluationsTitle">Backtest evaluation provenance</h2><p>Published source artifacts, row counts and selection rules for this scope</p></div></div>
+              <div id="reliabilityEvaluationSummary" class="reliability-evaluation-grid" aria-live="polite"></div>
+              <p class="analysis-note">The evaluation record documents which rows entered the selection backtest. It does not make the results an independent holdout.</p>
             </section>
 
             <div class="reliability-chart-grid">
               <section class="outlook-panel reliability-chart-panel" aria-labelledby="reliabilityScatterTitle">
-                <div class="panel-heading"><div><h2 id="reliabilityScatterTitle">Actual vs. predicted</h2><p>Out-of-sample observations · selected horizon and scope</p></div></div>
-                <div id="reliabilityScatterEmpty" class="context-empty-state"><span class="context-empty-icon" aria-hidden="true">◎</span><strong>Backtesting pairs are not published</strong><p>This chart requires a row-level observed value and its matching historical prediction. The current views contain observed history and future forecasts, not those evaluation pairs.</p></div>
+                <div class="panel-heading"><div><h2 id="reliabilityScatterTitle">Actual vs. predicted</h2><p>One point per verified country-year or city-year evaluation pair</p></div></div>
+                <div id="reliabilityScatterEmpty" class="context-empty-state"><span class="context-empty-icon" aria-hidden="true">◎</span><strong>Backtesting pairs are not published</strong><p>This chart requires a row-level observed value and its matching historical prediction.</p></div>
+                <div id="reliabilityScatterChart" class="reliability-chart-content" hidden></div>
               </section>
               <section class="outlook-panel reliability-chart-panel" aria-labelledby="reliabilityBacktestTitle">
-                <div class="panel-heading"><div><h2 id="reliabilityBacktestTitle">Backtesting performance</h2><p>Origin year, target year, prediction, actual and error</p></div></div>
+                <div class="panel-heading"><div><h2 id="reliabilityBacktestTitle">Backtesting performance</h2><p>Unweighted mean actual vs. prediction by target year</p></div></div>
                 <div id="reliabilityBacktestEmpty" class="context-empty-state"><span class="context-empty-icon" aria-hidden="true">⌁</span><strong>No fold-level records in the published views</strong><p>No illustrative folds or synthetic prediction paths are drawn. A dated backtest result set is needed for this timeline.</p></div>
+                <div id="reliabilityBacktestChart" class="reliability-chart-content" hidden></div>
               </section>
               <section class="outlook-panel reliability-chart-panel" aria-labelledby="reliabilityHorizonTitle">
                 <div class="panel-heading"><div><h2 id="reliabilityHorizonTitle">Horizon performance</h2><p>Only comparable, verified evaluation metrics belong here</p></div></div>
@@ -354,6 +360,7 @@
               <section class="outlook-panel reliability-chart-panel" aria-labelledby="reliabilityRankingTitle">
                 <div class="panel-heading"><div><h2 id="reliabilityRankingTitle">Country error ranking</h2><p id="reliabilityRankingSubtitle">Selected model and horizon · error with evaluation sample size</p></div></div>
                 <div id="reliabilityRankingEmpty" class="context-empty-state"><span class="context-empty-icon" aria-hidden="true">↕</span><strong id="reliabilityRankingEmptyTitle">Country error ranking unavailable</strong><p id="reliabilityRankingEmptyText">Ranking countries requires verified country-level backtest errors and the number of evaluation observations behind each score.</p></div>
+                <div id="reliabilityRankingList" class="reliability-ranking-list" hidden></div>
                 <button id="reliabilityOpenCountry" class="small-control reliability-open-country" type="button" disabled>Open selected country in Country Intelligence</button>
               </section>
             </div>
@@ -427,8 +434,8 @@
             <div class="city-lower-grid">
               <section class="outlook-panel city-reliability-panel" aria-labelledby="cityReliabilityTitle">
                 <div class="panel-heading"><div><h2 id="cityReliabilityTitle">City Model Reliability</h2><p>City-level evaluation evidence · percentage points</p></div></div>
-                <div class="reliability-metrics city-reliability-metrics"><article><span>MAE</span><strong>Not published</strong><small>Mean absolute error · percentage points</small></article><article><span>WAPE</span><strong>Not published</strong><small>Requires a defined city evaluation sample</small></article><article><span>R²</span><strong>Not published</strong><small>Coefficient, not a percentage</small></article><article><span>Evaluation sample</span><strong>Not published</strong><small>No backtest row count is inferred</small></article><article><span>Forecast intervals</span><strong id="cityReliabilityInterval">Checking</strong><small id="cityReliabilityIntervalNote">Interval evidence for selected horizons</small></article></div>
-                <p class="analysis-note">Production forecasts are not a backtest. No accuracy or interval-coverage score is estimated from them.</p>
+                <div class="reliability-metrics city-reliability-metrics"><article><span>MAE</span><strong id="cityReliabilityMae">Not published</strong><small id="cityReliabilityMaeNote">Error in percentage points, by horizon</small></article><article><span>WAPE</span><strong id="cityReliabilityWape">Not published</strong><small id="cityReliabilityWapeNote">Weighted percentage error, by horizon</small></article><article><span>R²</span><strong id="cityReliabilityR2">Not published</strong><small id="cityReliabilityR2Note">Not included in the published metric contract</small></article><article><span>Evaluation sample</span><strong id="cityReliabilitySample">Not published</strong><small id="cityReliabilitySampleNote">Pairs / folds, by horizon</small></article><article><span>Forecast intervals</span><strong id="cityReliabilityInterval">Checking</strong><small id="cityReliabilityIntervalNote">Interval evidence for selected horizons</small></article></div>
+                <p class="analysis-note">Accuracy metrics come from the registered candidate's selection backtest, separate from production forecasts. They are diagnostics, not an independent holdout; production intervals have no published backtest coverage score.</p>
               </section>
 
               <section class="outlook-panel city-profile-panel" aria-labelledby="cityProfileTitle">
@@ -451,7 +458,7 @@
               <article class="outlook-panel methodology-summary-card"><span>Missing values</span><strong id="methodologyMissingCount">—</strong><small id="methodologyMissingNote">Null or non-numeric published values</small></article>
               <article class="outlook-panel methodology-summary-card"><span>Temporal coverage</span><strong id="methodologyTemporalCoverage">—</strong><small id="methodologyTemporalNote">Observed years in the current view</small></article>
               <article class="outlook-panel methodology-summary-card"><span>Territorial coverage</span><strong id="methodologyTerritorialCoverage">—</strong><small id="methodologyTerritorialNote">Entities with at least one valid observation</small></article>
-              <article class="outlook-panel methodology-summary-card"><span>Source attribution</span><strong id="methodologySourceCoverage">—</strong><small id="methodologySourceCoverageNote">Rows with a published source family</small></article>
+              <article class="outlook-panel methodology-summary-card"><span>Observed-flow source attribution</span><strong id="methodologySourceCoverage">—</strong><small id="methodologySourceCoverageNote">Rows with a published source family</small></article>
               <article class="outlook-panel methodology-summary-card"><span>Available forecasts</span><strong id="methodologyForecastCount">—</strong><small id="methodologyForecastNote">Derived from published forecast status and values</small></article>
             </section>
 
@@ -467,18 +474,30 @@
               <div id="methodologyCoverageGrid" class="methodology-coverage-scroll" role="region" aria-label="Observed data coverage matrix" tabindex="0"></div>
             </section>
 
+            <section class="outlook-panel methodology-context-panel" aria-labelledby="methodologyContextTitle">
+              <div class="panel-heading"><div><h2 id="methodologyContextTitle">Contextual observations and sources</h2><p>Published indicator records from the protected context view, separate from immigration-flow observations</p></div></div>
+              <div id="methodologyContextSummary" class="methodology-context-summary" aria-live="polite"></div>
+              <div class="methodology-table-scroll">
+                <table class="methodology-status-table methodology-context-table">
+                  <thead><tr><th scope="col">Level</th><th scope="col">Family</th><th scope="col">Source</th><th scope="col">Published datasets</th><th scope="col">Entities</th><th scope="col">Indicators</th><th scope="col">Values</th><th scope="col">Year range</th></tr></thead>
+                  <tbody id="methodologyContextSourceRows"></tbody>
+                </table>
+              </div>
+              <p id="methodologyContextNote" class="analysis-note">Context sources are loaded on demand from the authenticated Supabase view. This series is not source attribution for immigration-flow observations.</p>
+            </section>
+
             <div class="methodology-main-grid">
               <section class="outlook-panel methodology-lineage-panel" aria-labelledby="methodologyLineageTitle">
                 <div class="panel-heading"><div><h2 id="methodologyLineageTitle">Source lineage and methodology</h2><p>From documented source families to the authenticated dashboard</p></div></div>
                 <div class="methodology-lineage">
-                  <details class="methodology-stage" open><summary><span>01</span><strong>Data sources</strong></summary><p>The project documentation names Eurostat, GDELT and INE. The current published views do not attach source-family identifiers to each observation, so row-level attribution cannot be verified here.</p></details>
+                  <details class="methodology-stage" open><summary><span>01</span><strong>Data sources</strong></summary><p>Contextual indicators publish source names and dataset identifiers in the inventory above. The separate immigration-flow view does not currently expose row-level source attribution.</p></details>
                   <details class="methodology-stage"><summary><span>02</span><strong>Processing</strong></summary><p>Project materials describe cleaning, validation, duplicate handling and missing-value treatment in the upstream pipeline. Detailed transformation logs are not exposed in these dashboard views.</p></details>
                   <details class="methodology-stage"><summary><span>03</span><strong>Country &amp; City datasets</strong></summary><p>Country and City observations and forecast rows are read from the published <code>observed_latest</code> and <code>forecasts_latest</code> views in the <code>migrai</code> schema.</p></details>
-                  <details class="methodology-stage"><summary><span>04</span><strong>Model evaluation</strong></summary><p>Production forecasts are distinct from backtesting. Historical prediction pairs and fold-level evaluation are not currently published in the dashboard data contract.</p></details>
+                  <details class="methodology-stage"><summary><span>04</span><strong>Model evaluation</strong></summary><p>Production forecasts remain separate from backtesting. The dashboard reads published observed/predicted pairs and horizon/entity metrics from protected backtest views; these are diagnostics from the model-selection backtest, not an independent holdout.</p></details>
                   <details class="methodology-stage"><summary><span>05</span><strong>Production forecasts</strong></summary><p>Forecast status, target year, horizon, model label and interval bounds are displayed only when the corresponding fields are present and valid in the published rows.</p></details>
-                  <details class="methodology-stage"><summary><span>06</span><strong>Supabase → Dashboard</strong></summary><p>Supabase Auth gates access. The static GitHub Pages client makes authenticated, read-only queries to the views; row-level security protects the underlying data.</p></details>
+                  <details class="methodology-stage"><summary><span>06</span><strong>Supabase → Dashboard</strong></summary><p>Supabase Auth gates access. The static GitHub Pages client makes authenticated, read-only queries to the approved views, including the published context and backtest views. No secret or service-role key is used by the browser.</p></details>
                 </div>
-                <p class="analysis-note">Source inventory is based on project documentation, not inferred from individual output rows. Add source metadata to the published views to enable verified source-family filtering.</p>
+                <p class="analysis-note">A published year range describes rows currently available, not the complete set of years expected by the pipeline. The current views do not expose an expected entity-year manifest.</p>
               </section>
 
               <section class="outlook-panel methodology-run-panel" aria-labelledby="methodologyRunTitle">
@@ -537,6 +556,6 @@
     <footer class="site-footer site-footer--compact"><div class="container footer-bottom"><span>© migrAI · Migration intelligence</span><span>Acceso privado · Supabase Auth</span></div></footer>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-    <script src="app.js?v=data-methodology-1" defer></script>
+    <script src="app.js?v=verified-data-20261019" defer></script>
   </body>
 </html>
