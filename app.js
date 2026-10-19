@@ -67,6 +67,10 @@ const ui = {
   mapZoomIn: document.querySelector("#mapZoomIn"),
   mapZoomOut: document.querySelector("#mapZoomOut"),
   mapReset: document.querySelector("#mapReset"),
+  mapPanUp: document.querySelector("#mapPanUp"),
+  mapPanRight: document.querySelector("#mapPanRight"),
+  mapPanDown: document.querySelector("#mapPanDown"),
+  mapPanLeft: document.querySelector("#mapPanLeft"),
   timelineMarkers: document.querySelector("#timelineMarkers"),
   timelineRange: document.querySelector("#timelineRange"),
   timelineYear: document.querySelector("#timelineYear"),
@@ -279,6 +283,11 @@ const state = {
   selectedCountry: "all",
   mapFeatures: [],
   mapZoom: 1,
+  mapZoomStep: 0,
+  mapPanX: 0,
+  mapPanY: 0,
+  mapDrag: null,
+  mapSuppressClick: false,
   playbackTimer: null,
   activePage: "european-outlook",
   countryChartZoom: 1,
@@ -655,9 +664,14 @@ ui.timelineRange.addEventListener("input", () => selectYearIndex(Number(ui.timel
 ui.timelineBack.addEventListener("click", () => selectYearIndex(Math.max(0, state.years.indexOf(state.selectedYear) - 1)));
 ui.timelineForward.addEventListener("click", () => selectYearIndex(Math.min(state.years.length - 1, state.years.indexOf(state.selectedYear) + 1)));
 ui.timelinePlay.addEventListener("click", togglePlayback);
-ui.mapZoomIn.addEventListener("click", () => setMapZoom(state.mapZoom * 1.2));
-ui.mapZoomOut.addEventListener("click", () => setMapZoom(state.mapZoom / 1.2));
-ui.mapReset.addEventListener("click", () => setMapZoom(1));
+ui.mapZoomIn.addEventListener("click", () => setMapZoomStep(state.mapZoomStep + 1));
+ui.mapZoomOut.addEventListener("click", () => setMapZoomStep(state.mapZoomStep - 1));
+ui.mapReset.addEventListener("click", resetMapView);
+ui.mapPanUp.addEventListener("click", () => panMapBy(0, -34));
+ui.mapPanRight.addEventListener("click", () => panMapBy(34, 0));
+ui.mapPanDown.addEventListener("click", () => panMapBy(0, 34));
+ui.mapPanLeft.addEventListener("click", () => panMapBy(-34, 0));
+ui.mapTooltip.addEventListener("pointerleave", () => { ui.mapTooltip.hidden = true; });
 ui.rankingLimit.addEventListener("change", renderRanking);
 ui.rankingOrder.addEventListener("change", renderRanking);
 ui.helpToggle.addEventListener("click", () => ui.helpDialog.showModal());
@@ -4304,6 +4318,46 @@ function exportCountryChart() {
 
 const MAP_DATA_URL = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_50m_admin_0_countries.geojson";
 
+// Natural Earth 5.1.2 populated-place points (Admin-0 capitals; WGS84 [longitude, latitude]).
+const EUROPEAN_CAPITALS = [
+  ["ALB", "Tirana", 19.818883, 41.327541], ["AND", "Andorra la Vella", 1.526594, 42.510753],
+  ["ARM", "Yerevan", 44.511606, 40.183097], ["AUT", "Vienna", 16.364693, 48.201961],
+  ["AZE", "Baku", 49.860271, 40.397218], ["BEL", "Brussels", 4.331371, 50.835263], ["BGR", "Sofia", 23.314708, 42.685295],
+  ["BIH", "Sarajevo", 18.383002, 43.850022], ["BLR", "Minsk", 27.564681, 53.901923],
+  ["CHE", "Bern", 7.466976, 46.916683], ["CYP", "Nicosia", 33.366635, 35.166677],
+  ["CZE", "Prague", 14.422939, 50.086967], ["DEU", "Berlin", 13.399603, 52.523764],
+  ["DNK", "Copenhagen", 12.56154, 55.68051], ["ESP", "Madrid", -3.685297, 40.401972],
+  ["EST", "Tallinn", 24.728041, 59.433877], ["FIN", "Helsinki", 24.932457, 60.163804],
+  ["FRA", "Paris", 2.352992, 48.858092], ["GBR", "London", -0.118668, 51.501941],
+  ["GEO", "Tbilisi", 44.78885, 41.726956], ["GRC", "Athens", 23.731375, 37.985272],
+  ["HRV", "Zagreb", 15.999995, 45.800007], ["HUN", "Budapest", 19.081375, 47.501952],
+  ["IRL", "Dublin", -6.25698, 53.346731], ["ISL", "Reykjavik", -21.936546, 64.143459],
+  ["ITA", "Rome", 12.481313, 41.897902], ["KOS", "Pristina", 21.165984, 42.66671],
+  ["LIE", "Vaduz", 9.51667, 47.133724], ["LTU", "Vilnius", 25.316635, 54.683366],
+  ["LUX", "Luxembourg", 6.130003, 49.61166], ["LVA", "Riga", 24.099965, 56.950024],
+  ["MCO", "Monaco", 7.406913, 43.739646], ["MDA", "Chisinau", 28.857711, 47.005024],
+  ["MKD", "Skopje", 21.433461, 42.000006], ["MLT", "Valletta", 14.514711, 35.899732],
+  ["MNE", "Podgorica", 19.266307, 42.465972], ["NLD", "Amsterdam", 4.914694, 52.351914],
+  ["NOR", "Oslo", 10.748033, 59.918636], ["POL", "Warsaw", 21.005347, 52.230872],
+  ["PRT", "Lisbon", -9.146812, 38.724669], ["ROU", "Bucharest", 26.098001, 44.435318],
+  ["RUS", "Moscow", 37.613577, 55.75411], ["SMR", "San Marino", 12.44177, 43.936096],
+  ["SRB", "Belgrade", 20.466045, 44.820591], ["SVK", "Bratislava", 17.116981, 48.150018],
+  ["SVN", "Ljubljana", 14.514969, 46.055288], ["SWE", "Stockholm", 18.0663, 59.324127],
+  ["TUR", "Ankara", 32.862446, 39.929184], ["UKR", "Kyiv", 30.514682, 50.435313],
+  ["VAT", "Vatican City", 12.453387, 41.903282],
+];
+
+// City Intelligence production rows have no coordinate fields. These map points use Natural Earth 10m
+// populated-place references and are intentionally separate from the Supabase data payload.
+const CITY_MAP_LOCATIONS = new Map([
+  ["ES::Barcelona", [2.181424, 41.385245]], ["ES::Madrid", [-3.685297, 40.401972]],
+  ["ES::Málaga", [-4.419999, 36.720406]], ["ES::Sevilla", [-5.980007, 37.405015]],
+  ["ES::València", [-0.401958, 39.486963]], ["ES::Zaragoza", [-0.889982, 41.650002]],
+  ["IT::Milano", [9.203063, 45.471921]], ["IT::Torino", [7.668015, 45.072333]],
+  ["IT::Roma", [12.481313, 41.897902]], ["IT::Genova", [8.930039, 44.409988]],
+  ["IT::Napoli", [14.243066, 40.841971]], ["IT::Palermo", [13.348081, 38.126969]],
+]);
+
 async function loadEuropeMap() {
   if (state.mapFeatures.length || !window.d3) {
     if (!window.d3) showMapUnavailable("Map rendering is unavailable in this browser.");
@@ -4422,6 +4476,7 @@ function renderMap() {
   ui.mapRoot.replaceChildren();
   const svg = createSvg("svg", { viewBox: `0 0 ${width} ${height}`, role: "group", "aria-label": `European immigration map for ${state.selectedYear}` });
   svg.classList.add("map-svg");
+  if (state.mapZoomStep > 0) svg.classList.add("is-pannable");
   const projection = d3.geoMercator().fitExtent([[12, 14], [width - 12, height - 14]], { type: "FeatureCollection", features: state.mapFeatures });
   const path = d3.geoPath(projection);
   const layer = createSvg("g", { class: "map-layer" });
@@ -4454,27 +4509,204 @@ function renderMap() {
         }
       });
       countryPath.addEventListener("pointerenter", (event) => showMapTooltip(event, name, point, value));
-      countryPath.addEventListener("pointermove", (event) => positionMapTooltip(event));
-      countryPath.addEventListener("pointerleave", () => { ui.mapTooltip.hidden = true; });
+      countryPath.addEventListener("pointermove", positionMapTooltip);
+      countryPath.addEventListener("pointerleave", hideMapTooltipWhenLeavingTarget);
     }
     const title = createSvg("title");
     title.textContent = `${name} · ${value === null ? "No data" : numberFormatter.format(value)} ${mapMetricLabel()}`;
     countryPath.append(title);
     layer.append(countryPath);
   });
+  if (state.mapZoomStep >= 3) appendMapPlaceMarkers(layer, projection);
   svg.append(layer);
+  wireMapPanning(svg, layer, width, height);
   ui.mapRoot.append(svg);
+}
+
+function appendMapPlaceMarkers(layer, projection) {
+  const featureForCode = new Map(state.mapFeatures.map((feature) => [mapFeatureCode(feature), feature]).filter(([code]) => code));
+  const capitals = createSvg("g", { class: "map-marker-layer map-marker-layer--capitals", "aria-label": "European capital locations" });
+  EUROPEAN_CAPITALS.forEach(([code, name, longitude, latitude]) => {
+    if (!featureForCode.has(code)) return;
+    const [x, y] = projection([longitude, latitude]);
+    const marker = createSvg("g", { class: "map-marker map-marker--capital", tabindex: "0", role: "img", "aria-label": `${name}, capital` });
+    marker.append(createSvg("circle", { cx: x, cy: y, r: 3.25, class: "map-marker__capital-dot", "vector-effect": "non-scaling-stroke" }));
+    marker.addEventListener("pointerenter", (event) => showMapPlaceTooltip(event, { name, kind: "capital" }));
+    marker.addEventListener("pointermove", positionMapTooltip);
+    marker.addEventListener("pointerleave", hideMapTooltipWhenLeavingTarget);
+    marker.addEventListener("focus", () => showMapPlaceTooltipForElement(marker, { name, kind: "capital" }));
+    marker.addEventListener("blur", hideMapTooltipWhenLeavingTarget);
+    capitals.append(marker);
+  });
+  layer.append(capitals);
+
+  const cities = cityRecordsAcrossCountries().cities;
+  const cityMarkers = createSvg("g", { class: "map-marker-layer map-marker-layer--cities", "aria-label": "Production cities with City Intelligence details" });
+  cities.forEach((city) => {
+    const coordinates = CITY_MAP_LOCATIONS.get(city.key);
+    if (!coordinates) return;
+    const [x, y] = projection(coordinates);
+    const marker = createSvg("g", { class: "map-marker map-marker--city", tabindex: "0", role: "link", "aria-label": `${city.name} · open City Intelligence` });
+    marker.append(
+      createSvg("circle", { cx: x, cy: y, r: 6.1, class: "map-marker__city-halo", "vector-effect": "non-scaling-stroke" }),
+      createSvg("circle", { cx: x, cy: y, r: 3.2, class: "map-marker__city-dot", "vector-effect": "non-scaling-stroke" }),
+    );
+    marker.addEventListener("pointerenter", (event) => showMapPlaceTooltip(event, { name: city.name, kind: "city", city }));
+    marker.addEventListener("pointermove", positionMapTooltip);
+    marker.addEventListener("pointerleave", hideMapTooltipWhenLeavingTarget);
+    marker.addEventListener("focus", () => showMapPlaceTooltipForElement(marker, { name: city.name, kind: "city", city }));
+    marker.addEventListener("blur", hideMapTooltipWhenLeavingTarget);
+    marker.addEventListener("click", (event) => {
+      event.stopPropagation();
+      navigateToCity(city);
+    });
+    marker.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        navigateToCity(city);
+      }
+    });
+    cityMarkers.append(marker);
+  });
+  layer.append(cityMarkers);
+}
+
+function mapFeatureCode(feature) {
+  const properties = feature.properties ?? {};
+  return [properties.ADM0_A3, properties.ISO_A3, properties.ISO_A3_EH]
+    .find((code) => code && code !== "-99") ?? null;
 }
 
 function mapZoomTransform(width, height) {
   const offsetX = width * (1 - state.mapZoom) / 2;
   const offsetY = height * (1 - state.mapZoom) / 2;
-  return `translate(${offsetX} ${offsetY}) scale(${state.mapZoom})`;
+  return `translate(${offsetX + state.mapPanX} ${offsetY + state.mapPanY}) scale(${state.mapZoom})`;
 }
 
-function setMapZoom(value) {
-  state.mapZoom = Math.min(Math.max(value, 1), 2.6);
+function setMapZoomStep(step) {
+  const zoomLevels = [1, 1.35, 1.75, 2.25, 2.8];
+  state.mapZoomStep = Math.min(Math.max(step, 0), zoomLevels.length - 1);
+  state.mapZoom = zoomLevels[state.mapZoomStep];
+  clampMapPan(690, 370);
+  ui.mapZoomOut.disabled = state.mapZoomStep === 0;
+  ui.mapZoomIn.disabled = state.mapZoomStep === zoomLevels.length - 1;
+  [ui.mapPanUp, ui.mapPanRight, ui.mapPanDown, ui.mapPanLeft].forEach((button) => { button.disabled = state.mapZoomStep === 0; });
   renderMap();
+}
+
+function resetMapView() {
+  state.mapZoomStep = 0;
+  state.mapZoom = 1;
+  state.mapPanX = 0;
+  state.mapPanY = 0;
+  ui.mapZoomOut.disabled = true;
+  ui.mapZoomIn.disabled = false;
+  [ui.mapPanUp, ui.mapPanRight, ui.mapPanDown, ui.mapPanLeft].forEach((button) => { button.disabled = true; });
+  ui.mapTooltip.hidden = true;
+  renderMap();
+}
+
+function clampMapPan(width, height) {
+  const maxX = width * (state.mapZoom - 1) / 2;
+  const maxY = height * (state.mapZoom - 1) / 2;
+  state.mapPanX = Math.max(-maxX, Math.min(maxX, state.mapPanX));
+  state.mapPanY = Math.max(-maxY, Math.min(maxY, state.mapPanY));
+}
+
+function panMapBy(deltaX, deltaY) {
+  state.mapPanX += deltaX;
+  state.mapPanY += deltaY;
+  clampMapPan(690, 370);
+  renderMap();
+}
+
+function wireMapPanning(svg, layer, width, height) {
+  svg.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0 || state.mapZoomStep === 0) return;
+    const point = mapPointerPosition(event, svg);
+    state.mapDrag = { pointerId: event.pointerId, x: point.x, y: point.y, panX: state.mapPanX, panY: state.mapPanY, moved: false };
+    svg.classList.add("is-panning");
+    svg.setPointerCapture(event.pointerId);
+  });
+  svg.addEventListener("pointermove", (event) => {
+    if (!state.mapDrag || state.mapDrag.pointerId !== event.pointerId) return;
+    const point = mapPointerPosition(event, svg);
+    const deltaX = point.x - state.mapDrag.x;
+    const deltaY = point.y - state.mapDrag.y;
+    if (Math.hypot(deltaX, deltaY) > 3) state.mapDrag.moved = true;
+    if (!state.mapDrag.moved) return;
+    state.mapPanX = state.mapDrag.panX + deltaX;
+    state.mapPanY = state.mapDrag.panY + deltaY;
+    clampMapPan(width, height);
+    layer.setAttribute("transform", mapZoomTransform(width, height));
+    ui.mapTooltip.hidden = true;
+  });
+  svg.addEventListener("pointerup", (event) => {
+    if (!state.mapDrag || state.mapDrag.pointerId !== event.pointerId) return;
+    state.mapSuppressClick = state.mapDrag.moved;
+    state.mapDrag = null;
+    svg.classList.remove("is-panning");
+  });
+  svg.addEventListener("pointercancel", () => {
+    state.mapDrag = null;
+    state.mapSuppressClick = false;
+    svg.classList.remove("is-panning");
+  });
+  svg.addEventListener("click", (event) => {
+    if (!state.mapSuppressClick) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    state.mapSuppressClick = false;
+  }, true);
+}
+
+function mapPointerPosition(event, svg) {
+  const point = svg.createSVGPoint();
+  point.x = event.clientX;
+  point.y = event.clientY;
+  const local = point.matrixTransform(svg.getScreenCTM().inverse());
+  return { x: local.x, y: local.y };
+}
+
+function showMapPlaceTooltip(event, place) {
+  ui.mapTooltip.replaceChildren();
+  if (place.kind === "city") {
+    const link = document.createElement("a");
+    link.className = "map-tooltip__city-link";
+    link.href = cityIntelligenceHref(place.city);
+    link.textContent = place.name;
+    const action = document.createElement("small");
+    action.textContent = "Open City Intelligence";
+    ui.mapTooltip.append(link, action);
+  } else {
+    const title = document.createElement("strong");
+    title.textContent = place.name;
+    ui.mapTooltip.append(title);
+  }
+  ui.mapTooltip.hidden = false;
+  positionMapTooltip(event);
+}
+
+function showMapPlaceTooltipForElement(element, place) {
+  const bounds = element.getBoundingClientRect();
+  showMapPlaceTooltip({ clientX: bounds.left + bounds.width / 2, clientY: bounds.top + bounds.height / 2 }, place);
+}
+
+function hideMapTooltipWhenLeavingTarget(event) {
+  if (event.relatedTarget && ui.mapTooltip.contains(event.relatedTarget)) return;
+  ui.mapTooltip.hidden = true;
+}
+
+function cityIntelligenceHref(city) {
+  const url = new URL(window.location.href);
+  url.searchParams.set("country", city.countryId);
+  url.searchParams.set("city", city.id);
+  url.hash = "#city-intelligence";
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
+function navigateToCity(city) {
+  window.location.href = cityIntelligenceHref(city);
 }
 
 function selectCountry(countryId) {
@@ -4513,8 +4745,11 @@ function showMapTooltip(event, name, point, value) {
 
 function positionMapTooltip(event) {
   const bounds = ui.mapRoot.parentElement.getBoundingClientRect();
-  ui.mapTooltip.style.left = `${Math.min(Math.max(event.clientX - bounds.left + 12, 8), bounds.width - 205)}px`;
-  ui.mapTooltip.style.top = `${Math.max(event.clientY - bounds.top - 18, 8)}px`;
+  const tooltip = ui.mapTooltip.getBoundingClientRect();
+  const maxLeft = Math.max(8, bounds.width - tooltip.width - 8);
+  const maxTop = Math.max(8, bounds.height - tooltip.height - 8);
+  ui.mapTooltip.style.left = `${Math.min(Math.max(event.clientX - bounds.left + 12, 8), maxLeft)}px`;
+  ui.mapTooltip.style.top = `${Math.min(Math.max(event.clientY - bounds.top - tooltip.height - 9, 8), maxTop)}px`;
 }
 
 function forecastRowsForHorizon(horizon) {
