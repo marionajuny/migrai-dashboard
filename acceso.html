@@ -7,7 +7,7 @@
     <meta name="description" content="Acceso privado al dashboard de migrAI." />
     <title>Acceso privado · migrAI</title>
     <link rel="icon" href="migrai-mark.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=migration-context-overlay-20261019" />
+    <link rel="stylesheet" href="styles.css?v=migration-context-labels-20261019" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   </head>
   <body>
@@ -256,7 +256,7 @@
               <div class="panel-heading panel-heading--wrap">
                 <div><h2 id="migrationContextPageHeading">Immigration and contextual indicators over time</h2><p id="migrationContextSubtitle">Compare up to three countries and multiple source-reported indicators</p></div>
                 <div class="context-controls">
-                  <div class="context-selector" id="contextCountrySelector">
+                  <div class="context-selector context-selector--countries" id="contextCountrySelector">
                     <button id="contextCountryToggle" class="compact-select context-selector-toggle" type="button" aria-expanded="false" aria-controls="contextCountryMenu"><span id="contextCountrySummary">Select countries</span><span aria-hidden="true">⌄</span></button>
                     <span class="context-selector-label">Countries (max. 3)</span>
                     <div id="contextCountryMenu" class="context-selector-menu" role="group" aria-label="Choose up to three countries" hidden></div>
@@ -581,6 +581,6 @@
     <footer class="site-footer site-footer--compact"><div class="container footer-bottom"><span>© migrAI · Migration intelligence</span><span>Acceso privado · Supabase Auth</span></div></footer>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-    <script src="app.js?v=migration-context-overlay-20261019" defer></script>
+    <script src="app.js?v=migration-context-labels-20261019" defer></script>
   </body>
 </html>
