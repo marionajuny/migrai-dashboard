@@ -474,13 +474,13 @@ body.dashboard-mode .access-shell { width: 100%; min-height: 100vh; margin: 0; p
 .map-zoom button:disabled, .map-pan-controls button:disabled { opacity: .38; cursor: not-allowed; }
 .map-marker { vector-effect: non-scaling-stroke; }
 .map-marker--capital { cursor: help; }
-.map-marker__capital-dot { fill: #ffd2b6; stroke: #24160f; stroke-width: .8; }
+.map-marker__capital-dot { fill: #ffd2b6; stroke: #24160f; stroke-width: .267; }
 .map-marker--city { cursor: pointer; }
 .map-marker__hit-area { fill: transparent; pointer-events: all; }
-.map-marker__city-halo { fill: #0a1b2c; stroke: #8ed9f4; stroke-width: 1; }
-.map-marker__city-dot { fill: #ff9a4d; stroke: #fff1e5; stroke-width: .75; }
-.map-marker--city:hover .map-marker__city-halo, .map-marker--city:focus .map-marker__city-halo { fill: rgba(86, 177, 215, .25); stroke: #d9f5ff; stroke-width: 1.3; }
-.map-marker:focus { outline: none; filter: drop-shadow(0 0 4px rgba(142, 217, 244, .9)); }
+.map-marker__city-halo { fill: #0a1b2c; stroke: #8ed9f4; stroke-width: .333; }
+.map-marker__city-dot { fill: #ff9a4d; stroke: #fff1e5; stroke-width: .25; }
+.map-marker--city:hover .map-marker__city-halo, .map-marker--city:focus .map-marker__city-halo { fill: rgba(86, 177, 215, .25); stroke: #d9f5ff; stroke-width: .433; }
+.map-marker:focus { outline: none; filter: drop-shadow(0 0 1.33px rgba(142, 217, 244, .9)); }
 .map-tooltip { position: absolute; z-index: 5; display: grid; min-width: 110px; max-width: min(220px, calc(100% - 16px)); gap: 4px; padding: 7px 9px; border: 1px solid rgba(240, 123, 55, .36); border-radius: 8px; color: #eaf0f4; background: rgba(7, 19, 33, .97); box-shadow: 0 12px 24px rgba(0, 0, 0, .3); pointer-events: none; }
 .map-tooltip strong { font-size: .7rem; }
 .map-tooltip span { color: #f7a064; font-size: .66rem; }
