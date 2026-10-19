@@ -164,7 +164,6 @@ const ui = {
   contextScatterZoomYIn: document.querySelector("#contextScatterZoomYIn"),
   contextScatterZoomReset: document.querySelector("#contextScatterZoomReset"),
   contextScatterStatus: document.querySelector("#contextScatterStatus"),
-  contextIndicatorLegend: document.querySelector("#contextIndicatorLegend"),
   contextIndicatorHeading: document.querySelector("#contextIndicatorHeading"),
   contextIndicatorDefinition: document.querySelector("#contextIndicatorDefinition"),
   contextIndicatorFamily: document.querySelector("#contextIndicatorFamily"),
@@ -2582,147 +2581,8 @@ function renderContextMetadataTabs() {
   renderContextIndicatorMetadata(activeIndicator, activeRows, activeCountry);
 }
 
-function renderMigrationHistoryChartLegacy() {
-  if (!state.initialized) return;
-  ui.migrationHistoryChart.replaceChildren();
-  const country = countryById(state.selectedCountry);
-  if (!country) {
-    benchmarkEmpty(ui.migrationHistoryChart, "No country-level observations are available for this selection.");
-    ui.migrationContextSubtitle.textContent = "Country-level migration observations are not available";
-    ui.migrationHistoryNote.textContent = "No context values are inferred when a source series is unavailable.";
-    renderContextIndicatorMetadata(null, []);
-    return;
-  }
-
-  let observations = state.observed
-    .filter((row) => String(row.entity_id) === country.id)
-    .map((row) => ({ row, year: safeNumber(row.year), value: safeNumber(row.value) }))
-    .filter((point) => point.year !== null && point.value !== null)
-    .sort((a, b) => a.year - b.year);
-  const fullContextSeries = state.contextRows
-    .filter((row) => row.indicator_id === state.selectedContextIndicator)
-    .map((row) => ({ row, year: safeNumber(row.year), value: safeNumber(row.value) }))
-    .filter((point) => point.year !== null && point.value !== null)
-    .sort((a, b) => a.year - b.year);
-  const selectedIndicator = fullContextSeries[0]?.row ?? null;
-  let contextSeries = fullContextSeries;
-  const period = ui.migrationPeriod.value;
-  const commonYearCeiling = Math.max(observations.at(-1)?.year ?? 0, contextSeries.at(-1)?.year ?? 0);
-  if (period !== "all" && commonYearCeiling) {
-    const startYear = commonYearCeiling - Number(period) + 1;
-    observations = observations.filter((point) => point.year >= startYear);
-    contextSeries = contextSeries.filter((point) => point.year >= startYear);
-  }
-  const allYears = state.observed
-    .filter((row) => String(row.entity_id) === country.id)
-    .map((row) => safeNumber(row.year)).filter((year) => year !== null);
-  const totalPeriod = allYears.length ? `${Math.min(...allYears)}–${Math.max(...allYears)}` : "coverage unavailable";
-  ui.migrationContextSubtitle.textContent = `${country.name} · observed immigration and source-reported context · ${totalPeriod}`;
-  ui.contextIndicatorLegend.textContent = selectedIndicator
-    ? `${selectedIndicator.indicator_label} · ${selectedIndicator.unit}` : "Selected indicator · not available";
-  renderContextIndicatorMetadata(selectedIndicator, fullContextSeries);
-
-  if (!observations.length) {
-    benchmarkEmpty(ui.migrationHistoryChart, "There are no valid observed immigration values for this country and period.");
-    ui.migrationHistoryNote.textContent = "The contextual source remains descriptive; no migration value is generated from it.";
-    return;
-  }
-  if (!contextSeries.length) {
-    ui.migrationHistoryNote.textContent = !state.contextViewsAvailable
-      ? "The protected contextual-data view is not yet configured or accessible. Observed immigration remains available; no context is inferred."
-      : `No published ${selectedIndicator?.indicator_label ?? "contextual"} values match this country and time window. The observed immigration series remains visible; no values are imputed.`;
-  } else {
-  ui.migrationHistoryNote.textContent = "The two lines use separate labelled axes and only source-reported observed years. Co-movement is descriptive; it does not establish causality. Source quality flags are shown only when providers supply them and are not an independent data-quality assessment.";
-  }
-
-  const width = Math.max(320, Math.round(ui.migrationHistoryChart.getBoundingClientRect().width || 860));
-  const height = 330;
-  const margin = { top: 24, right: 82, bottom: 50, left: 74 };
-  const plotWidth = width - margin.left - margin.right;
-  const plotHeight = height - margin.top - margin.bottom;
-  const years = unique([...observations.map((point) => point.year), ...contextSeries.map((point) => point.year)]).sort((a, b) => a - b);
-  const minYear = years[0];
-  const maxYear = years.at(-1);
-  const immigrantValues = observations.map((point) => point.value);
-  const contextValues = contextSeries.map((point) => point.value);
-  const bounds = (values) => {
-    const low = Math.min(...values);
-    const high = Math.max(...values);
-    const padding = Math.max((high - low) * .1, Math.abs(high) * .02, 1);
-    return [low - padding, high + padding];
-  };
-  const [minImmigration, maxImmigration] = bounds(immigrantValues);
-  const [minContext, maxContext] = contextValues.length ? bounds(contextValues) : [0, 1];
-  const x = (year) => margin.left + (maxYear === minYear ? plotWidth / 2 : (year - minYear) / (maxYear - minYear) * plotWidth);
-  const yImmigration = (value) => margin.top + (maxImmigration - value) / (maxImmigration - minImmigration) * plotHeight;
-  const yContext = (value) => margin.top + (maxContext - value) / (maxContext - minContext) * plotHeight;
-  const svg = createSvg("svg", { viewBox: `0 0 ${width} ${height}`, role: "img", "aria-label": `Observed immigration and ${selectedIndicator?.indicator_label ?? "context"} for ${country.name}` });
-
-  for (let tick = 0; tick <= 4; tick += 1) {
-    const fraction = tick / 4;
-    const immigrationValue = maxImmigration - fraction * (maxImmigration - minImmigration);
-    const yPosition = margin.top + plotHeight * fraction;
-    svg.append(createSvg("line", { x1: margin.left, x2: width - margin.right, y1: yPosition, y2: yPosition, class: "benchmark-gridline" }));
-    const leftLabel = createSvg("text", { x: margin.left - 8, y: yPosition + 4, "text-anchor": "end", class: "benchmark-axis-label" });
-    leftLabel.textContent = formatAxisNumber(immigrationValue);
-    svg.append(leftLabel);
-    if (contextValues.length) {
-      const contextValue = maxContext - fraction * (maxContext - minContext);
-      const rightLabel = createSvg("text", { x: width - margin.right + 9, y: yPosition + 4, "text-anchor": "start", class: "benchmark-axis-label" });
-      rightLabel.textContent = formatAxisNumber(contextValue);
-      svg.append(rightLabel);
-    }
-  }
-  const tickCount = Math.min(7, years.length);
-  const visibleTicks = tickCount === years.length || tickCount <= 1
-    ? years
-    : Array.from({ length: tickCount }, (_, index) => years[Math.round(index * (years.length - 1) / (tickCount - 1))]);
-  visibleTicks.forEach((year) => {
-    const label = createSvg("text", { x: x(year), y: height - 22, "text-anchor": "middle", class: "benchmark-axis-label" });
-    label.textContent = String(year);
-    svg.append(label);
-  });
-  svg.append(createSvg("line", { x1: margin.left, x2: width - margin.right, y1: height - margin.bottom, y2: height - margin.bottom, class: "benchmark-axis-line" }));
-  const leftTitle = createSvg("text", { x: 16, y: height / 2, transform: `rotate(-90 16 ${height / 2})`, "text-anchor": "middle", class: "benchmark-axis-title" });
-  leftTitle.textContent = "Immigration · persons/year";
-  svg.append(leftTitle);
-  if (contextValues.length) {
-    const rightTitle = createSvg("text", { x: width - 13, y: height / 2, transform: `rotate(-90 ${width - 13} ${height / 2})`, "text-anchor": "middle", class: "benchmark-axis-title" });
-    rightTitle.textContent = `${selectedIndicator.indicator_label} · ${selectedIndicator.unit}`;
-    svg.append(rightTitle);
-  }
-  const xTitle = createSvg("text", { x: margin.left + plotWidth / 2, y: height - 3, "text-anchor": "middle", class: "benchmark-axis-title" });
-  xTitle.textContent = "Observed year";
-  svg.append(xTitle);
-
-  splitObservedSegments(observations.map(({ year, value }) => ({ year, value }))).forEach((segment) => {
-    if (segment.length < 2) return;
-    const path = segment.map((point, index) => `${index ? "L" : "M"} ${x(point.year)} ${yImmigration(point.value)}`).join(" ");
-    svg.append(createSvg("path", { d: path, class: "context-history-line" }));
-  });
-  observations.forEach(({ year, value }) => {
-    const point = createSvg("circle", { cx: x(year), cy: yImmigration(value), r: 4, class: "context-history-point" });
-    const title = createSvg("title");
-    title.textContent = `${country.name} · ${year} · ${formatNumber(value)} persons/year · observed`;
-    point.append(title);
-    svg.append(point);
-  });
-  splitObservedSegments(contextSeries.map(({ year, value }) => ({ year, value }))).forEach((segment) => {
-    if (segment.length < 2) return;
-    const path = segment.map((point, index) => `${index ? "L" : "M"} ${x(point.year)} ${yContext(point.value)}`).join(" ");
-    svg.append(createSvg("path", { d: path, class: "context-indicator-line" }));
-  });
-  contextSeries.forEach(({ year, value }) => {
-    const point = createSvg("circle", { cx: x(year), cy: yContext(value), r: 3.7, class: "context-indicator-point" });
-    const title = createSvg("title");
-    title.textContent = `${selectedIndicator.indicator_label} · ${year} · ${formatContextValue(value, selectedIndicator.unit)} · source-reported`;
-    point.append(title);
-    svg.append(point);
-  });
-  ui.migrationHistoryChart.replaceChildren(svg);
-}
-
 const CONTEXT_COUNTRY_COLORS = ["#f5a16b", "#5fb5d4", "#ad91dc"];
+const CONTEXT_SINGLE_INDICATOR_COLORS = ["#5fb5d4", "#ad91dc", "#71c9a8", "#e8c86e", "#df8eaa", "#82a9f7", "#c2a47b", "#d98868", "#6dbbc0", "#c1a0e8"];
 
 function renderContextChartLegend(countries) {
   ui.contextChartLegend.replaceChildren();
@@ -2764,6 +2624,165 @@ function contextSeriesForCountry(country, indicatorId, startYear = null) {
   return { immigration, context };
 }
 
+function renderSingleContextChartLegend(indicators) {
+  ui.contextChartLegend.replaceChildren();
+  const immigration = document.createElement("span");
+  const immigrationLine = document.createElement("i");
+  immigrationLine.className = "context-chart-legend__line";
+  immigrationLine.style.borderTopColor = CONTEXT_COUNTRY_COLORS[0];
+  immigration.append(immigrationLine, document.createTextNode("Immigration · persons/year"));
+  ui.contextChartLegend.append(immigration);
+  indicators.forEach((indicator, index) => {
+    const item = document.createElement("span");
+    const swatch = document.createElement("i");
+    swatch.className = "context-chart-legend__line";
+    swatch.style.borderTopColor = CONTEXT_SINGLE_INDICATOR_COLORS[index % CONTEXT_SINGLE_INDICATOR_COLORS.length];
+    swatch.style.borderTopStyle = "dashed";
+    item.append(swatch, document.createTextNode(`${indicator.indicator_label} · ${indicator.unit}`));
+    ui.contextChartLegend.append(item);
+  });
+}
+
+function renderSingleCountryContextOverlay(country, indicators, period) {
+  const allSeries = indicators.map((indicator) => ({
+    indicator,
+    ...contextSeriesForCountry(country, indicator.indicator_id),
+  }));
+  const immigration = allSeries[0]?.immigration ?? contextSeriesForCountry(country, null).immigration;
+  const allYears = [...immigration, ...allSeries.flatMap((series) => series.context)].map((point) => point.year);
+  const maxYear = allYears.length ? Math.max(...allYears) : null;
+  const startYear = period === "all" || maxYear === null ? null : maxYear - Number(period) + 1;
+  const visibleImmigration = startYear === null ? immigration : immigration.filter((point) => point.year >= startYear);
+  const visibleSeries = allSeries.map((series, index) => {
+    const context = startYear === null ? series.context : series.context.filter((point) => point.year >= startYear);
+    const base = context[0]?.value ?? null;
+    const magnitudes = context.map((point) => Math.abs(point.value)).filter((value) => value > 1e-9).sort((a, b) => a - b);
+    const fallbackScale = magnitudes.length
+      ? magnitudes[Math.floor((magnitudes.length - 1) / 2)]
+      : 1;
+    const scale = base !== null && Math.abs(base) > 1e-9 ? Math.abs(base) : fallbackScale;
+    return {
+      ...series,
+      color: CONTEXT_SINGLE_INDICATOR_COLORS[index % CONTEXT_SINGLE_INDICATOR_COLORS.length],
+      indexed: context.map((point) => ({ ...point, indexedValue: 100 + ((point.value - (base ?? 0)) / scale) * 100 })),
+    };
+  });
+  const contextValues = visibleSeries.flatMap((series) => series.indexed.map((point) => point.indexedValue));
+  const years = unique([...visibleImmigration, ...visibleSeries.flatMap((series) => series.indexed)].map((point) => point.year)).sort((a, b) => a - b);
+  if (!years.length) {
+    benchmarkEmpty(ui.migrationHistoryChart, "No immigration or contextual observations are available for this selection.");
+    ui.migrationHistoryNote.textContent = "No values are inferred or filled in when a selected series is unavailable.";
+    return;
+  }
+
+  const panel = document.createElement("section");
+  panel.className = "context-series-panel";
+  const heading = document.createElement("div");
+  heading.className = "context-series-panel__heading";
+  const title = document.createElement("h3");
+  title.textContent = `Migration and selected indicators · ${country.name}`;
+  const detail = document.createElement("span");
+  const indicatorsWithValues = visibleSeries.filter((series) => series.indexed.length).length;
+  detail.textContent = `${indicatorsWithValues}/${indicators.length} indicators with values · index reset within selected window`;
+  heading.append(title, detail);
+  panel.append(heading);
+
+  const width = Math.max(320, Math.round(ui.migrationHistoryChart.getBoundingClientRect().width || 860));
+  const height = 340;
+  const margin = { top: 26, right: 88, bottom: 52, left: 74 };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  const bounds = (values) => {
+    if (!values.length) return [0, 1];
+    const low = Math.min(...values);
+    const high = Math.max(...values);
+    const padding = Math.max((high - low) * .1, Math.max(Math.abs(high), Math.abs(low)) * .02, 1);
+    return [low - padding, high + padding];
+  };
+  const [minImmigration, maxImmigration] = bounds(visibleImmigration.map((point) => point.value));
+  const [minContext, maxContext] = bounds(contextValues);
+  const minYear = years[0];
+  const maxChartYear = years.at(-1);
+  const x = (year) => margin.left + (maxChartYear === minYear ? plotWidth / 2 : (year - minYear) / (maxChartYear - minYear) * plotWidth);
+  const yImmigration = (value) => margin.top + (maxImmigration - value) / (maxImmigration - minImmigration) * plotHeight;
+  const yContext = (value) => margin.top + (maxContext - value) / (maxContext - minContext) * plotHeight;
+  const svg = createSvg("svg", {
+    viewBox: `0 0 ${width} ${height}`,
+    role: "img",
+    "aria-label": `Observed immigration and ${indicators.length} indexed contextual indicators for ${country.name}`,
+  });
+
+  for (let tick = 0; tick <= 4; tick += 1) {
+    const fraction = tick / 4;
+    const yPosition = margin.top + plotHeight * fraction;
+    svg.append(createSvg("line", { x1: margin.left, x2: width - margin.right, y1: yPosition, y2: yPosition, class: "benchmark-gridline" }));
+    const immigrationTick = createSvg("text", { x: margin.left - 8, y: yPosition + 4, "text-anchor": "end", class: "benchmark-axis-label" });
+    immigrationTick.textContent = formatAxisNumber(maxImmigration - fraction * (maxImmigration - minImmigration));
+    svg.append(immigrationTick);
+    if (contextValues.length) {
+      const contextTick = createSvg("text", { x: width - margin.right + 9, y: yPosition + 4, "text-anchor": "start", class: "benchmark-axis-label" });
+      contextTick.textContent = formatAxisNumber(maxContext - fraction * (maxContext - minContext));
+      svg.append(contextTick);
+    }
+  }
+  const tickCount = Math.min(7, years.length);
+  const visibleTicks = tickCount === years.length || tickCount <= 1
+    ? years
+    : Array.from({ length: tickCount }, (_, index) => years[Math.round(index * (years.length - 1) / (tickCount - 1))]);
+  visibleTicks.forEach((year) => {
+    const label = createSvg("text", { x: x(year), y: height - 23, "text-anchor": "middle", class: "benchmark-axis-label" });
+    label.textContent = String(year);
+    svg.append(label);
+  });
+  svg.append(createSvg("line", { x1: margin.left, x2: width - margin.right, y1: height - margin.bottom, y2: height - margin.bottom, class: "benchmark-axis-line" }));
+  const immigrationTitle = createSvg("text", { x: 16, y: height / 2, transform: `rotate(-90 16 ${height / 2})`, "text-anchor": "middle", class: "benchmark-axis-title" });
+  immigrationTitle.textContent = "Immigration · persons/year";
+  svg.append(immigrationTitle);
+  if (contextValues.length) {
+    const contextTitle = createSvg("text", { x: width - 13, y: height / 2, transform: `rotate(-90 ${width - 13} ${height / 2})`, "text-anchor": "middle", class: "benchmark-axis-title" });
+    contextTitle.textContent = "Context index · first visible value = 100";
+    svg.append(contextTitle);
+  }
+  const yearTitle = createSvg("text", { x: margin.left + plotWidth / 2, y: height - 3, "text-anchor": "middle", class: "benchmark-axis-title" });
+  yearTitle.textContent = "Observed year";
+  svg.append(yearTitle);
+
+  splitObservedSegments(visibleImmigration).forEach((segment) => {
+    if (segment.length < 2) return;
+    const path = segment.map((point, index) => `${index ? "L" : "M"} ${x(point.year)} ${yImmigration(point.value)}`).join(" ");
+    svg.append(createSvg("path", { d: path, class: "context-history-line" }));
+  });
+  visibleImmigration.forEach(({ year, value }) => {
+    const point = createSvg("circle", { cx: x(year), cy: yImmigration(value), r: 4, class: "context-history-point" });
+    const tooltip = createSvg("title");
+    tooltip.textContent = `${country.name} · ${year} · ${formatNumber(value)} persons/year · observed`;
+    point.append(tooltip);
+    svg.append(point);
+  });
+  visibleSeries.forEach(({ indicator, indexed, color }) => {
+    const plotValues = indexed.map((point) => ({ year: point.year, value: point.indexedValue }));
+    splitObservedSegments(plotValues).forEach((segment) => {
+      if (segment.length < 2) return;
+      const path = segment.map((point, index) => `${index ? "L" : "M"} ${x(point.year)} ${yContext(point.value)}`).join(" ");
+      const line = createSvg("path", { d: path, class: "context-indicator-line" });
+      line.style.stroke = color;
+      line.style.opacity = ".9";
+      svg.append(line);
+    });
+    indexed.forEach(({ year, value, indexedValue }) => {
+      const point = createSvg("circle", { cx: x(year), cy: yContext(indexedValue), r: 3.7, class: "context-indicator-point" });
+      point.style.fill = color;
+      const tooltip = createSvg("title");
+      tooltip.textContent = `${country.name} · ${indicator.indicator_label} · ${year} · ${formatContextValue(value, indicator.unit)} · index ${indexedValue.toFixed(1)} · source-reported`;
+      point.append(tooltip);
+      svg.append(point);
+    });
+  });
+  panel.append(svg);
+  ui.migrationHistoryChart.append(panel);
+  ui.migrationHistoryNote.textContent = "All selected indicators share one chart. Each contextual series is rebased to 100 at its first available year in the selected window. Changes use the starting-value magnitude as their scale (or the median non-zero magnitude when the starting value is zero); immigration keeps its own persons/year axis. This supports trend comparison, not comparison of absolute indicator levels or causal inference.";
+}
+
 function renderMigrationHistoryChart() {
   if (!state.initialized) return;
   ui.migrationHistoryChart.replaceChildren();
@@ -2784,6 +2803,12 @@ function renderMigrationHistoryChart() {
   if (!indicators.length) {
     benchmarkEmpty(ui.migrationHistoryChart, "No verified contextual indicators are available for the selected countries.");
     ui.migrationHistoryNote.textContent = "Observed immigration remains separate from contextual data; unavailable indicators are not inferred.";
+    return;
+  }
+
+  if (countries.length === 1 && indicators.length > 1) {
+    renderSingleContextChartLegend(indicators);
+    renderSingleCountryContextOverlay(countries[0], indicators, ui.migrationPeriod.value);
     return;
   }
 
