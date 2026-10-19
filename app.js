@@ -4535,6 +4535,7 @@ function appendMapPlaceMarkers(layer, projection) {
     marker.addEventListener("pointermove", positionMapTooltip);
     marker.addEventListener("pointerleave", hideMapTooltipWhenLeavingTarget);
     marker.addEventListener("focus", () => showMapPlaceTooltipForElement(marker, { name, kind: "capital" }));
+    marker.addEventListener("blur", hideMapTooltipWhenLeavingTarget);
     capitals.append(marker);
   });
   layer.append(capitals);
@@ -4554,6 +4555,7 @@ function appendMapPlaceMarkers(layer, projection) {
     marker.addEventListener("pointermove", positionMapTooltip);
     marker.addEventListener("pointerleave", hideMapTooltipWhenLeavingTarget);
     marker.addEventListener("focus", () => showMapPlaceTooltipForElement(marker, { name: city.name, kind: "city", city }));
+    marker.addEventListener("blur", hideMapTooltipWhenLeavingTarget);
     marker.addEventListener("click", (event) => {
       event.stopPropagation();
       navigateToCity(city);
