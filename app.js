@@ -4530,7 +4530,7 @@ function appendMapPlaceMarkers(layer, projection) {
     if (!featureForCode.has(code)) return;
     const [x, y] = projection([longitude, latitude]);
     const marker = createSvg("g", { class: "map-marker map-marker--capital", transform: mapMarkerScreenSizeTransform(x, y), tabindex: "0", role: "img", "aria-label": `${name}, capital` });
-    marker.append(createSvg("circle", { cx: x, cy: y, r: 1.55 / 3, class: "map-marker__capital-dot", "vector-effect": "non-scaling-stroke" }));
+    marker.append(createSvg("circle", { cx: x, cy: y, r: 3.1 / 3, class: "map-marker__capital-dot", "vector-effect": "non-scaling-stroke" }));
     marker.addEventListener("pointerenter", (event) => showMapPlaceTooltip(event, { name, kind: "capital" }));
     marker.addEventListener("pointermove", positionMapTooltip);
     marker.addEventListener("pointerleave", hideMapTooltipWhenLeavingTarget);
@@ -4546,18 +4546,18 @@ function appendMapPlaceMarkers(layer, projection) {
     const coordinates = CITY_MAP_LOCATIONS.get(city.key);
     if (!coordinates) return;
     const [x, y] = projection(coordinates);
-    const marker = createSvg("g", { class: "map-marker map-marker--city", transform: mapMarkerScreenSizeTransform(x, y), tabindex: "0", role: "link", "aria-label": `${city.name} · open City Intelligence` });
+    const marker = createSvg("g", { class: "map-marker map-marker--city", transform: mapMarkerScreenSizeTransform(x, y), tabindex: "0", role: "link", "aria-label": `${city.name} · double-click or press Enter to open City Intelligence` });
     marker.append(
       createSvg("circle", { cx: x, cy: y, r: 5, class: "map-marker__hit-area" }),
-      createSvg("circle", { cx: x, cy: y, r: 2.75 / 3, class: "map-marker__city-halo", "vector-effect": "non-scaling-stroke" }),
-      createSvg("circle", { cx: x, cy: y, r: 1.5 / 3, class: "map-marker__city-dot", "vector-effect": "non-scaling-stroke" }),
+      createSvg("circle", { cx: x, cy: y, r: 5.5 / 3, class: "map-marker__city-halo", "vector-effect": "non-scaling-stroke" }),
+      createSvg("circle", { cx: x, cy: y, r: 3 / 3, class: "map-marker__city-dot", "vector-effect": "non-scaling-stroke" }),
     );
     marker.addEventListener("pointerenter", (event) => showMapPlaceTooltip(event, { name: city.name, kind: "city", city }));
     marker.addEventListener("pointermove", positionMapTooltip);
     marker.addEventListener("pointerleave", hideMapTooltipWhenLeavingTarget);
     marker.addEventListener("focus", () => showMapPlaceTooltipForElement(marker, { name: city.name, kind: "city", city }));
     marker.addEventListener("blur", hideMapTooltipWhenLeavingTarget);
-    marker.addEventListener("click", (event) => {
+    marker.addEventListener("dblclick", (event) => {
       event.stopPropagation();
       navigateToCity(city);
     });
@@ -4681,7 +4681,7 @@ function showMapPlaceTooltip(event, place) {
   ui.mapTooltip.append(title);
   if (place.kind === "city") {
     const action = document.createElement("small");
-    action.textContent = "Click the marker to open City Intelligence";
+    action.textContent = "Double-click the marker to open City Intelligence";
     ui.mapTooltip.append(action);
   }
   ui.mapTooltip.hidden = false;
