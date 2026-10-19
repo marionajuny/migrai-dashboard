@@ -144,6 +144,13 @@ const ui = {
   migrationContextSubtitle: document.querySelector("#migrationContextSubtitle"),
   migrationHistoryChart: document.querySelector("#migrationHistoryChart"),
   migrationHistoryNote: document.querySelector("#migrationHistoryNote"),
+  contextScatterControls: document.querySelector("#contextScatterControls"),
+  contextScatterZoomXOut: document.querySelector("#contextScatterZoomXOut"),
+  contextScatterZoomXIn: document.querySelector("#contextScatterZoomXIn"),
+  contextScatterZoomYOut: document.querySelector("#contextScatterZoomYOut"),
+  contextScatterZoomYIn: document.querySelector("#contextScatterZoomYIn"),
+  contextScatterZoomReset: document.querySelector("#contextScatterZoomReset"),
+  contextScatterStatus: document.querySelector("#contextScatterStatus"),
   contextIndicatorLegend: document.querySelector("#contextIndicatorLegend"),
   contextIndicatorHeading: document.querySelector("#contextIndicatorHeading"),
   contextIndicatorDefinition: document.querySelector("#contextIndicatorDefinition"),
@@ -264,6 +271,8 @@ const state = {
   contextViewsAvailable: true,
   contextRequestId: 0,
   selectedContextIndicator: null,
+  contextScatterZoomX: 1,
+  contextScatterZoomY: 1,
   initialized: false,
   years: [],
   selectedYear: null,
@@ -539,14 +548,24 @@ ui.benchmarkRankingYear.addEventListener("change", renderCountryBenchmark);
 ui.benchmarkHeatmapMeasure.addEventListener("change", renderCountryBenchmark);
 ui.benchmarkHorizon.addEventListener("change", renderCountryBenchmark);
 ui.migrationCountrySelect.addEventListener("change", () => {
+  resetContextScatterZoom();
   selectCountry(ui.migrationCountrySelect.value);
   renderMigrationContext();
 });
 ui.migrationIndicatorSelect.addEventListener("change", () => {
+  resetContextScatterZoom();
   state.selectedContextIndicator = ui.migrationIndicatorSelect.value || null;
   renderMigrationHistoryChart();
   renderContextScatter();
   renderOtherContextIndicators();
+});
+ui.contextScatterZoomXOut.addEventListener("click", () => adjustContextScatterZoom("x", 1 / 1.35));
+ui.contextScatterZoomXIn.addEventListener("click", () => adjustContextScatterZoom("x", 1.35));
+ui.contextScatterZoomYOut.addEventListener("click", () => adjustContextScatterZoom("y", 1 / 1.35));
+ui.contextScatterZoomYIn.addEventListener("click", () => adjustContextScatterZoom("y", 1.35));
+ui.contextScatterZoomReset.addEventListener("click", () => {
+  resetContextScatterZoom();
+  renderContextScatter();
 });
 ui.migrationPeriod.addEventListener("change", renderMigrationHistoryChart);
 ui.reliabilityCountryScope.addEventListener("click", () => {
@@ -598,7 +617,10 @@ ui.cityRankingCriterion.addEventListener("change", renderCityRanking);
 ui.cityYoyMeasure.addEventListener("change", renderCityYearChange);
 window.addEventListener("resize", () => {
   if (state.activePage === "country-benchmark") renderBenchmarkTrendChart();
-  if (state.activePage === "migration-context") renderMigrationHistoryChart();
+  if (state.activePage === "migration-context") {
+    renderMigrationHistoryChart();
+    renderContextScatter();
+  }
   if (state.activePage === "city-intelligence") renderCityTrendChart();
 });
 ui.intelligenceCountrySelect.addEventListener("change", () => {
@@ -2281,6 +2303,7 @@ async function renderMigrationContext() {
     state.contextRows = [];
     populateMigrationIndicatorOptions();
     renderMigrationHistoryChart();
+    renderContextScatter();
     return;
   }
   const requestId = ++state.contextRequestId;
@@ -2488,50 +2511,134 @@ function renderContextIndicatorMetadata(indicator, rows) {
     ? `${firstYear ?? "—"}–${lastYear ?? "—"} · ${count} values · ${flagged ? `${flagged} source flags reported` : "no source flags supplied"}` : "Not available";
 }
 
+function resetContextScatterZoom() {
+  state.contextScatterZoomX = 1;
+  state.contextScatterZoomY = 1;
+}
+
+function adjustContextScatterZoom(axis, multiplier) {
+  const key = axis === "x" ? "contextScatterZoomX" : "contextScatterZoomY";
+  state[key] = Math.min(8, Math.max(1, state[key] * multiplier));
+  renderContextScatter();
+}
+
+function contextScatterDomain(values, zoom = 1) {
+  const low = Math.min(...values);
+  const high = Math.max(...values);
+  const range = high - low;
+  const padding = range > 0 ? range * 0.08 : Math.max(Math.abs(high) * 0.08, 0.01);
+  const paddedLow = low - padding;
+  const paddedHigh = high + padding;
+  const center = (paddedLow + paddedHigh) / 2;
+  const halfRange = (paddedHigh - paddedLow) / (2 * Math.max(zoom, 1));
+  return [center - halfRange, center + halfRange];
+}
+
+function formatContextScatterAxisValue(value, span) {
+  const absolute = Math.abs(value);
+  if (absolute >= 1_000_000) {
+    return `${new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 }).format(value / 1_000_000)}m`;
+  }
+  if (absolute >= 10_000) {
+    return `${new Intl.NumberFormat("en-GB", { maximumFractionDigits: 1 }).format(value / 1_000)}k`;
+  }
+  const digits = span < 1 ? 2 : span < 10 ? 2 : span < 100 ? 1 : 0;
+  return new Intl.NumberFormat("en-GB", { maximumFractionDigits: digits }).format(value);
+}
+
 function renderContextScatter() {
   const indicator = selectedCountryContextIndicator();
   const country = countryById(state.selectedCountry);
   ui.contextScatterChart.hidden = true;
   ui.contextScatterChart.replaceChildren();
   ui.contextScatterEmpty.hidden = false;
+  ui.contextScatterControls.hidden = true;
+  ui.contextScatterStatus.hidden = true;
   if (!indicator || !country) return;
+
   const observedByYear = new Map(state.observed
     .filter((row) => String(row.entity_id) === country.id)
     .map((row) => [safeNumber(row.year), safeNumber(row.value)])
-    .filter(([year, value]) => year !== null && value !== null));
+    .filter(([year, value]) => Number.isFinite(year) && Number.isFinite(value)));
   const pairs = state.contextRows.filter((row) => row.indicator_id === indicator.indicator_id)
     .map((row) => ({ year: safeNumber(row.year), x: safeNumber(row.value), y: observedByYear.get(safeNumber(row.year)) }))
-    .filter((point) => point.year !== null && point.x !== null && point.y !== null);
-  if (pairs.length < 2) return;
+    .filter((point) => Number.isFinite(point.year) && Number.isFinite(point.x) && Number.isFinite(point.y));
+  if (pairs.length < 2) {
+    const detail = ui.contextScatterEmpty.querySelector("p");
+    if (detail) detail.textContent = "At least two years with both a published contextual value and an observed immigration value are needed. Unmatched years are omitted.";
+    return;
+  }
+
   ui.contextScatterEmpty.hidden = true;
   ui.contextScatterChart.hidden = false;
-  const width = Math.max(320, Math.round(ui.contextScatterChart.getBoundingClientRect().width || 600));
-  const height = 270;
-  const margin = { top: 18, right: 18, bottom: 46, left: 66 };
-  let minX = Math.min(...pairs.map((point) => point.x));
-  let maxX = Math.max(...pairs.map((point) => point.x));
-  let minY = Math.min(...pairs.map((point) => point.y));
-  let maxY = Math.max(...pairs.map((point) => point.y));
-  if (minX === maxX) { minX -= 1; maxX += 1; }
-  if (minY === maxY) { minY -= 1; maxY += 1; }
-  const x = (value) => margin.left + (value - minX) / (maxX - minX) * (width - margin.left - margin.right);
-  const y = (value) => height - margin.bottom - (value - minY) / (maxY - minY) * (height - margin.top - margin.bottom);
-  const svg = createSvg("svg", { viewBox: `0 0 ${width} ${height}`, role: "img", "aria-label": `${indicator.indicator_label} compared with observed immigration in ${country.name}` });
-  svg.append(createSvg("line", { x1: margin.left, x2: width - margin.right, y1: height - margin.bottom, y2: height - margin.bottom, class: "benchmark-axis-line" }));
-  svg.append(createSvg("line", { x1: margin.left, x2: margin.left, y1: margin.top, y2: height - margin.bottom, class: "benchmark-axis-line" }));
+  ui.contextScatterControls.hidden = false;
+  ui.contextScatterStatus.hidden = false;
+  const width = Math.max(340, Math.round(ui.contextScatterChart.getBoundingClientRect().width || 600));
+  const height = 300;
+  const margin = { top: 20, right: 18, bottom: 60, left: 74 };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  const xDomain = contextScatterDomain(pairs.map((point) => point.x), state.contextScatterZoomX);
+  const yDomain = contextScatterDomain(pairs.map((point) => point.y), state.contextScatterZoomY);
+  const xSpan = xDomain[1] - xDomain[0];
+  const ySpan = yDomain[1] - yDomain[0];
+  const x = (value) => margin.left + (value - xDomain[0]) / xSpan * plotWidth;
+  const y = (value) => margin.top + (yDomain[1] - value) / ySpan * plotHeight;
+  const svg = createSvg("svg", {
+    viewBox: `0 0 ${width} ${height}`,
+    role: "img",
+    "aria-label": `${pairs.length} paired country-year observations: ${indicator.indicator_label} compared with observed immigration in ${country.name}`,
+  });
+  const plotTop = margin.top;
+  const plotBottom = height - margin.bottom;
+  const plotRight = width - margin.right;
+  const clipId = "context-scatter-plot-clip";
+  const defs = createSvg("defs");
+  const clip = createSvg("clipPath", { id: clipId });
+  clip.append(createSvg("rect", { x: margin.left, y: plotTop, width: plotWidth, height: plotHeight }));
+  defs.append(clip);
+  svg.append(defs);
+
+  for (let tick = 0; tick <= 4; tick += 1) {
+    const fraction = tick / 4;
+    const xValue = xDomain[0] + xSpan * fraction;
+    const xPosition = margin.left + plotWidth * fraction;
+    svg.append(createSvg("line", { x1: xPosition, x2: xPosition, y1: plotTop, y2: plotBottom, class: "context-scatter-grid" }));
+    const xTick = createSvg("text", { x: xPosition, y: plotBottom + 17, "text-anchor": "middle", class: "context-scatter-axis-label" });
+    xTick.textContent = formatContextScatterAxisValue(xValue, xSpan);
+    svg.append(xTick);
+
+    const yValue = yDomain[1] - ySpan * fraction;
+    const yPosition = plotTop + plotHeight * fraction;
+    svg.append(createSvg("line", { x1: margin.left, x2: plotRight, y1: yPosition, y2: yPosition, class: "context-scatter-grid" }));
+    const yTick = createSvg("text", { x: margin.left - 9, y: yPosition + 4, "text-anchor": "end", class: "context-scatter-axis-label" });
+    yTick.textContent = formatContextScatterAxisValue(yValue, ySpan);
+    svg.append(yTick);
+  }
+  svg.append(createSvg("line", { x1: margin.left, x2: plotRight, y1: plotBottom, y2: plotBottom, class: "benchmark-axis-line" }));
+  svg.append(createSvg("line", { x1: margin.left, x2: margin.left, y1: plotTop, y2: plotBottom, class: "benchmark-axis-line" }));
+
+  const points = createSvg("g", { "clip-path": `url(#${clipId})` });
   pairs.forEach((pair) => {
-    const point = createSvg("circle", { cx: x(pair.x), cy: y(pair.y), r: 4, class: "context-scatter-point" });
+    const point = createSvg("circle", { cx: x(pair.x), cy: y(pair.y), r: 4.3, class: "context-scatter-point" });
     const title = createSvg("title");
     title.textContent = `${pair.year} · ${formatContextValue(pair.x, indicator.unit)} · ${formatNumber(pair.y)} persons/year`;
     point.append(title);
-    svg.append(point);
+    points.append(point);
   });
-  const xLabel = createSvg("text", { x: margin.left + (width - margin.left - margin.right) / 2, y: height - 7, "text-anchor": "middle", class: "benchmark-axis-title" });
+  svg.append(points);
+
+  const xLabel = createSvg("text", { x: margin.left + plotWidth / 2, y: height - 4, "text-anchor": "middle", class: "benchmark-axis-title" });
   xLabel.textContent = `${indicator.indicator_label} · ${indicator.unit}`;
-  const yLabel = createSvg("text", { x: 15, y: height / 2, transform: `rotate(-90 15 ${height / 2})`, "text-anchor": "middle", class: "benchmark-axis-title" });
+  const yLabel = createSvg("text", { x: 16, y: margin.top + plotHeight / 2, transform: `rotate(-90 16 ${margin.top + plotHeight / 2})`, "text-anchor": "middle", class: "benchmark-axis-title" });
   yLabel.textContent = "Immigration · persons/year";
   svg.append(xLabel, yLabel);
   ui.contextScatterChart.append(svg);
+  ui.contextScatterStatus.textContent = `${pairs.length} matched years · scales fitted to this indicator and country. Years without observed immigration are excluded.`;
+  ui.contextScatterZoomXOut.disabled = state.contextScatterZoomX <= 1.001;
+  ui.contextScatterZoomYOut.disabled = state.contextScatterZoomY <= 1.001;
+  ui.contextScatterZoomXIn.disabled = state.contextScatterZoomX >= 7.999;
+  ui.contextScatterZoomYIn.disabled = state.contextScatterZoomY >= 7.999;
 }
 
 function renderOtherContextIndicators() {
@@ -4371,6 +4478,7 @@ function setMapZoom(value) {
 }
 
 function selectCountry(countryId) {
+  if (state.selectedCountry !== countryId) resetContextScatterZoom();
   if (state.selectedCountry !== countryId) {
     state.selectedCity = null;
     updateCityQuery(null);
@@ -4384,7 +4492,10 @@ function selectCountry(countryId) {
   updateCountryQuery();
   renderOutlook();
   renderCountryIntelligence();
-  if (state.activePage === "migration-context") renderMigrationHistoryChart();
+  if (state.activePage === "migration-context") {
+    renderMigrationHistoryChart();
+    renderContextScatter();
+  }
 }
 
 function showMapTooltip(event, name, point, value) {

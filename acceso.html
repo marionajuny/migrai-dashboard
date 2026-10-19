@@ -282,9 +282,19 @@
 
             <div class="context-analysis-grid">
               <section class="outlook-panel context-scatter-panel" aria-labelledby="contextScatterTitle">
-                <div class="panel-heading"><div><h2 id="contextScatterTitle">Immigration vs. selected indicator</h2><p>Country-year observations · descriptive comparison only</p></div></div>
+                <div class="panel-heading"><div><h2 id="contextScatterTitle">Immigration vs. selected indicator</h2><p>Matched country-years · descriptive comparison only</p></div></div>
                 <div id="contextScatterEmpty" class="context-empty-state"><span class="context-empty-icon" aria-hidden="true">↗</span><strong>Comparison unavailable</strong><p>A scatter plot needs paired immigration and contextual values for the same country-years.</p></div>
+                <div id="contextScatterControls" class="context-scatter-controls" role="group" aria-label="Scatter plot scale controls" hidden>
+                  <div class="context-scatter-axis-controls" role="group" aria-label="Horizontal indicator scale">
+                    <span>X · indicator</span><button id="contextScatterZoomXOut" type="button" aria-label="Zoom out on indicator axis" title="Zoom out on indicator axis">−</button><button id="contextScatterZoomXIn" type="button" aria-label="Zoom in on indicator axis" title="Zoom in on indicator axis">+</button>
+                  </div>
+                  <div class="context-scatter-axis-controls" role="group" aria-label="Vertical immigration scale">
+                    <span>Y · immigration</span><button id="contextScatterZoomYOut" type="button" aria-label="Zoom out on immigration axis" title="Zoom out on immigration axis">−</button><button id="contextScatterZoomYIn" type="button" aria-label="Zoom in on immigration axis" title="Zoom in on immigration axis">+</button>
+                  </div>
+                  <button id="contextScatterZoomReset" class="context-scatter-reset" type="button">Auto fit</button>
+                </div>
                 <div id="contextScatterChart" class="context-scatter-chart" hidden></div>
+                <p id="contextScatterStatus" class="context-scatter-status" role="status" aria-live="polite" hidden></p>
               </section>
               <section class="outlook-panel context-indicators-panel" aria-labelledby="contextIndicatorsTitle">
                 <div class="panel-heading"><div><h2 id="contextIndicatorsTitle">Other contextual indicators</h2><p>Verified series available for the selected destination</p></div><span id="contextIndicatorCount" class="context-unavailable-tag">0 available</span></div>
@@ -294,13 +304,16 @@
 
             <div class="context-analysis-grid context-bottom-grid">
               <section class="outlook-panel context-diaspora-panel" aria-labelledby="contextDiasporaTitle">
-                <div class="panel-heading"><div><h2 id="contextDiasporaTitle">Diaspora network structure</h2><p>Origin composition and concentration of migrant populations</p></div></div>
-                <div class="context-diaspora-metrics">
-                  <article><strong>—</strong><span>Concentration</span><small>Requires origin-level shares</small></article>
-                  <article><strong>—</strong><span>Top-origin share</span><small>Requires a defined origin field</small></article>
-                  <article><strong>—</strong><span>Effective origin count</span><small>Requires comparable origin records</small></article>
+                <div class="panel-heading"><div><h2 id="contextDiasporaTitle">Diaspora network structure</h2><p>Origin composition and concentration of migrant populations</p></div><span class="context-unavailable-tag">Not in current data release</span></div>
+                <div class="context-diaspora-empty" role="status">
+                  <p>The published Supabase views and latest pipeline run contain destination-level immigration totals, but no counts broken down by migrant origin. Those totals cannot show where people came from.</p>
+                  <div class="context-diaspora-requirements" aria-label="Data needed for diaspora measures">
+                    <article><strong>Concentration</strong><small>Share of each origin among arrivals to the destination.</small></article>
+                    <article><strong>Top-origin share</strong><small>Counts with both origin and destination recorded.</small></article>
+                    <article><strong>Effective origin count</strong><small>Comparable origin shares for the same years.</small></article>
+                  </div>
+                  <p class="analysis-note">No values are inferred from country totals. Add a validated origin–destination source to the pipeline and publish a protected Supabase view to enable this panel.</p>
                 </div>
-                <p class="analysis-note">No origin-by-destination network artifact is present in the production pipeline. Diaspora measures are not inferred from country-level immigration totals.</p>
               </section>
               <section class="outlook-panel context-caveats-panel" aria-labelledby="contextCaveatsTitle">
                 <div class="panel-heading"><div><h2 id="contextCaveatsTitle">Historical context, not causal explanation</h2><p>How to interpret contextual comparisons</p></div></div>
