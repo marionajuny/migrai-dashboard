@@ -142,12 +142,21 @@ const ui = {
   benchmarkHorizon: document.querySelector("#benchmarkHorizon"),
   benchmarkDumbbell: document.querySelector("#benchmarkDumbbell"),
   benchmarkInsights: document.querySelector("#benchmarkInsights"),
-  migrationCountrySelect: document.querySelector("#migrationCountrySelect"),
-  migrationIndicatorSelect: document.querySelector("#migrationIndicatorSelect"),
+  contextCountryToggle: document.querySelector("#contextCountryToggle"),
+  contextCountrySummary: document.querySelector("#contextCountrySummary"),
+  contextCountryMenu: document.querySelector("#contextCountryMenu"),
+  contextIndicatorToggle: document.querySelector("#contextIndicatorToggle"),
+  contextIndicatorSummary: document.querySelector("#contextIndicatorSummary"),
+  contextIndicatorMenu: document.querySelector("#contextIndicatorMenu"),
+  contextSelectionNote: document.querySelector("#contextSelectionNote"),
   migrationPeriod: document.querySelector("#migrationPeriod"),
   migrationContextSubtitle: document.querySelector("#migrationContextSubtitle"),
   migrationHistoryChart: document.querySelector("#migrationHistoryChart"),
   migrationHistoryNote: document.querySelector("#migrationHistoryNote"),
+  contextChartLegend: document.querySelector("#contextChartLegend"),
+  contextMetadataCountryTabs: document.querySelector("#contextMetadataCountryTabs"),
+  contextMetadataIndicatorTabs: document.querySelector("#contextMetadataIndicatorTabs"),
+  contextScatterSubtitle: document.querySelector("#contextScatterSubtitle"),
   contextScatterControls: document.querySelector("#contextScatterControls"),
   contextScatterZoomXOut: document.querySelector("#contextScatterZoomXOut"),
   contextScatterZoomXIn: document.querySelector("#contextScatterZoomXIn"),
@@ -272,9 +281,13 @@ const state = {
   contextInventoryStatus: "idle",
   contextCache: new Map(),
   contextCacheEpoch: 0,
+  contextLoadFailures: new Set(),
   contextViewsAvailable: true,
   contextRequestId: 0,
-  selectedContextIndicator: null,
+  selectedContextCountries: [],
+  selectedContextIndicators: [],
+  activeContextCountry: null,
+  activeContextIndicator: null,
   contextScatterZoomX: 1,
   contextScatterZoomY: 1,
   initialized: false,
@@ -421,9 +434,14 @@ ui.logoutButton.addEventListener("click", async () => {
   state.backtestEntityMetrics = [];
   state.backtestViewsAvailable = true;
   state.contextRows = [];
+  state.selectedContextCountries = [];
+  state.selectedContextIndicators = [];
+  state.activeContextCountry = null;
+  state.activeContextIndicator = null;
   state.contextInventoryRows = [];
   state.contextInventoryStatus = "idle";
   state.contextCache.clear();
+  state.contextLoadFailures.clear();
   state.contextCacheEpoch += 1;
   state.contextRequestId += 1;
   state.contextViewsAvailable = true;
@@ -556,17 +574,14 @@ ui.benchmarkIndexButton.addEventListener("click", () => {
 ui.benchmarkRankingYear.addEventListener("change", renderCountryBenchmark);
 ui.benchmarkHeatmapMeasure.addEventListener("change", renderCountryBenchmark);
 ui.benchmarkHorizon.addEventListener("change", renderCountryBenchmark);
-ui.migrationCountrySelect.addEventListener("change", () => {
-  resetContextScatterZoom();
-  selectCountry(ui.migrationCountrySelect.value);
-  renderMigrationContext();
-});
-ui.migrationIndicatorSelect.addEventListener("change", () => {
-  resetContextScatterZoom();
-  state.selectedContextIndicator = ui.migrationIndicatorSelect.value || null;
-  renderMigrationHistoryChart();
-  renderContextScatter();
-  renderOtherContextIndicators();
+ui.contextCountryToggle.addEventListener("click", () => toggleContextSelector(ui.contextCountryMenu, ui.contextCountryToggle));
+ui.contextIndicatorToggle.addEventListener("click", () => toggleContextSelector(ui.contextIndicatorMenu, ui.contextIndicatorToggle));
+ui.contextCountryMenu.addEventListener("change", handleContextCountrySelection);
+ui.contextIndicatorMenu.addEventListener("change", handleContextIndicatorSelection);
+document.addEventListener("click", (event) => {
+  if (event.target.closest(".context-selector")) return;
+  closeContextSelector(ui.contextCountryMenu, ui.contextCountryToggle);
+  closeContextSelector(ui.contextIndicatorMenu, ui.contextIndicatorToggle);
 });
 ui.contextScatterZoomXOut.addEventListener("click", () => adjustContextScatterZoom("x", 1 / 1.35));
 ui.contextScatterZoomXIn.addEventListener("click", () => adjustContextScatterZoom("x", 1.35));
@@ -1007,13 +1022,170 @@ function populateIntelligenceCountryControl() {
   }
 }
 
+function toggleContextSelector(menu, toggle) {
+  const shouldOpen = menu.hidden;
+  closeContextSelector(ui.contextCountryMenu, ui.contextCountryToggle);
+  closeContextSelector(ui.contextIndicatorMenu, ui.contextIndicatorToggle);
+  if (!shouldOpen) return;
+  menu.hidden = false;
+  toggle.setAttribute("aria-expanded", "true");
+}
+
+function closeContextSelector(menu, toggle) {
+  menu.hidden = true;
+  toggle.setAttribute("aria-expanded", "false");
+}
+
+function renderContextCountryMenu() {
+  ui.contextCountryMenu.replaceChildren();
+  const countries = listCountries();
+  const selected = new Set(state.selectedContextCountries);
+  countries.forEach((country) => {
+    const label = document.createElement("label");
+    label.className = "context-selector-option";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.value = country.id;
+    checkbox.dataset.contextCountry = country.id;
+    checkbox.checked = selected.has(country.id);
+    checkbox.disabled = !checkbox.checked && selected.size >= 3;
+    const name = document.createElement("span");
+    name.textContent = country.name;
+    label.append(checkbox, name);
+    ui.contextCountryMenu.append(label);
+  });
+}
+
+function renderContextIndicatorMenu() {
+  ui.contextIndicatorMenu.replaceChildren();
+  const indicators = contextIndicatorRows(state.contextRows);
+  if (!indicators.length) {
+    const empty = document.createElement("p");
+    empty.className = "context-selector-empty";
+    empty.textContent = state.contextViewsAvailable
+      ? "No source-reported indicators are available for these countries."
+      : "The protected contextual-data view is not accessible.";
+    ui.contextIndicatorMenu.append(empty);
+    return;
+  }
+  const selected = new Set(state.selectedContextIndicators);
+  indicators.forEach((indicator) => {
+    const label = document.createElement("label");
+    label.className = "context-selector-option context-selector-option--indicator";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.value = indicator.indicator_id;
+    checkbox.dataset.contextIndicator = indicator.indicator_id;
+    checkbox.checked = selected.has(indicator.indicator_id);
+    const name = document.createElement("span");
+    name.className = "context-selector-option-copy";
+    const title = document.createElement("strong");
+    title.textContent = indicator.indicator_label;
+    const family = document.createElement("small");
+    family.textContent = `${indicator.family} · ${indicator.unit}`;
+    name.append(title, family);
+    label.append(checkbox, name);
+    ui.contextIndicatorMenu.append(label);
+  });
+}
+
+function renderContextSelectionControls() {
+  renderContextSelectionSummaries();
+  renderContextCountryMenu();
+  renderContextIndicatorMenu();
+}
+
+function renderContextSelectionSummaries() {
+  const countries = state.selectedContextCountries.map(countryById).filter(Boolean);
+  const indicators = contextIndicatorRows(state.contextRows);
+  const selectedIndicators = state.selectedContextIndicators
+    .map((id) => indicators.find((indicator) => indicator.indicator_id === id))
+    .filter(Boolean);
+  ui.contextCountrySummary.textContent = countries.map((country) => country.name).join(", ") || "Select countries";
+  ui.contextCountryToggle.setAttribute("aria-label", `Countries selected: ${countries.map((country) => country.name).join(", ") || "none"}`);
+  ui.contextIndicatorSummary.textContent = selectedIndicators.length === 1
+    ? selectedIndicators[0].indicator_label
+    : `${selectedIndicators.length} indicators selected`;
+  ui.contextIndicatorToggle.setAttribute("aria-label", `Indicators selected: ${selectedIndicators.map((indicator) => indicator.indicator_label).join(", ") || "none"}`);
+  ui.contextIndicatorToggle.disabled = indicators.length === 0;
+  const selected = new Set(state.selectedContextCountries);
+  ui.contextCountryMenu.querySelectorAll("input[data-context-country]").forEach((checkbox) => {
+    checkbox.checked = selected.has(checkbox.dataset.contextCountry);
+    checkbox.disabled = !checkbox.checked && selected.size >= 3;
+  });
+}
+
+function setContextSelectionNote(message = "", kind = "") {
+  ui.contextSelectionNote.textContent = message;
+  ui.contextSelectionNote.classList.toggle("is-error", kind === "error");
+}
+
 function populateMigrationCountryControl() {
   const countries = listCountries();
-  replaceOptions(ui.migrationCountrySelect, countries.map(({ id, name }) => ({ value: id, label: name })));
-  const preferred = countries.find((item) => item.id === state.selectedCountry)
-    ?? countries.find((item) => normalizeName(item.name) === "spain")
-    ?? countries[0];
-  if (preferred) ui.migrationCountrySelect.value = preferred.id;
+  if (!state.selectedContextCountries.length) {
+    const preferred = countries.find((item) => item.id === state.selectedCountry)
+      ?? countries.find((item) => normalizeName(item.name) === "spain")
+      ?? countries[0];
+    if (preferred) state.selectedContextCountries = [preferred.id];
+  }
+  state.selectedContextCountries = unique(state.selectedContextCountries)
+    .filter((id) => countries.some((country) => country.id === id)).slice(0, 3);
+  if (!state.activeContextCountry || !state.selectedContextCountries.includes(state.activeContextCountry)) {
+    state.activeContextCountry = state.selectedContextCountries[0] ?? null;
+  }
+  renderContextSelectionControls();
+}
+
+function handleContextCountrySelection(event) {
+  const checkbox = event.target.closest("input[data-context-country]");
+  if (!checkbox) return;
+  const next = new Set(state.selectedContextCountries);
+  if (checkbox.checked) {
+    if (next.size >= 3) {
+      checkbox.checked = false;
+      setContextSelectionNote("You can select a maximum of three countries.", "error");
+      return;
+    }
+    next.add(checkbox.dataset.contextCountry);
+  } else {
+    if (next.size <= 1) {
+      checkbox.checked = true;
+      setContextSelectionNote("Keep at least one country selected.", "error");
+      return;
+    }
+    next.delete(checkbox.dataset.contextCountry);
+  }
+  state.selectedContextCountries = [...next];
+  if (!next.has(state.activeContextCountry)) state.activeContextCountry = state.selectedContextCountries[0];
+  setContextSelectionNote("Loading verified contextual indicators for the selected countries…");
+  resetContextScatterZoom();
+  renderContextSelectionSummaries();
+  renderMigrationContext();
+}
+
+function handleContextIndicatorSelection(event) {
+  const checkbox = event.target.closest("input[data-context-indicator]");
+  if (!checkbox) return;
+  const next = new Set(state.selectedContextIndicators);
+  if (checkbox.checked) {
+    next.add(checkbox.dataset.contextIndicator);
+  } else {
+    if (next.size <= 1) {
+      checkbox.checked = true;
+      setContextSelectionNote("Keep at least one indicator selected.", "error");
+      return;
+    }
+    next.delete(checkbox.dataset.contextIndicator);
+  }
+  state.selectedContextIndicators = [...next];
+  if (!next.has(state.activeContextIndicator)) state.activeContextIndicator = state.selectedContextIndicators[0] ?? null;
+  setContextSelectionNote();
+  resetContextScatterZoom();
+  renderContextSelectionSummaries();
+  renderContextMetadataTabs();
+  renderMigrationHistoryChart();
+  renderContextScatter();
+  renderOtherContextIndicators();
 }
 
 function navigateToDashboardPage(page) {
@@ -2270,11 +2442,13 @@ async function loadContextRows(level, entityId, countryIso2 = "") {
   const { data, error } = await query;
   if (cacheEpoch !== state.contextCacheEpoch) return [];
   if (error) {
+    state.contextLoadFailures.add(key);
     state.contextViewsAvailable = false;
     state.contextCache.set(key, []);
     return [];
   }
-  state.contextViewsAvailable = true;
+  state.contextLoadFailures.delete(key);
+  state.contextViewsAvailable = state.contextLoadFailures.size === 0;
   const rows = data ?? [];
   state.contextCache.set(key, rows);
   return rows;
@@ -2306,25 +2480,29 @@ function officialContextSourceUrl(value) {
 
 async function renderMigrationContext() {
   if (!state.initialized) return;
-  if (state.selectedCountry === "all") {
-    const countries = listCountries();
-    const preferred = countries.find((item) => normalizeName(item.name) === "spain") ?? countries[0];
-    if (preferred) state.selectedCountry = preferred.id;
-  }
-  populateMigrationCountryControl();
-  const country = countryById(state.selectedCountry);
-  if (!country) {
+  if (!state.selectedContextCountries.length) populateMigrationCountryControl();
+  const countries = state.selectedContextCountries.map(countryById).filter(Boolean);
+  if (!countries.length) {
     state.contextRows = [];
     populateMigrationIndicatorOptions();
+    renderContextMetadataTabs();
     renderMigrationHistoryChart();
     renderContextScatter();
+    renderOtherContextIndicators();
     return;
   }
   const requestId = ++state.contextRequestId;
-  const rows = await loadContextRows("country", country.id);
-  if (requestId !== state.contextRequestId || state.selectedCountry !== country.id) return;
-  state.contextRows = rows;
+  const countrySelection = countries.map((country) => country.id).join("|");
+  ui.contextIndicatorToggle.disabled = true;
+  const results = await Promise.all(countries.map((country) => loadContextRows("country", country.id)));
+  if (requestId !== state.contextRequestId || countrySelection !== state.selectedContextCountries.join("|")) return;
+  state.contextRows = results.flat();
+  state.contextViewsAvailable = countries.every((country) => !state.contextLoadFailures.has(contextEntityCacheKey("country", country.id)));
   populateMigrationIndicatorOptions();
+  renderContextSelectionSummaries();
+  renderContextIndicatorMenu();
+  renderContextMetadataTabs();
+  setContextSelectionNote();
   renderMigrationHistoryChart();
   renderContextScatter();
   renderOtherContextIndicators();
@@ -2332,26 +2510,79 @@ async function renderMigrationContext() {
 
 function populateMigrationIndicatorOptions() {
   const indicators = contextIndicatorRows();
-  const current = state.selectedContextIndicator;
-  replaceOptions(ui.migrationIndicatorSelect, indicators.map((row) => ({
-    value: row.indicator_id,
-    label: `${row.family} · ${row.indicator_label}`,
-  })));
-  ui.migrationIndicatorSelect.disabled = indicators.length === 0;
-  const selected = indicators.some((row) => row.indicator_id === current)
-    ? current
-    : indicators.find((row) => row.indicator_id === "country_gdp_per_capita_pps")?.indicator_id
-      ?? indicators[0]?.indicator_id
-      ?? null;
-  state.selectedContextIndicator = selected;
-  if (selected) ui.migrationIndicatorSelect.value = selected;
+  const available = new Set(indicators.map((row) => row.indicator_id));
+  const retained = state.selectedContextIndicators.filter((id) => available.has(id));
+  if (!retained.length && indicators.length) {
+    retained.push(indicators.find((row) => row.indicator_id === "country_gdp_per_capita_pps")?.indicator_id
+      ?? indicators[0].indicator_id);
+  }
+  state.selectedContextIndicators = retained;
+  if (!retained.includes(state.activeContextIndicator)) state.activeContextIndicator = retained[0] ?? null;
 }
 
 function selectedCountryContextIndicator() {
-  return state.contextRows.find((row) => row.indicator_id === state.selectedContextIndicator) ?? null;
+  return state.contextRows.find((row) => String(row.entity_id) === state.activeContextCountry
+    && row.indicator_id === state.activeContextIndicator)
+    ?? state.contextRows.find((row) => row.indicator_id === state.activeContextIndicator)
+    ?? null;
 }
 
-function renderMigrationHistoryChart() {
+function contextRowsForCountry(countryId) {
+  return state.contextRows.filter((row) => String(row.entity_id) === String(countryId));
+}
+
+function renderContextMetadataTabs() {
+  const countries = state.selectedContextCountries.map(countryById).filter(Boolean);
+  const indicators = state.selectedContextIndicators.map((id) => contextIndicatorRows().find((row) => row.indicator_id === id)).filter(Boolean);
+  if (!countries.some((country) => country.id === state.activeContextCountry)) state.activeContextCountry = countries[0]?.id ?? null;
+  if (!indicators.some((indicator) => indicator.indicator_id === state.activeContextIndicator)) state.activeContextIndicator = indicators[0]?.indicator_id ?? null;
+
+  ui.contextMetadataCountryTabs.replaceChildren();
+  ui.contextMetadataCountryTabs.hidden = countries.length < 2;
+  countries.forEach((country) => {
+    const tab = document.createElement("button");
+    tab.type = "button";
+    tab.className = "context-metadata-tab";
+    const countryIndex = state.selectedContextCountries.indexOf(country.id);
+    tab.style.setProperty("--context-country-color", CONTEXT_COUNTRY_COLORS[countryIndex % CONTEXT_COUNTRY_COLORS.length]);
+    tab.setAttribute("role", "tab");
+    tab.setAttribute("aria-selected", String(country.id === state.activeContextCountry));
+    tab.textContent = country.name;
+    tab.addEventListener("click", () => {
+      state.activeContextCountry = country.id;
+      resetContextScatterZoom();
+      renderContextMetadataTabs();
+      renderContextScatter();
+    });
+    ui.contextMetadataCountryTabs.append(tab);
+  });
+
+  ui.contextMetadataIndicatorTabs.replaceChildren();
+  indicators.forEach((indicator) => {
+    const tab = document.createElement("button");
+    tab.type = "button";
+    tab.className = "context-metadata-tab context-metadata-tab--indicator";
+    tab.setAttribute("role", "tab");
+    tab.setAttribute("aria-selected", String(indicator.indicator_id === state.activeContextIndicator));
+    tab.title = `${indicator.family} · ${indicator.unit}`;
+    tab.textContent = indicator.indicator_label;
+    tab.addEventListener("click", () => {
+      state.activeContextIndicator = indicator.indicator_id;
+      resetContextScatterZoom();
+      renderContextMetadataTabs();
+      renderContextScatter();
+    });
+    ui.contextMetadataIndicatorTabs.append(tab);
+  });
+  const activeCountry = countryById(state.activeContextCountry);
+  const activeIndicator = contextIndicatorRows().find((row) => row.indicator_id === state.activeContextIndicator) ?? null;
+  const activeRows = activeCountry && activeIndicator
+    ? contextRowsForCountry(activeCountry.id).filter((row) => row.indicator_id === activeIndicator.indicator_id)
+    : [];
+  renderContextIndicatorMetadata(activeIndicator, activeRows, activeCountry);
+}
+
+function renderMigrationHistoryChartLegacy() {
   if (!state.initialized) return;
   ui.migrationHistoryChart.replaceChildren();
   const country = countryById(state.selectedCountry);
@@ -2491,16 +2722,236 @@ function renderMigrationHistoryChart() {
   ui.migrationHistoryChart.replaceChildren(svg);
 }
 
-function renderContextIndicatorMetadata(indicator, rows) {
-  const count = rows.length;
-  const firstYear = count ? Math.min(...rows.map((row) => safeNumber(row.year)).filter((year) => year !== null)) : null;
-  const lastYear = count ? Math.max(...rows.map((row) => safeNumber(row.year)).filter((year) => year !== null)) : null;
+const CONTEXT_COUNTRY_COLORS = ["#f5a16b", "#5fb5d4", "#ad91dc"];
+
+function renderContextChartLegend(countries) {
+  ui.contextChartLegend.replaceChildren();
+  countries.forEach((country, index) => {
+    const item = document.createElement("span");
+    const swatch = document.createElement("i");
+    swatch.style.background = CONTEXT_COUNTRY_COLORS[index % CONTEXT_COUNTRY_COLORS.length];
+    item.append(swatch, document.createTextNode(country.name));
+    ui.contextChartLegend.append(item);
+  });
+  const immigration = document.createElement("span");
+  const immigrationLine = document.createElement("i");
+  immigrationLine.className = "context-chart-legend__line";
+  immigration.append(immigrationLine, document.createTextNode("Immigration · solid"));
+  const indicator = document.createElement("span");
+  const indicatorLine = document.createElement("i");
+  indicatorLine.className = "context-chart-legend__line context-chart-legend__line--muted";
+  indicator.append(indicatorLine, document.createTextNode("Indicator · muted/dashed"));
+  ui.contextChartLegend.append(immigration, indicator);
+}
+
+function contextSeriesForCountry(country, indicatorId, startYear = null) {
+  const immigration = state.observed
+    .filter((row) => String(row.entity_id) === country.id)
+    .map((row) => ({ year: safeNumber(row.year), value: safeNumber(row.value) }))
+    .filter((point) => point.year !== null && point.value !== null)
+    .sort((a, b) => a.year - b.year);
+  const context = contextRowsForCountry(country.id)
+    .filter((row) => row.indicator_id === indicatorId)
+    .map((row) => ({ year: safeNumber(row.year), value: safeNumber(row.value), row }))
+    .filter((point) => point.year !== null && point.value !== null)
+    .sort((a, b) => a.year - b.year);
+  if (startYear !== null) {
+    return {
+      immigration: immigration.filter((point) => point.year >= startYear),
+      context: context.filter((point) => point.year >= startYear),
+    };
+  }
+  return { immigration, context };
+}
+
+function renderMigrationHistoryChart() {
+  if (!state.initialized) return;
+  ui.migrationHistoryChart.replaceChildren();
+  const countries = state.selectedContextCountries.map(countryById).filter(Boolean);
+  const indicators = state.selectedContextIndicators
+    .map((id) => contextIndicatorRows().find((row) => row.indicator_id === id))
+    .filter(Boolean);
+  renderContextChartLegend(countries);
+
+  const countryNames = countries.map((country) => country.name).join(", ");
+  const indicatorCount = indicators.length;
+  ui.migrationContextSubtitle.textContent = `${countryNames || "No countries selected"} · ${countries.length} of 3 countries · ${indicatorCount} indicator${indicatorCount === 1 ? "" : "s"} selected`;
+  if (!countries.length) {
+    benchmarkEmpty(ui.migrationHistoryChart, "Select at least one country to explore observed migration and contextual indicators.");
+    ui.migrationHistoryNote.textContent = "No contextual or migration values are inferred when a selection is empty.";
+    return;
+  }
+  if (!indicators.length) {
+    benchmarkEmpty(ui.migrationHistoryChart, "No verified contextual indicators are available for the selected countries.");
+    ui.migrationHistoryNote.textContent = "Observed immigration remains separate from contextual data; unavailable indicators are not inferred.";
+    return;
+  }
+
+  const period = ui.migrationPeriod.value;
+  const panelResults = [];
+  indicators.forEach((indicator) => {
+    const series = countries.map((country, index) => ({
+      country,
+      color: CONTEXT_COUNTRY_COLORS[index % CONTEXT_COUNTRY_COLORS.length],
+      ...contextSeriesForCountry(country, indicator.indicator_id),
+    }));
+    const fullYears = series.flatMap((item) => [...item.immigration, ...item.context].map((point) => point.year));
+    const maxYear = fullYears.length ? Math.max(...fullYears) : null;
+    const startYear = period === "all" || maxYear === null ? null : maxYear - Number(period) + 1;
+    const filteredSeries = series.map((item) => ({
+      ...item,
+      immigration: startYear === null ? item.immigration : item.immigration.filter((point) => point.year >= startYear),
+      context: startYear === null ? item.context : item.context.filter((point) => point.year >= startYear),
+    }));
+    panelResults.push({ indicator, series: filteredSeries });
+  });
+
+  const anyImmigration = panelResults.some((panel) => panel.series.some((series) => series.immigration.length));
+  if (!anyImmigration) {
+    benchmarkEmpty(ui.migrationHistoryChart, "There are no valid observed immigration values for these countries and years.");
+    ui.migrationHistoryNote.textContent = "The selected contextual series remain source-reported; no migration values are generated from them.";
+    return;
+  }
+
+  const width = Math.max(320, Math.round(ui.migrationHistoryChart.getBoundingClientRect().width || 860));
+  const height = 320;
+  const margin = { top: 24, right: 88, bottom: 50, left: 74 };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  const bounds = (values) => {
+    const low = Math.min(...values);
+    const high = Math.max(...values);
+    const padding = Math.max((high - low) * .1, Math.max(Math.abs(high), Math.abs(low)) * .02, 0.000001);
+    return [low - padding, high + padding];
+  };
+
+  panelResults.forEach(({ indicator, series }) => {
+    const immigrationValues = series.flatMap((item) => item.immigration.map((point) => point.value));
+    const contextValues = series.flatMap((item) => item.context.map((point) => point.value));
+    const years = unique(series.flatMap((item) => [...item.immigration, ...item.context].map((point) => point.year))).sort((a, b) => a - b);
+    const panel = document.createElement("section");
+    panel.className = "context-series-panel";
+    const heading = document.createElement("div");
+    heading.className = "context-series-panel__heading";
+    const title = document.createElement("h3");
+    title.textContent = indicator.indicator_label;
+    const detail = document.createElement("span");
+    const availableCount = series.filter((item) => item.context.length).length;
+    detail.textContent = `${indicator.family} · ${indicator.unit} · ${availableCount}/${countries.length} countries with values`;
+    heading.append(title, detail);
+    panel.append(heading);
+
+    if (!years.length || !immigrationValues.length) {
+      const empty = document.createElement("p");
+      empty.className = "context-series-empty";
+      empty.textContent = "No matched observed immigration and contextual years are available for this indicator.";
+      panel.append(empty);
+      ui.migrationHistoryChart.append(panel);
+      return;
+    }
+
+    const minYear = years[0];
+    const maxChartYear = years.at(-1);
+    const [minImmigration, maxImmigration] = bounds(immigrationValues);
+    const [minContext, maxContext] = contextValues.length ? bounds(contextValues) : [0, 1];
+    const x = (year) => margin.left + (maxChartYear === minYear ? plotWidth / 2 : (year - minYear) / (maxChartYear - minYear) * plotWidth);
+    const yImmigration = (value) => margin.top + (maxImmigration - value) / (maxImmigration - minImmigration) * plotHeight;
+    const yContext = (value) => margin.top + (maxContext - value) / (maxContext - minContext) * plotHeight;
+    const svg = createSvg("svg", {
+      viewBox: `0 0 ${width} ${height}`,
+      role: "img",
+      "aria-label": `${indicator.indicator_label} and observed immigration by selected country`,
+    });
+
+    for (let tick = 0; tick <= 4; tick += 1) {
+      const fraction = tick / 4;
+      const immigrationValue = maxImmigration - fraction * (maxImmigration - minImmigration);
+      const yPosition = margin.top + plotHeight * fraction;
+      svg.append(createSvg("line", { x1: margin.left, x2: width - margin.right, y1: yPosition, y2: yPosition, class: "benchmark-gridline" }));
+      const leftLabel = createSvg("text", { x: margin.left - 8, y: yPosition + 4, "text-anchor": "end", class: "benchmark-axis-label" });
+      leftLabel.textContent = formatAxisNumber(immigrationValue);
+      svg.append(leftLabel);
+      if (contextValues.length) {
+        const contextValue = maxContext - fraction * (maxContext - minContext);
+        const rightLabel = createSvg("text", { x: width - margin.right + 9, y: yPosition + 4, "text-anchor": "start", class: "benchmark-axis-label" });
+        rightLabel.textContent = formatAxisNumber(contextValue);
+        svg.append(rightLabel);
+      }
+    }
+    const tickCount = Math.min(7, years.length);
+    const visibleTicks = tickCount === years.length || tickCount <= 1
+      ? years
+      : Array.from({ length: tickCount }, (_, index) => years[Math.round(index * (years.length - 1) / (tickCount - 1))]);
+    visibleTicks.forEach((year) => {
+      const label = createSvg("text", { x: x(year), y: height - 22, "text-anchor": "middle", class: "benchmark-axis-label" });
+      label.textContent = String(year);
+      svg.append(label);
+    });
+    svg.append(createSvg("line", { x1: margin.left, x2: width - margin.right, y1: height - margin.bottom, y2: height - margin.bottom, class: "benchmark-axis-line" }));
+    const leftTitle = createSvg("text", { x: 16, y: height / 2, transform: `rotate(-90 16 ${height / 2})`, "text-anchor": "middle", class: "benchmark-axis-title" });
+    leftTitle.textContent = "Immigration · persons/year";
+    svg.append(leftTitle);
+    if (contextValues.length) {
+      const rightTitle = createSvg("text", { x: width - 13, y: height / 2, transform: `rotate(-90 ${width - 13} ${height / 2})`, "text-anchor": "middle", class: "benchmark-axis-title" });
+      rightTitle.textContent = `${indicator.indicator_label} · ${indicator.unit}`;
+      svg.append(rightTitle);
+    }
+    const xTitle = createSvg("text", { x: margin.left + plotWidth / 2, y: height - 3, "text-anchor": "middle", class: "benchmark-axis-title" });
+    xTitle.textContent = "Observed year";
+    svg.append(xTitle);
+
+    series.forEach(({ country, color, immigration, context }) => {
+      splitObservedSegments(immigration).forEach((segment) => {
+        if (segment.length < 2) return;
+        const path = segment.map((point, index) => `${index ? "L" : "M"} ${x(point.year)} ${yImmigration(point.value)}`).join(" ");
+        const line = createSvg("path", { d: path, class: "context-history-line" });
+        line.style.stroke = color;
+        svg.append(line);
+      });
+      immigration.forEach(({ year, value }) => {
+        const point = createSvg("circle", { cx: x(year), cy: yImmigration(value), r: 4, class: "context-history-point" });
+        point.style.fill = color;
+        const tooltip = createSvg("title");
+        tooltip.textContent = `${country.name} · ${year} · ${formatNumber(value)} persons/year · observed`;
+        point.append(tooltip);
+        svg.append(point);
+      });
+      splitObservedSegments(context).forEach((segment) => {
+        if (segment.length < 2) return;
+        const path = segment.map((point, index) => `${index ? "L" : "M"} ${x(point.year)} ${yContext(point.value)}`).join(" ");
+        const line = createSvg("path", { d: path, class: "context-indicator-line" });
+        line.style.stroke = color;
+        line.style.opacity = ".62";
+        svg.append(line);
+      });
+      context.forEach(({ year, value }) => {
+        const point = createSvg("circle", { cx: x(year), cy: yContext(value), r: 3.7, class: "context-indicator-point" });
+        point.style.fill = color;
+        point.style.opacity = ".62";
+        const tooltip = createSvg("title");
+        tooltip.textContent = `${country.name} · ${indicator.indicator_label} · ${year} · ${formatContextValue(value, indicator.unit)} · source-reported`;
+        point.append(tooltip);
+        svg.append(point);
+      });
+    });
+    panel.append(svg);
+    ui.migrationHistoryChart.append(panel);
+  });
+  ui.migrationHistoryNote.textContent = "Each selected indicator has its own value scale and chart. Country colors stay consistent; solid lines show observed immigration, while dashed muted lines show source-reported indicator values. These are descriptive comparisons, not causal explanations.";
+}
+
+function renderContextIndicatorMetadata(indicator, rows, country = null) {
+  const validRows = rows.filter((row) => safeNumber(row.year) !== null && safeNumber(row.value) !== null);
+  const count = validRows.length;
+  const years = validRows.map((row) => safeNumber(row.year));
+  const firstYear = count ? Math.min(...years) : null;
+  const lastYear = count ? Math.max(...years) : null;
   ui.contextIndicatorHeading.textContent = indicator?.indicator_label ?? "No contextual series";
   ui.contextIndicatorDefinition.textContent = !state.contextViewsAvailable
     ? "The protected contextual-data view is not yet configured or accessible. The main dashboard data remains available."
     : indicator
     ? `${indicator.definition}${indicator.caveat ? ` ${indicator.caveat}` : ""}`
-    : "No verified contextual values are published for this country. Values are never inferred or filled in.";
+    : "No verified contextual values are published for this selection. Values are never inferred or filled in.";
   ui.contextIndicatorFamily.textContent = indicator?.family ?? "Not available";
   ui.contextIndicatorUnit.textContent = indicator?.unit ?? "Not available";
   ui.contextIndicatorSource.replaceChildren();
@@ -2520,9 +2971,12 @@ function renderContextIndicatorMetadata(indicator, rows) {
       ui.contextIndicatorSource.textContent = label;
     }
   }
-  const flagged = rows.filter((row) => row.quality_flag).length;
-  ui.contextIndicatorCoverage.textContent = indicator
-    ? `${firstYear ?? "—"}–${lastYear ?? "—"} · ${count} values · ${flagged ? `${flagged} source flags reported` : "no source flags supplied"}` : "Not available";
+  const flagged = validRows.filter((row) => row.quality_flag).length;
+  const countryViewUnavailable = country && state.contextLoadFailures.has(contextEntityCacheKey("country", country.id));
+  ui.contextIndicatorCoverage.textContent = indicator && count
+    ? `${firstYear}–${lastYear} · ${count} values · ${flagged ? `${flagged} source flags reported` : "no source flags supplied"}`
+    : indicator && countryViewUnavailable ? `Data view unavailable for ${country.name}.`
+      : indicator ? `No published values for ${country?.name ?? "this country"}.` : "Not available";
 }
 
 function resetContextScatterZoom() {
@@ -2562,24 +3016,28 @@ function formatContextScatterAxisValue(value, span) {
 
 function renderContextScatter() {
   const indicator = selectedCountryContextIndicator();
-  const country = countryById(state.selectedCountry);
+  const country = countryById(state.activeContextCountry);
   ui.contextScatterChart.hidden = true;
   ui.contextScatterChart.replaceChildren();
   ui.contextScatterEmpty.hidden = false;
   ui.contextScatterControls.hidden = true;
   ui.contextScatterStatus.hidden = true;
-  if (!indicator || !country) return;
+  if (!indicator || !country) {
+    ui.contextScatterSubtitle.textContent = "Select a country and indicator to inspect their paired observations.";
+    return;
+  }
+  ui.contextScatterSubtitle.textContent = `${country.name} · ${indicator.indicator_label} · descriptive comparison only`;
 
   const observedByYear = new Map(state.observed
     .filter((row) => String(row.entity_id) === country.id)
     .map((row) => [safeNumber(row.year), safeNumber(row.value)])
     .filter(([year, value]) => Number.isFinite(year) && Number.isFinite(value)));
-  const pairs = state.contextRows.filter((row) => row.indicator_id === indicator.indicator_id)
+  const pairs = contextRowsForCountry(country.id).filter((row) => row.indicator_id === indicator.indicator_id)
     .map((row) => ({ year: safeNumber(row.year), x: safeNumber(row.value), y: observedByYear.get(safeNumber(row.year)) }))
     .filter((point) => Number.isFinite(point.year) && Number.isFinite(point.x) && Number.isFinite(point.y));
   if (pairs.length < 2) {
     const detail = ui.contextScatterEmpty.querySelector("p");
-    if (detail) detail.textContent = "At least two years with both a published contextual value and an observed immigration value are needed. Unmatched years are omitted.";
+    if (detail) detail.textContent = `At least two matched years are needed for ${country.name} and ${indicator.indicator_label}. Unmatched years are omitted.`;
     return;
   }
 
@@ -2648,7 +3106,7 @@ function renderContextScatter() {
   yLabel.textContent = "Immigration · persons/year";
   svg.append(xLabel, yLabel);
   ui.contextScatterChart.append(svg);
-  ui.contextScatterStatus.textContent = `${pairs.length} matched years · scales fitted to this indicator and country. Years without observed immigration are excluded.`;
+  ui.contextScatterStatus.textContent = `${pairs.length} matched years · scales fitted to ${indicator.indicator_label} in ${country.name}. Years without observed immigration are excluded.`;
   ui.contextScatterZoomXOut.disabled = state.contextScatterZoomX <= 1.001;
   ui.contextScatterZoomYOut.disabled = state.contextScatterZoomY <= 1.001;
   ui.contextScatterZoomXIn.disabled = state.contextScatterZoomX >= 7.999;
@@ -2656,47 +3114,50 @@ function renderContextScatter() {
 }
 
 function renderOtherContextIndicators() {
-  const selectedId = state.selectedContextIndicator;
-  const latestByIndicator = new Map();
-  state.contextRows.forEach((row) => {
-    const current = latestByIndicator.get(row.indicator_id);
-    if (!current || safeNumber(row.year) > safeNumber(current.year)) latestByIndicator.set(row.indicator_id, row);
-  });
-  const items = [...latestByIndicator.values()].filter((row) => row.indicator_id !== selectedId)
-    .sort((a, b) => a.family.localeCompare(b.family) || a.indicator_label.localeCompare(b.indicator_label));
+  const indicators = state.selectedContextIndicators.map((id) => contextIndicatorRows().find((row) => row.indicator_id === id)).filter(Boolean);
+  const countries = state.selectedContextCountries.map(countryById).filter(Boolean);
+  const items = countries.flatMap((country) => indicators.map((indicator) => {
+    const rows = contextRowsForCountry(country.id).filter((row) => row.indicator_id === indicator.indicator_id
+      && safeNumber(row.year) !== null && safeNumber(row.value) !== null)
+      .sort((a, b) => safeNumber(b.year) - safeNumber(a.year));
+    return { country, indicator, latest: rows[0] ?? null };
+  }));
   ui.contextOtherIndicators.replaceChildren();
-  ui.contextIndicatorCount.textContent = state.contextViewsAvailable ? `${items.length} available` : "Not connected";
+  const availableCount = items.filter((item) => item.latest).length;
+  ui.contextIndicatorCount.textContent = state.contextViewsAvailable ? `${availableCount}/${items.length} available` : "Not connected";
   if (!items.length) {
     const empty = document.createElement("div");
     empty.className = "context-family-empty";
     empty.textContent = state.contextViewsAvailable
-      ? "No additional source-reported contextual indicators are available for this country."
+      ? "Select at least one country and one indicator to see their latest published values."
       : "The protected contextual-data view is not yet configured or accessible.";
     ui.contextOtherIndicators.append(empty);
     return;
   }
-  items.forEach((row, index) => {
+  items.forEach(({ country, indicator, latest }, index) => {
     const item = document.createElement("div");
     const number = document.createElement("span");
     number.className = "context-family-icon";
     number.textContent = String(index + 1).padStart(2, "0");
     const description = document.createElement("span");
     const title = document.createElement("strong");
-    title.textContent = row.indicator_label;
+    title.textContent = `${indicator.indicator_label} · ${country.name}`;
     const details = document.createElement("small");
-    details.textContent = `${row.family} · ${row.source_name} · latest reported ${row.year}`;
-    const href = officialContextSourceUrl(row.source_url);
+    details.textContent = latest
+      ? `${indicator.family} · ${indicator.source_name} · latest reported ${latest.year}`
+      : `${indicator.family} · ${state.contextLoadFailures.has(contextEntityCacheKey("country", country.id)) ? "data view unavailable" : "no values published for this country"}`;
+    const href = officialContextSourceUrl(indicator.source_url);
     if (href) {
       const link = document.createElement("a");
       link.href = href;
       link.target = "_blank";
       link.rel = "noopener noreferrer";
-      link.textContent = ` · ${row.source_dataset}`;
+      link.textContent = ` · ${indicator.source_dataset}`;
       details.append(link);
     }
     description.append(title, details);
     const value = document.createElement("b");
-    value.textContent = formatContextValue(row.value, row.unit);
+    value.textContent = latest ? formatContextValue(latest.value, indicator.unit) : "Not available";
     item.append(number, description, value);
     ui.contextOtherIndicators.append(item);
   });
@@ -4720,7 +5181,6 @@ function selectCountry(countryId) {
   state.selectedCountry = countryId;
   ui.mapCountrySelect.value = countryId;
   ui.intelligenceCountrySelect.value = countryId;
-  ui.migrationCountrySelect.value = countryId;
   const country = countryById(countryId);
   ui.countrySearch.value = country?.name ?? "";
   updateCountryQuery();

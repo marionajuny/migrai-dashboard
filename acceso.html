@@ -7,7 +7,7 @@
     <meta name="description" content="Acceso privado al dashboard de migrAI." />
     <title>Acceso privado · migrAI</title>
     <link rel="icon" href="migrai-mark.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=map-marker-click-20261019" />
+    <link rel="stylesheet" href="styles.css?v=migration-context-multi-20261019" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   </head>
   <body>
@@ -254,21 +254,32 @@
           <section id="migrationContextPage" class="dashboard-page migration-context-page" aria-labelledby="migrationContextPageHeading" hidden>
             <section class="outlook-panel context-overview-panel" aria-labelledby="migrationContextPageHeading">
               <div class="panel-heading panel-heading--wrap">
-                <div><h2 id="migrationContextPageHeading">Immigration and contextual indicator over time</h2><p id="migrationContextSubtitle">Explore observed immigration alongside a verified contextual series</p></div>
+                <div><h2 id="migrationContextPageHeading">Immigration and contextual indicators over time</h2><p id="migrationContextSubtitle">Compare up to three countries and multiple source-reported indicators</p></div>
                 <div class="context-controls">
-                  <label><span>Country</span><select id="migrationCountrySelect" class="compact-select" aria-label="Select country for migration context"></select></label>
-                  <label><span>Indicator</span><select id="migrationIndicatorSelect" class="compact-select" aria-label="Select verified contextual indicator"></select></label>
+                  <div class="context-selector" id="contextCountrySelector">
+                    <span class="context-selector-label">Countries · up to 3</span>
+                    <button id="contextCountryToggle" class="compact-select context-selector-toggle" type="button" aria-expanded="false" aria-controls="contextCountryMenu"><span id="contextCountrySummary">Select countries</span><span aria-hidden="true">⌄</span></button>
+                    <div id="contextCountryMenu" class="context-selector-menu" role="group" aria-label="Choose up to three countries" hidden></div>
+                  </div>
+                  <div class="context-selector context-selector--indicators" id="contextIndicatorSelector">
+                    <span class="context-selector-label">Indicators</span>
+                    <button id="contextIndicatorToggle" class="compact-select context-selector-toggle" type="button" aria-expanded="false" aria-controls="contextIndicatorMenu"><span id="contextIndicatorSummary">Select indicators</span><span aria-hidden="true">⌄</span></button>
+                    <div id="contextIndicatorMenu" class="context-selector-menu" role="group" aria-label="Choose contextual indicators" hidden></div>
+                  </div>
                   <label><span>Historical window</span><select id="migrationPeriod" class="compact-select" aria-label="Select historical window"><option value="all">All available years</option><option value="10">Last 10 years</option><option value="5">Last 5 years</option></select></label>
                 </div>
               </div>
+              <p id="contextSelectionNote" class="context-selection-note" role="status" aria-live="polite"></p>
               <div class="context-overview-grid">
                 <div class="context-history-column">
-                  <div class="context-chart-legend"><span><i></i>Observed immigration · persons/year</span><span class="context-legend-indicator"><i></i><span id="contextIndicatorLegend">Selected indicator · not available</span></span></div>
-                  <div id="migrationHistoryChart" class="context-history-chart" role="img" aria-label="Observed immigration history for the selected country"></div>
+                  <div id="contextChartLegend" class="context-chart-legend" aria-label="Chart legend"></div>
+                  <div id="migrationHistoryChart" class="context-history-chart" role="region" aria-label="Observed immigration and contextual indicators by selected country"></div>
                   <p id="migrationHistoryNote" class="analysis-note"></p>
                 </div>
                 <aside class="context-indicator-card" aria-labelledby="contextIndicatorHeading">
                   <p class="eyebrow">DATA AVAILABILITY</p>
+                  <div id="contextMetadataCountryTabs" class="context-metadata-country-tabs" role="tablist" aria-label="Countries in data availability"></div>
+                  <div id="contextMetadataIndicatorTabs" class="context-metadata-indicator-tabs" role="tablist" aria-label="Selected indicators in data availability"></div>
                   <h3 id="contextIndicatorHeading">Select an indicator</h3>
                   <p id="contextIndicatorDefinition" class="context-indicator-empty">No contextual series is available for this country.</p>
                   <dl class="context-metadata-list">
@@ -283,7 +294,7 @@
 
             <div class="context-analysis-grid">
               <section class="outlook-panel context-scatter-panel" aria-labelledby="contextScatterTitle">
-                <div class="panel-heading"><div><h2 id="contextScatterTitle">Immigration vs. selected indicator</h2><p>Matched country-years · descriptive comparison only</p></div></div>
+                <div class="panel-heading"><div><h2 id="contextScatterTitle">Immigration vs. selected indicator</h2><p id="contextScatterSubtitle">Matched country-years · descriptive comparison only</p></div></div>
                 <div id="contextScatterEmpty" class="context-empty-state"><span class="context-empty-icon" aria-hidden="true">↗</span><strong>Comparison unavailable</strong><p>A scatter plot needs paired immigration and contextual values for the same country-years.</p></div>
                 <div id="contextScatterControls" class="context-scatter-controls" role="group" aria-label="Scatter plot scale controls" hidden>
                   <div class="context-scatter-axis-controls" role="group" aria-label="Horizontal indicator scale">
@@ -298,7 +309,7 @@
                 <p id="contextScatterStatus" class="context-scatter-status" role="status" aria-live="polite" hidden></p>
               </section>
               <section class="outlook-panel context-indicators-panel" aria-labelledby="contextIndicatorsTitle">
-                <div class="panel-heading"><div><h2 id="contextIndicatorsTitle">Other contextual indicators</h2><p>Verified series available for the selected destination</p></div><span id="contextIndicatorCount" class="context-unavailable-tag">0 available</span></div>
+                <div class="panel-heading"><div><h2 id="contextIndicatorsTitle">Selected contextual series</h2><p>Latest source-reported values for selected countries and indicators</p></div><span id="contextIndicatorCount" class="context-unavailable-tag">0 selected</span></div>
                 <div id="contextOtherIndicators" class="context-family-list"></div>
               </section>
             </div>
@@ -570,6 +581,6 @@
     <footer class="site-footer site-footer--compact"><div class="container footer-bottom"><span>© migrAI · Migration intelligence</span><span>Acceso privado · Supabase Auth</span></div></footer>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-    <script src="app.js?v=map-marker-click-20261019" defer></script>
+    <script src="app.js?v=migration-context-multi-20261019" defer></script>
   </body>
 </html>
