@@ -107,6 +107,9 @@ const ui = {
   countryYoyChart: document.querySelector("#countryYoyChart"),
   countryYoyNote: document.querySelector("#countryYoyNote"),
   countryForecastCompare: document.querySelector("#countryForecastCompare"),
+  countryReliabilityMae: document.querySelector("#countryReliabilityMae"),
+  countryReliabilityWape: document.querySelector("#countryReliabilityWape"),
+  countryReliabilityN: document.querySelector("#countryReliabilityN"),
   countryReliabilityNote: document.querySelector("#countryReliabilityNote"),
   cityExplorerCoverage: document.querySelector("#cityExplorerCoverage"),
   cityExplorerContent: document.querySelector("#cityExplorerContent"),
@@ -226,6 +229,10 @@ const ui = {
   methodologySourceFilter: document.querySelector("#methodologySourceFilter"),
   methodologyCoverageGrid: document.querySelector("#methodologyCoverageGrid"),
   methodologyCoverageNote: document.querySelector("#methodologyCoverageNote"),
+  methodologyContextSummary: document.querySelector("#methodologyContextSummary"),
+  methodologyContextSourceRows: document.querySelector("#methodologyContextSourceRows"),
+  methodologyContextNote: document.querySelector("#methodologyContextNote"),
+  reliabilityEvaluationSummary: document.querySelector("#reliabilityEvaluationSummary"),
   methodologyRunMetadata: document.querySelector("#methodologyRunMetadata"),
   methodologyRunNote: document.querySelector("#methodologyRunNote"),
   methodologyEntityFilter: document.querySelector("#methodologyEntityFilter"),
@@ -244,10 +251,14 @@ const state = {
   cityForecasts: [],
   cityObserved: [],
   backtestPredictions: [],
+  backtestEvaluations: [],
+  backtestEvaluationsAvailable: true,
   backtestMetrics: [],
   backtestEntityMetrics: [],
   backtestViewsAvailable: true,
   contextRows: [],
+  contextInventoryRows: [],
+  contextInventoryStatus: "idle",
   contextCache: new Map(),
   contextCacheEpoch: 0,
   contextViewsAvailable: true,
@@ -386,10 +397,14 @@ ui.logoutButton.addEventListener("click", async () => {
   state.cityForecasts = [];
   state.cityObserved = [];
   state.backtestPredictions = [];
+  state.backtestEvaluations = [];
+  state.backtestEvaluationsAvailable = true;
   state.backtestMetrics = [];
   state.backtestEntityMetrics = [];
   state.backtestViewsAvailable = true;
   state.contextRows = [];
+  state.contextInventoryRows = [];
+  state.contextInventoryStatus = "idle";
   state.contextCache.clear();
   state.contextCacheEpoch += 1;
   state.contextRequestId += 1;
@@ -651,11 +666,12 @@ async function loadDashboard() {
   setMessage(ui.dashboardMessage);
 
   const [runsResponse, forecastsResponse, observedResponse, backtestPredictionsResponse,
-    backtestMetricsResponse, backtestEntityMetricsResponse] = await Promise.all([
+    backtestEvaluationsResponse, backtestMetricsResponse, backtestEntityMetricsResponse] = await Promise.all([
     supabaseClient.from("runs").select("*").order("run_id", { ascending: false }).limit(25),
     supabaseClient.from("forecasts_latest").select("*").in("level", ["country", "city"]).order("entity_name").order("horizon"),
     supabaseClient.from("observed_latest").select("*").in("level", ["country", "city"]).order("year"),
     supabaseClient.from("backtest_predictions_latest").select("*").order("target_year").limit(1000),
+    supabaseClient.from("backtest_evaluations_latest").select("*"),
     supabaseClient.from("backtest_metrics_latest").select("*"),
     supabaseClient.from("backtest_entity_metrics_latest").select("*"),
   ]);
@@ -683,6 +699,8 @@ async function loadDashboard() {
   state.backtestViewsAvailable = !backtestPredictionsResponse.error
     && !backtestMetricsResponse.error && !backtestEntityMetricsResponse.error;
   state.backtestPredictions = backtestPredictionsResponse.data ?? [];
+  state.backtestEvaluationsAvailable = !backtestEvaluationsResponse.error;
+  state.backtestEvaluations = backtestEvaluationsResponse.data ?? [];
   state.backtestMetrics = backtestMetricsResponse.data ?? [];
   state.backtestEntityMetrics = backtestEntityMetricsResponse.data ?? [];
   ui.connectionBadge.textContent = "Data connected";
@@ -1123,6 +1141,133 @@ function renderDataMethodology() {
   renderDataMethodologyCoverage();
   renderDataMethodologyRun();
   renderDataMethodologyStatus();
+  if (state.activePage === "data-methodology") renderMethodologyContextInventory();
+}
+
+function renderMethodologyContextInventory() {
+  ui.methodologyContextSummary.replaceChildren();
+  ui.methodologyContextSourceRows.replaceChildren();
+  if (state.contextInventoryStatus === "idle") {
+    state.contextInventoryStatus = "loading";
+    const loading = document.createElement("p");
+    loading.className = "methodology-empty";
+    loading.textContent = "Loading contextual observations from the authenticated view…";
+    ui.methodologyContextSummary.append(loading);
+    loadMethodologyContextInventory();
+    return;
+  }
+  if (state.contextInventoryStatus === "loading") {
+    const loading = document.createElement("p");
+    loading.className = "methodology-empty";
+    loading.textContent = "Loading contextual observations from the authenticated view…";
+    ui.methodologyContextSummary.append(loading);
+    return;
+  }
+  if (state.contextInventoryStatus === "error") {
+    const unavailable = document.createElement("p");
+    unavailable.className = "methodology-empty";
+    unavailable.textContent = "The contextual source inventory could not be loaded. Country and City production observations remain available.";
+    ui.methodologyContextSummary.append(unavailable);
+    ui.methodologyContextNote.textContent = "No source inventory is inferred when the protected contextual view cannot be read.";
+    return;
+  }
+
+  const rows = state.contextInventoryRows;
+  if (!rows.length) {
+    const empty = document.createElement("p");
+    empty.className = "methodology-empty";
+    empty.textContent = "The contextual view is accessible, but it currently returns no published observations.";
+    ui.methodologyContextSummary.append(empty);
+    ui.methodologyContextNote.textContent = "This is separate from observed immigration-flow records in observed_latest.";
+    return;
+  }
+
+  const appendSummary = (labelText, valueText, detailText) => {
+    const card = document.createElement("article");
+    card.className = "outlook-panel methodology-summary-card";
+    const label = document.createElement("span");
+    label.textContent = labelText;
+    const value = document.createElement("strong");
+    value.textContent = valueText;
+    const detail = document.createElement("small");
+    detail.textContent = detailText;
+    card.append(label, value, detail);
+    ui.methodologyContextSummary.append(card);
+  };
+  const recordsWithSource = rows.filter((row) => String(row.source_name ?? "").trim() || String(row.source_dataset ?? "").trim()).length;
+  appendSummary("Context values", numberFormatter.format(rows.length), "Published country and city indicator observations");
+  ["country", "city"].forEach((level) => {
+    const scoped = rows.filter((row) => row.level === level);
+    const entities = unique(scoped.map((row) => String(row.entity_id ?? "")).filter(Boolean));
+    const indicators = unique(scoped.map((row) => String(row.indicator_id ?? "")).filter(Boolean));
+    const years = scoped.map((row) => safeNumber(row.year)).filter((year) => year !== null);
+    const coverage = years.length ? `${Math.min(...years)}–${Math.max(...years)}` : "No years";
+    appendSummary(`${level === "country" ? "Country" : "City"} context`, numberFormatter.format(scoped.length), `${entities.length} entities · ${indicators.length} indicators · ${coverage}`);
+  });
+  appendSummary("Source documented", `${numberFormatter.format(recordsWithSource)} / ${numberFormatter.format(rows.length)}`, "Context rows with a source name or dataset");
+
+  const grouped = new Map();
+  rows.forEach((row) => {
+    const key = [row.level ?? "unknown", row.family ?? "Unclassified", row.source_name ?? "Source not published"].join("\u001f");
+    const group = grouped.get(key) ?? { level: row.level ?? "unknown", family: row.family ?? "Unclassified", source: row.source_name ?? "Source not published", datasets: new Set(), entities: new Set(), indicators: new Set(), years: [], count: 0 };
+    if (row.source_dataset) group.datasets.add(String(row.source_dataset));
+    if (row.entity_id) group.entities.add(String(row.entity_id));
+    if (row.indicator_id) group.indicators.add(String(row.indicator_id));
+    const year = safeNumber(row.year);
+    if (year !== null) group.years.push(year);
+    group.count += 1;
+    grouped.set(key, group);
+  });
+
+  const fragment = document.createDocumentFragment();
+  [...grouped.values()].sort((a, b) => a.level.localeCompare(b.level) || a.family.localeCompare(b.family) || a.source.localeCompare(b.source)).forEach((group) => {
+    const tr = document.createElement("tr");
+    const values = [
+      group.level === "country" ? "Country" : group.level === "city" ? "City" : group.level,
+      group.family,
+      group.source,
+      [...group.datasets].sort().join(", ") || "Not published",
+      String(group.entities.size),
+      String(group.indicators.size),
+      numberFormatter.format(group.count),
+      group.years.length ? `${Math.min(...group.years)}–${Math.max(...group.years)}` : "Not available",
+    ];
+    values.forEach((text) => {
+      const cell = document.createElement("td");
+      cell.textContent = text;
+      tr.append(cell);
+    });
+    fragment.append(tr);
+  });
+  ui.methodologyContextSourceRows.append(fragment);
+  ui.methodologyContextNote.textContent = "These source names and datasets describe contextual indicators only. They do not provide row-level provenance for the separate immigration-flow records in observed_latest. Year ranges describe published rows, not an expected-coverage guarantee; no expected entity-year manifest is exposed in the current views.";
+}
+
+async function loadMethodologyContextInventory() {
+  const cacheEpoch = state.contextCacheEpoch;
+  const pageSize = 1000;
+  const rows = [];
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await supabaseClient.from("context_observations_latest")
+      .select("level,entity_id,entity_name,country_iso2,year,indicator_id,indicator_label,family,value,unit,source_name,source_dataset,geography_level,quality_flag")
+      .order("level").order("entity_id").order("indicator_id").order("year").order("source_dataset")
+      .range(offset, offset + pageSize - 1);
+    if (cacheEpoch !== state.contextCacheEpoch) return;
+    if (error) {
+      state.contextInventoryStatus = "error";
+      state.contextViewsAvailable = false;
+      renderMethodologyContextInventory();
+      return;
+    }
+    const page = data ?? [];
+    rows.push(...page);
+    if (page.length < pageSize) break;
+  }
+  if (cacheEpoch !== state.contextCacheEpoch) return;
+  state.contextInventoryRows = rows;
+  state.contextInventoryStatus = "ready";
+  state.contextViewsAvailable = true;
+  renderMethodologyContextInventory();
 }
 
 function renderDataMethodologySummary() {
@@ -1150,8 +1295,8 @@ function renderDataMethodologySummary() {
   ui.methodologyTerritorialNote.textContent = "Entities with a valid value / entities represented in observed rows";
   ui.methodologySourceCoverage.textContent = `${numberFormatter.format(attributedRows.length)} / ${numberFormatter.format(rows.length)}`;
   ui.methodologySourceCoverageNote.textContent = sourceFamilies.length
-    ? `${sourceFamilies.length} source ${sourceFamilies.length === 1 ? "family" : "families"} represented in published rows`
-    : "No source family is exposed in observed rows";
+    ? `${sourceFamilies.length} source ${sourceFamilies.length === 1 ? "family" : "families"} represented in published immigration-flow rows`
+    : "No source family is exposed for immigration flows; contextual sources are listed separately below";
   ui.methodologyForecastCount.textContent = `${numberFormatter.format(availableForecasts.length)} / ${numberFormatter.format(forecasts.length)}`;
   const forecastStatuses = { available: 0, partial: 0, unavailable: 0 };
   forecasts.forEach((row) => { forecastStatuses[methodologyForecastStatus(row)] += 1; });
@@ -1175,7 +1320,7 @@ function renderDataMethodologySourceOptions() {
   }
   ui.methodologyCoverageNote.textContent = families.length
     ? "Available = every published row has a valid value; Partial = rows exist but some values are missing; No row = no observation for that entity-year."
-    : "Source-family filtering is unavailable: the published observed views do not expose a source-family field. Coverage is based on valid observed rows only.";
+    : "The immigration-flow views do not expose a source-family field, so this filter is disabled. Contextual indicator sources are inventoried separately below.";
 }
 
 function renderDataMethodologyCoverage() {
@@ -2783,6 +2928,62 @@ function renderReliabilityRankingState() {
   ui.reliabilityOpenCountry.disabled = cityScope || ui.reliabilityEntity.value === "all";
 }
 
+function renderReliabilityEvaluationSummary() {
+  ui.reliabilityEvaluationSummary.replaceChildren();
+  if (!state.backtestEvaluationsAvailable) {
+    const empty = document.createElement("p");
+    empty.className = "methodology-empty";
+    empty.textContent = "Evaluation provenance is not available from the protected view.";
+    ui.reliabilityEvaluationSummary.append(empty);
+    return;
+  }
+  const rows = state.backtestEvaluations.filter((row) => row.level === state.reliabilityScope);
+  if (!rows.length) {
+    const empty = document.createElement("p");
+    empty.className = "methodology-empty";
+    empty.textContent = `No evaluation provenance is published for the ${state.reliabilityScope} scope.`;
+    ui.reliabilityEvaluationSummary.append(empty);
+    return;
+  }
+  rows.forEach((row) => {
+    const card = document.createElement("article");
+    card.className = "reliability-evaluation-card";
+    const heading = document.createElement("div");
+    heading.className = "reliability-evaluation-card__heading";
+    const target = document.createElement("strong");
+    target.textContent = row.target_variable || "Target variable not published";
+    const level = document.createElement("span");
+    level.textContent = row.level === "country" ? "Country" : "City";
+    heading.append(target, level);
+
+    const counts = document.createElement("p");
+    counts.className = "reliability-evaluation-card__counts";
+    counts.textContent = `${formatNumber(row.evaluated_rows)} evaluated / ${formatNumber(row.source_rows)} source rows · ${formatNumber(row.excluded_rows)} excluded`;
+
+    const artifact = document.createElement("p");
+    artifact.className = "reliability-evaluation-card__artifact";
+    artifact.textContent = row.source_artifact || "Source artifact not published";
+
+    const selection = document.createElement("p");
+    selection.className = "analysis-note";
+    selection.textContent = `Selection rule: ${row.selection_rule || "Not published"}`;
+
+    const provenance = document.createElement("small");
+    const scopeLabel = row.validation_scope === "same_model_selection_backtest_not_independent_holdout"
+      ? "Model-selection backtest · not an independent holdout"
+      : row.validation_scope || "Validation scope not published";
+    const imported = row.imported_at && Number.isFinite(Date.parse(row.imported_at))
+      ? new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(new Date(row.imported_at)) + " UTC"
+      : "Import time not published";
+    const hashPrefix = String(row.source_sha256 ?? "").slice(0, 12);
+    provenance.textContent = `${scopeLabel} · imported ${imported}${hashPrefix ? ` · source SHA-256 ${hashPrefix}…` : ""}`;
+    if (row.source_sha256) provenance.title = `Full source SHA-256: ${row.source_sha256}`;
+
+    card.append(heading, counts, artifact, selection, provenance);
+    ui.reliabilityEvaluationSummary.append(card);
+  });
+}
+
 function renderForecastReliability() {
   if (!state.initialized) return;
   ui.reliabilityCountryScope.setAttribute("aria-pressed", String(state.reliabilityScope === "country"));
@@ -2790,6 +2991,7 @@ function renderForecastReliability() {
   populateReliabilityFilters();
   renderReliabilityHorizonCards();
   renderReliabilityMetricStatus();
+  renderReliabilityEvaluationSummary();
   renderReliabilityScatter();
   renderReliabilityBacktestTimeline();
   renderReliabilityModelProcess();
@@ -3204,9 +3406,27 @@ function renderCountryForecastComparison() {
 function renderCountryReliability() {
   const forecasts = currentCountryForecasts();
   const models = unique(forecasts.map((row) => forecastModelLabel(row)).filter(Boolean));
-  ui.countryReliabilityNote.textContent = models.length
-    ? `Production model${models.length > 1 ? "s" : ""}: ${models.join(", ")}. Country-level backtesting metrics are not included in the currently published views, so no accuracy score is inferred.`
-    : "Country-level backtesting metrics are not included in the currently published views, so no accuracy score is inferred.";
+  const rows = state.backtestViewsAvailable
+    ? state.backtestEntityMetrics
+      .filter((row) => row.level === "country" && String(row.entity_id) === String(state.selectedCountry))
+      .filter((row) => safeNumber(row.mae) !== null && safeNumber(row.wape_pct) !== null)
+      .sort((a, b) => safeNumber(a.horizon) - safeNumber(b.horizon))
+    : [];
+  const unavailable = state.backtestViewsAvailable ? "Not available" : "Unavailable";
+  ui.countryReliabilityMae.textContent = rows.length
+    ? rows.map((row) => `${safeNumber(row.horizon)}y ${formatMetricValue(row.mae)}`).join(" · ")
+    : unavailable;
+  ui.countryReliabilityWape.textContent = rows.length
+    ? rows.map((row) => `${safeNumber(row.horizon)}y ${formatMetricValue(row.wape_pct, 1)}%`).join(" · ")
+    : unavailable;
+  ui.countryReliabilityN.textContent = rows.length
+    ? rows.map((row) => `${safeNumber(row.horizon)}y ${formatNumber(row.n_observations)}/${formatNumber(row.n_folds)}`).join(" · ")
+    : unavailable;
+  ui.countryReliabilityNote.textContent = rows.length
+    ? `Selection-backtest diagnostics for ${countryById(state.selectedCountry)?.name ?? state.selectedCountry}; pairs / folds by horizon. These are not independent holdout results. Production model${models.length === 1 ? "" : "s"}: ${models.join(", ") || "not published"}.`
+    : state.backtestViewsAvailable
+      ? `No verified country-level backtest metric is published for ${countryById(state.selectedCountry)?.name ?? "this selection"}. ${models.length ? `Production model${models.length === 1 ? "" : "s"}: ${models.join(", ")}.` : ""}`
+      : "Protected backtest views could not be loaded; production forecasts remain available.";
 }
 
 function cityCountryReference(row) {

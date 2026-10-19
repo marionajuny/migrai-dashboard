@@ -951,6 +951,15 @@ body.dashboard-mode .access-shell { width: 100%; min-height: 100vh; margin: 0; p
 .reliability-filter-row select { width: 100%; min-height: 35px; }
 .reliability-scope-note { display: flex; align-items: center; gap: 8px; min-height: 35px; margin: 0; padding: 7px 9px; border: 1px solid rgba(240, 123, 55, .2); border-radius: 7px; color: #a8bac9; background: rgba(240, 123, 55, .045); font-size: .57rem; line-height: 1.45; }
 .reliability-scope-note span { color: #f5a16b; font-size: .78rem; }
+.reliability-evaluation-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; }
+.reliability-evaluation-card { display: grid; min-width: 0; align-content: start; gap: 8px; padding: 12px; border: 1px solid rgba(112, 141, 166, .2); border-radius: 9px; background: rgba(12, 29, 47, .7); }
+.reliability-evaluation-card__heading { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.reliability-evaluation-card__heading strong { color: #f2a16a; font-size: .68rem; overflow-wrap: anywhere; }
+.reliability-evaluation-card__heading span { color: #9bb0c3; font-size: .56rem; }
+.reliability-evaluation-card__counts { margin: 0; color: #e5eaf0; font-size: .65rem; font-variant-numeric: tabular-nums; }
+.reliability-evaluation-card__artifact { margin: 0; color: #9aafc1; font-size: .54rem; line-height: 1.5; overflow-wrap: anywhere; }
+.reliability-evaluation-card .analysis-note { margin: 0; font-size: .53rem; overflow-wrap: anywhere; }
+.reliability-evaluation-card small { color: #788fa4; font-size: .5rem; line-height: 1.45; overflow-wrap: anywhere; }
 .reliability-horizon-section > .analysis-note { margin: 8px 2px 0; }
 .reliability-horizon-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .reliability-horizon-card { display: grid; align-content: start; gap: 7px; min-height: 190px; padding: 13px; }
@@ -1114,6 +1123,8 @@ body.dashboard-mode .access-shell { width: 100%; min-height: 100vh; margin: 0; p
 /* Data & Methodology */
 .methodology-page { display: grid; gap: 13px; }
 .methodology-summary-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
+.methodology-context-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 10px 0 12px; }
+.methodology-context-summary > .methodology-summary-card { min-height: 86px; }
 .methodology-summary-card { display: grid; min-width: 0; min-height: 97px; align-content: space-between; gap: 8px; padding: 12px; }
 .methodology-summary-card > span { color: #93a9bb; font-size: .57rem; font-weight: 700; letter-spacing: .045em; text-transform: uppercase; }
 .methodology-summary-card > strong { overflow-wrap: anywhere; color: #f3a16b; font-size: clamp(.95rem, 1.2vw, 1.26rem); font-variant-numeric: tabular-nums; }

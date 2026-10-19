@@ -7,7 +7,7 @@
     <meta name="description" content="Acceso privado al dashboard de migrAI." />
     <title>Acceso privado · migrAI</title>
     <link rel="icon" href="migrai-mark.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=data-methodology-1" />
+    <link rel="stylesheet" href="styles.css?v=verified-data-20261019" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   </head>
   <body>
@@ -180,8 +180,8 @@
               </section>
               <section class="outlook-panel country-reliability-panel" aria-labelledby="countryReliabilityTitle">
                 <div class="panel-heading"><div><h2 id="countryReliabilityTitle">Forecast reliability</h2><p>Model performance and backtesting</p></div></div>
-                <div class="reliability-metrics"><article><span>MAE</span><strong id="countryReliabilityMae">Not available</strong><small>Mean absolute error</small></article><article><span>WAPE</span><strong id="countryReliabilityWape">Not available</strong><small>Weighted absolute percentage error</small></article><article><span>Evaluation sample</span><strong id="countryReliabilityN">Not available</strong><small>Country-level backtesting records</small></article></div>
-                <p id="countryReliabilityNote" class="analysis-note">Backtesting metrics are not included in the currently published Country data views; no performance values are inferred here.</p>
+                <div class="reliability-metrics"><article><span>MAE</span><strong id="countryReliabilityMae">Not available</strong><small>Mean absolute error · persons/year by horizon</small></article><article><span>WAPE</span><strong id="countryReliabilityWape">Not available</strong><small>Weighted absolute percentage error by horizon</small></article><article><span>Evaluation sample</span><strong id="countryReliabilityN">Not available</strong><small>Evaluation pairs / folds by horizon</small></article></div>
+                <p id="countryReliabilityNote" class="analysis-note">Country-level selection-backtest diagnostics are shown by horizon when available. They are not independent holdout results.</p>
               </section>
             </div>
 
@@ -335,6 +335,12 @@
               <p class="analysis-note">Evaluation scores come from the registered candidate's selection backtest. They are useful diagnostics, not an independent holdout or a guarantee of future accuracy.</p>
             </section>
 
+            <section class="outlook-panel reliability-evaluations-panel" aria-labelledby="reliabilityEvaluationsTitle">
+              <div class="panel-heading"><div><h2 id="reliabilityEvaluationsTitle">Backtest evaluation provenance</h2><p>Published source artifacts, row counts and selection rules for this scope</p></div></div>
+              <div id="reliabilityEvaluationSummary" class="reliability-evaluation-grid" aria-live="polite"></div>
+              <p class="analysis-note">The evaluation record documents which rows entered the selection backtest. It does not make the results an independent holdout.</p>
+            </section>
+
             <div class="reliability-chart-grid">
               <section class="outlook-panel reliability-chart-panel" aria-labelledby="reliabilityScatterTitle">
                 <div class="panel-heading"><div><h2 id="reliabilityScatterTitle">Actual vs. predicted</h2><p>One point per verified country-year or city-year evaluation pair</p></div></div>
@@ -452,7 +458,7 @@
               <article class="outlook-panel methodology-summary-card"><span>Missing values</span><strong id="methodologyMissingCount">—</strong><small id="methodologyMissingNote">Null or non-numeric published values</small></article>
               <article class="outlook-panel methodology-summary-card"><span>Temporal coverage</span><strong id="methodologyTemporalCoverage">—</strong><small id="methodologyTemporalNote">Observed years in the current view</small></article>
               <article class="outlook-panel methodology-summary-card"><span>Territorial coverage</span><strong id="methodologyTerritorialCoverage">—</strong><small id="methodologyTerritorialNote">Entities with at least one valid observation</small></article>
-              <article class="outlook-panel methodology-summary-card"><span>Source attribution</span><strong id="methodologySourceCoverage">—</strong><small id="methodologySourceCoverageNote">Rows with a published source family</small></article>
+              <article class="outlook-panel methodology-summary-card"><span>Observed-flow source attribution</span><strong id="methodologySourceCoverage">—</strong><small id="methodologySourceCoverageNote">Rows with a published source family</small></article>
               <article class="outlook-panel methodology-summary-card"><span>Available forecasts</span><strong id="methodologyForecastCount">—</strong><small id="methodologyForecastNote">Derived from published forecast status and values</small></article>
             </section>
 
@@ -468,18 +474,30 @@
               <div id="methodologyCoverageGrid" class="methodology-coverage-scroll" role="region" aria-label="Observed data coverage matrix" tabindex="0"></div>
             </section>
 
+            <section class="outlook-panel methodology-context-panel" aria-labelledby="methodologyContextTitle">
+              <div class="panel-heading"><div><h2 id="methodologyContextTitle">Contextual observations and sources</h2><p>Published indicator records from the protected context view, separate from immigration-flow observations</p></div></div>
+              <div id="methodologyContextSummary" class="methodology-context-summary" aria-live="polite"></div>
+              <div class="methodology-table-scroll">
+                <table class="methodology-status-table methodology-context-table">
+                  <thead><tr><th scope="col">Level</th><th scope="col">Family</th><th scope="col">Source</th><th scope="col">Published datasets</th><th scope="col">Entities</th><th scope="col">Indicators</th><th scope="col">Values</th><th scope="col">Year range</th></tr></thead>
+                  <tbody id="methodologyContextSourceRows"></tbody>
+                </table>
+              </div>
+              <p id="methodologyContextNote" class="analysis-note">Context sources are loaded on demand from the authenticated Supabase view. This series is not source attribution for immigration-flow observations.</p>
+            </section>
+
             <div class="methodology-main-grid">
               <section class="outlook-panel methodology-lineage-panel" aria-labelledby="methodologyLineageTitle">
                 <div class="panel-heading"><div><h2 id="methodologyLineageTitle">Source lineage and methodology</h2><p>From documented source families to the authenticated dashboard</p></div></div>
                 <div class="methodology-lineage">
-                  <details class="methodology-stage" open><summary><span>01</span><strong>Data sources</strong></summary><p>The project documentation names Eurostat, GDELT and INE. The current published views do not attach source-family identifiers to each observation, so row-level attribution cannot be verified here.</p></details>
+                  <details class="methodology-stage" open><summary><span>01</span><strong>Data sources</strong></summary><p>Contextual indicators publish source names and dataset identifiers in the inventory above. The separate immigration-flow view does not currently expose row-level source attribution.</p></details>
                   <details class="methodology-stage"><summary><span>02</span><strong>Processing</strong></summary><p>Project materials describe cleaning, validation, duplicate handling and missing-value treatment in the upstream pipeline. Detailed transformation logs are not exposed in these dashboard views.</p></details>
                   <details class="methodology-stage"><summary><span>03</span><strong>Country &amp; City datasets</strong></summary><p>Country and City observations and forecast rows are read from the published <code>observed_latest</code> and <code>forecasts_latest</code> views in the <code>migrai</code> schema.</p></details>
-                  <details class="methodology-stage"><summary><span>04</span><strong>Model evaluation</strong></summary><p>Production forecasts remain separate from backtesting. Where the protected backtest views are configured, the dashboard reads historical observed/predicted pairs and fold-level metrics for the registered candidates; these are diagnostics from the model-selection backtest, not an independent holdout.</p></details>
+                  <details class="methodology-stage"><summary><span>04</span><strong>Model evaluation</strong></summary><p>Production forecasts remain separate from backtesting. The dashboard reads published observed/predicted pairs and horizon/entity metrics from protected backtest views; these are diagnostics from the model-selection backtest, not an independent holdout.</p></details>
                   <details class="methodology-stage"><summary><span>05</span><strong>Production forecasts</strong></summary><p>Forecast status, target year, horizon, model label and interval bounds are displayed only when the corresponding fields are present and valid in the published rows.</p></details>
-                  <details class="methodology-stage"><summary><span>06</span><strong>Supabase → Dashboard</strong></summary><p>Supabase Auth gates access. The static GitHub Pages client makes authenticated, read-only queries to the approved views. Context and backtest data use separate, additive tables and remain unavailable until their migrations, RLS policies and Data API exposure are configured.</p></details>
+                  <details class="methodology-stage"><summary><span>06</span><strong>Supabase → Dashboard</strong></summary><p>Supabase Auth gates access. The static GitHub Pages client makes authenticated, read-only queries to the approved views, including the published context and backtest views. No secret or service-role key is used by the browser.</p></details>
                 </div>
-                <p class="analysis-note">Source inventory is based on project documentation, not inferred from individual output rows. Add source metadata to the published views to enable verified source-family filtering.</p>
+                <p class="analysis-note">A published year range describes rows currently available, not the complete set of years expected by the pipeline. The current views do not expose an expected entity-year manifest.</p>
               </section>
 
               <section class="outlook-panel methodology-run-panel" aria-labelledby="methodologyRunTitle">
@@ -538,6 +556,6 @@
     <footer class="site-footer site-footer--compact"><div class="container footer-bottom"><span>© migrAI · Migration intelligence</span><span>Acceso privado · Supabase Auth</span></div></footer>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-    <script src="app.js?v=data-methodology-1" defer></script>
+    <script src="app.js?v=verified-data-20261019" defer></script>
   </body>
 </html>
