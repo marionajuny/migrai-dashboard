@@ -4529,8 +4529,8 @@ function appendMapPlaceMarkers(layer, projection) {
   EUROPEAN_CAPITALS.forEach(([code, name, longitude, latitude]) => {
     if (!featureForCode.has(code)) return;
     const [x, y] = projection([longitude, latitude]);
-    const marker = createSvg("g", { class: "map-marker map-marker--capital", tabindex: "0", role: "img", "aria-label": `${name}, capital` });
-    marker.append(createSvg("circle", { cx: x, cy: y, r: 3.25, class: "map-marker__capital-dot", "vector-effect": "non-scaling-stroke" }));
+    const marker = createSvg("g", { class: "map-marker map-marker--capital", transform: mapMarkerScreenSizeTransform(x, y), tabindex: "0", role: "img", "aria-label": `${name}, capital` });
+    marker.append(createSvg("circle", { cx: x, cy: y, r: 1.55, class: "map-marker__capital-dot", "vector-effect": "non-scaling-stroke" }));
     marker.addEventListener("pointerenter", (event) => showMapPlaceTooltip(event, { name, kind: "capital" }));
     marker.addEventListener("pointermove", positionMapTooltip);
     marker.addEventListener("pointerleave", hideMapTooltipWhenLeavingTarget);
@@ -4546,10 +4546,11 @@ function appendMapPlaceMarkers(layer, projection) {
     const coordinates = CITY_MAP_LOCATIONS.get(city.key);
     if (!coordinates) return;
     const [x, y] = projection(coordinates);
-    const marker = createSvg("g", { class: "map-marker map-marker--city", tabindex: "0", role: "link", "aria-label": `${city.name} · open City Intelligence` });
+    const marker = createSvg("g", { class: "map-marker map-marker--city", transform: mapMarkerScreenSizeTransform(x, y), tabindex: "0", role: "link", "aria-label": `${city.name} · open City Intelligence` });
     marker.append(
-      createSvg("circle", { cx: x, cy: y, r: 6.1, class: "map-marker__city-halo", "vector-effect": "non-scaling-stroke" }),
-      createSvg("circle", { cx: x, cy: y, r: 3.2, class: "map-marker__city-dot", "vector-effect": "non-scaling-stroke" }),
+      createSvg("circle", { cx: x, cy: y, r: 5, class: "map-marker__hit-area" }),
+      createSvg("circle", { cx: x, cy: y, r: 2.75, class: "map-marker__city-halo", "vector-effect": "non-scaling-stroke" }),
+      createSvg("circle", { cx: x, cy: y, r: 1.5, class: "map-marker__city-dot", "vector-effect": "non-scaling-stroke" }),
     );
     marker.addEventListener("pointerenter", (event) => showMapPlaceTooltip(event, { name: city.name, kind: "city", city }));
     marker.addEventListener("pointermove", positionMapTooltip);
@@ -4575,6 +4576,11 @@ function mapFeatureCode(feature) {
   const properties = feature.properties ?? {};
   return [properties.ADM0_A3, properties.ISO_A3, properties.ISO_A3_EH]
     .find((code) => code && code !== "-99") ?? null;
+}
+
+function mapMarkerScreenSizeTransform(x, y) {
+  const inverseZoom = 1 / Math.max(state.mapZoom, 1);
+  return `translate(${x} ${y}) scale(${inverseZoom}) translate(${-x} ${-y})`;
 }
 
 function mapZoomTransform(width, height) {
@@ -4670,18 +4676,13 @@ function mapPointerPosition(event, svg) {
 
 function showMapPlaceTooltip(event, place) {
   ui.mapTooltip.replaceChildren();
+  const title = document.createElement("strong");
+  title.textContent = place.name;
+  ui.mapTooltip.append(title);
   if (place.kind === "city") {
-    const link = document.createElement("a");
-    link.className = "map-tooltip__city-link";
-    link.href = cityIntelligenceHref(place.city);
-    link.textContent = place.name;
     const action = document.createElement("small");
-    action.textContent = "Open City Intelligence";
-    ui.mapTooltip.append(link, action);
-  } else {
-    const title = document.createElement("strong");
-    title.textContent = place.name;
-    ui.mapTooltip.append(title);
+    action.textContent = "Click the marker to open City Intelligence";
+    ui.mapTooltip.append(action);
   }
   ui.mapTooltip.hidden = false;
   positionMapTooltip(event);
