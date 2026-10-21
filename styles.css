@@ -1364,3 +1364,21 @@ html:not(.i18n-ready) body { visibility: hidden; animation: i18n-reveal 0s 1.5s 
 .lang-select { width: auto; flex: none; margin-left: auto; }
 .header-inner .lang-select + .button--nav { margin-left: 8px; }
 .alerts-lead { margin: 0 0 4px; padding: 8px 10px; border-left: 2px solid #e8c86e; background: rgba(232, 200, 110, .08); color: #d8c98f; font-size: .66rem; line-height: 1.5; }
+
+/* One-page report (print to PDF) */
+#printReport { display: none; }
+@media print {
+  body > *:not(#printReport) { display: none !important; }
+  html, body { background: #fff !important; }
+  #printReport { display: block; padding: 0; color: #111; font: 11pt/1.45 Arial, sans-serif; }
+  #printReport h1 { margin: 4pt 0 2pt; font-size: 20pt; }
+  #printReport h2 { margin: 0 0 2pt; color: #b4531a; font-size: 9pt; letter-spacing: .05em; text-transform: uppercase; }
+  #printReport p { margin: 0; }
+  .print-report__brand { color: #b4531a; font-size: 9pt; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+  .print-report__sub { margin-bottom: 10pt !important; color: #555; font-size: 9pt; }
+  .print-report__item { margin-bottom: 7pt; padding: 5pt 8pt; border-left: 3pt solid #e08a4d; break-inside: avoid; }
+  #printReport table { width: 100%; margin-top: 8pt; border-collapse: collapse; font-size: 9pt; }
+  #printReport th, #printReport td { padding: 3pt 5pt; border-bottom: .5pt solid #ccc; text-align: left; }
+  #printReport th { background: #f1f1f1; }
+  .print-report__note { margin-top: 10pt !important; color: #666; font-size: 8pt; }
+}

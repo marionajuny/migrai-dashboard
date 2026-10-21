@@ -7,7 +7,7 @@
     <meta name="description" content="Private access to the migrAI dashboard." />
     <title>Private access · migrAI</title>
     <link rel="icon" href="migrai-mark.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=insights-20261022" />
+    <link rel="stylesheet" href="styles.css?v=insights-20261023" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   </head>
   <body>
@@ -157,7 +157,7 @@
             </div>
 
             <section class="outlook-panel exec-summary" aria-labelledby="countrySummaryTitle">
-              <div class="panel-heading panel-heading--wrap"><div><h2 id="countrySummaryTitle">What this means</h2><p>Plain-language reading of this country's data, generated from the published values</p></div><div class="exec-summary__actions"><button id="countryExportCsv" class="chip-button" type="button">Download CSV</button><button class="chip-button js-copy-link" type="button">Copy link</button></div></div>
+              <div class="panel-heading panel-heading--wrap"><div><h2 id="countrySummaryTitle">What this means</h2><p>Plain-language reading of this country's data, generated from the published values</p></div><div class="exec-summary__actions"><button id="countryExportCsv" class="chip-button" type="button">Download CSV</button><button id="countryReportPdf" class="chip-button" type="button">Download PDF</button><button class="chip-button js-copy-link" type="button">Copy link</button></div></div>
               <div id="countrySummary" class="exec-summary__grid"></div>
             </section>
 
@@ -454,7 +454,7 @@
             </div>
 
             <section class="outlook-panel exec-summary" aria-labelledby="citySummaryTitle">
-              <div class="panel-heading panel-heading--wrap"><div><h2 id="citySummaryTitle">What this means</h2><p>Plain-language reading of this city's data, generated from the published values</p></div><div class="exec-summary__actions"><button id="cityExportCsv" class="chip-button" type="button">Download CSV</button><button class="chip-button js-copy-link" type="button">Copy link</button></div></div>
+              <div class="panel-heading panel-heading--wrap"><div><h2 id="citySummaryTitle">What this means</h2><p>Plain-language reading of this city's data, generated from the published values</p></div><div class="exec-summary__actions"><button id="cityExportCsv" class="chip-button" type="button">Download CSV</button><button id="cityReportPdf" class="chip-button" type="button">Download PDF</button><button class="chip-button js-copy-link" type="button">Copy link</button></div></div>
               <div id="citySummary" class="exec-summary__grid"></div>
             </section>
 
@@ -609,7 +609,7 @@
     <footer class="site-footer site-footer--compact"><div class="container footer-bottom"><span>© migrAI · Migration intelligence</span><span>Acceso privado · Supabase Auth</span></div></footer>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-    <script src="insights.js?v=insights-20261022" defer></script>
-    <script src="app.js?v=insights-20261022" defer></script>
+    <script src="insights.js?v=insights-20261023" defer></script>
+    <script src="app.js?v=insights-20261023" defer></script>
   </body>
 </html>

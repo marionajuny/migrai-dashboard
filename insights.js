@@ -727,3 +727,107 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelector("#cityExportCsv")?.addEventListener("click", exportCityCsv);
   document.querySelectorAll(".js-copy-link").forEach((button) => button.addEventListener("click", () => copyShareLink(button)));
 });
+
+/* ---------- One-page report (print to PDF) ---------- */
+
+function reportRangeText(row, level, formatter) {
+  const bounds = intervalBounds(row, level);
+  return bounds ? `${formatter(bounds.lower)} – ${formatter(bounds.upper)}` : "—";
+}
+
+function printReport({ title, subtitle, items, rows, valueLabel, formatter }) {
+  document.querySelector("#printReport")?.remove();
+  const run = state.runs.find((item) => item.is_latest) ?? state.runs[0];
+  const root = document.createElement("section");
+  root.id = "printReport";
+  const heading = document.createElement("header");
+  const brand = document.createElement("p");
+  brand.className = "print-report__brand";
+  brand.textContent = "migrAI · Migration intelligence";
+  const h1 = document.createElement("h1");
+  h1.textContent = title;
+  const sub = document.createElement("p");
+  sub.className = "print-report__sub";
+  sub.textContent = `${subtitle} · Run ${run?.run_label ?? run?.run_id ?? "n/a"} · Generated ${new Date().toLocaleDateString("en-GB", { dateStyle: "long" })}`;
+  heading.append(brand, h1, sub);
+  root.append(heading);
+
+  items.forEach((item) => {
+    const block = document.createElement("div");
+    block.className = "print-report__item";
+    const h2 = document.createElement("h2");
+    h2.textContent = item.title;
+    const text = document.createElement("p");
+    text.textContent = item.text;
+    block.append(h2, text);
+    root.append(block);
+  });
+
+  const table = document.createElement("table");
+  const head = table.createTHead().insertRow();
+  ["Year", "Type", valueLabel, "80% range", "95% range", "Method"].forEach((label) => {
+    const th = document.createElement("th");
+    th.textContent = label;
+    head.append(th);
+  });
+  const body = table.createTBody();
+  rows.forEach((row) => {
+    const tr = body.insertRow();
+    [row.year, row.type, formatter(row.value), row.r80, row.r95, row.method].forEach((value) => { tr.insertCell().textContent = value; });
+  });
+  root.append(table);
+
+  const note = document.createElement("p");
+  note.className = "print-report__note";
+  note.textContent = "Estimates are analytical and descriptive; they are not guarantees. Accuracy figures come from the model-selection backtest, not an independent holdout, and intervals have no published coverage check. Correlation is not causation. Source: migrAI dashboard, protected Supabase views.";
+  root.append(note);
+  document.body.append(root);
+  const cleanup = () => { root.remove(); window.removeEventListener("afterprint", cleanup); };
+  window.addEventListener("afterprint", cleanup);
+  window.print();
+}
+
+function printCountryReport() {
+  const country = currentCountry();
+  if (!country) return;
+  const observed = state.observed.filter((row) => String(row.entity_id) === String(country.id) && safeNumber(row.value) !== null)
+    .sort((a, b) => safeNumber(a.year) - safeNumber(b.year)).slice(-8);
+  const forecasts = state.forecasts.filter((row) => String(row.entity_id) === String(country.id) && forecastIsAvailable(row))
+    .sort((a, b) => safeNumber(a.horizon) - safeNumber(b.horizon));
+  const format = (value) => new Intl.NumberFormat("en-GB", { maximumFractionDigits: 0 }).format(value);
+  printReport({
+    title: `${country.name}: immigration outlook`,
+    subtitle: "Annual immigration, persons per year",
+    items: buildCountrySummary(country),
+    valueLabel: "Persons per year",
+    formatter: format,
+    rows: [
+      ...observed.map((row) => ({ year: row.year, type: "Observed", value: safeNumber(row.value), r80: "—", r95: "—", method: "—" })),
+      ...forecasts.map((row) => ({ year: row.target_year, type: `Forecast (${row.horizon}y)`, value: safeNumber(row.prediction), r80: reportRangeText(row, 80, format), r95: reportRangeText(row, 95, format), method: modelDisplayName(forecastModelLabel(row)) })),
+    ],
+  });
+}
+
+function printCityReport() {
+  const city = currentCityRecord();
+  if (!city) return;
+  const observations = cityObservationSeries(city);
+  const forecasts = cityForecastSeries(city).filter(Boolean);
+  const format = (value) => `${Number(value).toFixed(2)}%`;
+  printReport({
+    title: `${city.name}: foreign-resident share outlook`,
+    subtitle: "Foreign residents, % of city population",
+    items: buildCitySummary(city, observations, cityForecastSeries(city), state.contextCache.get(contextEntityCacheKey("city", city.id, city.countryId)) ?? []),
+    valueLabel: "% of residents",
+    formatter: format,
+    rows: [
+      ...observations.slice(-8).map((row) => ({ year: row.year, type: "Observed", value: row.value, r80: "—", r95: "—", method: "—" })),
+      ...forecasts.map((row) => ({ year: row.target_year, type: `Forecast (${row.horizon}y)`, value: safeNumber(row.prediction), r80: reportRangeText(row, 80, format), r95: reportRangeText(row, 95, format), method: forecastModelLabel(row) || "—" })),
+    ],
+  });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelector("#countryReportPdf")?.addEventListener("click", printCountryReport);
+  document.querySelector("#cityReportPdf")?.addEventListener("click", printCityReport);
+});

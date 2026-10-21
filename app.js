@@ -726,7 +726,7 @@ async function loadDashboard() {
 
   const [runsResponse, forecastsResponse, observedResponse, backtestPredictionsResponse,
     backtestEvaluationsResponse, backtestMetricsResponse, backtestEntityMetricsResponse] = await Promise.all([
-    supabaseClient.from("runs").select("*").order("run_id", { ascending: false }).limit(25),
+    supabaseClient.from("runs").select("run_id,started_at_madrid,run_label,trigger,status,levels,n_forecasts,is_latest,git_branch,git_commit,n_failed_steps").order("run_id", { ascending: false }).limit(25),
     supabaseClient.from("forecasts_latest").select("*").in("level", ["country", "city"]).order("entity_name").order("horizon"),
     supabaseClient.from("observed_latest").select("*").in("level", ["country", "city"]).order("year"),
     supabaseClient.from("backtest_predictions_latest").select("*").order("target_year").limit(1000),
@@ -4869,7 +4869,7 @@ function exportCountryChart() {
   setMessage(ui.dashboardMessage, "Country chart exported as SVG.");
 }
 
-const MAP_DATA_URL = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_50m_admin_0_countries.geojson";
+const MAP_DATA_URL = "assets/europe-countries.geojson";
 
 // Natural Earth 5.1.2 populated-place points (Admin-0 capitals; WGS84 [longitude, latitude]).
 const EUROPEAN_CAPITALS = [
