@@ -114,6 +114,8 @@ const ui = {
   countryReliabilityMae: document.querySelector("#countryReliabilityMae"),
   countryReliabilityWape: document.querySelector("#countryReliabilityWape"),
   countryReliabilityN: document.querySelector("#countryReliabilityN"),
+  countryReliabilityNaive: document.querySelector("#countryReliabilityNaive"),
+  countryReliabilityNaiveNote: document.querySelector("#countryReliabilityNaiveNote"),
   countryReliabilityNote: document.querySelector("#countryReliabilityNote"),
   cityExplorerCoverage: document.querySelector("#cityExplorerCoverage"),
   cityExplorerContent: document.querySelector("#cityExplorerContent"),
@@ -127,6 +129,7 @@ const ui = {
   benchmarkPeriod: document.querySelector("#benchmarkPeriod"),
   benchmarkAbsoluteButton: document.querySelector("#benchmarkAbsoluteButton"),
   benchmarkIndexButton: document.querySelector("#benchmarkIndexButton"),
+  benchmarkPerThousandButton: document.querySelector("#benchmarkPerThousandButton"),
   benchmarkChartLegend: document.querySelector("#benchmarkChartLegend"),
   benchmarkTrendChart: document.querySelector("#benchmarkTrendChart"),
   benchmarkTrendSubtitle: document.querySelector("#benchmarkTrendSubtitle"),
@@ -230,6 +233,8 @@ const ui = {
   cityReliabilityR2: document.querySelector("#cityReliabilityR2"),
   cityReliabilityR2Note: document.querySelector("#cityReliabilityR2Note"),
   cityReliabilitySample: document.querySelector("#cityReliabilitySample"),
+  cityReliabilityNaive: document.querySelector("#cityReliabilityNaive"),
+  cityReliabilityNaiveNote: document.querySelector("#cityReliabilityNaiveNote"),
   cityReliabilitySampleNote: document.querySelector("#cityReliabilitySampleNote"),
   cityReliabilityInterval: document.querySelector("#cityReliabilityInterval"),
   cityReliabilityIntervalNote: document.querySelector("#cityReliabilityIntervalNote"),
@@ -570,6 +575,10 @@ ui.benchmarkIndexButton.addEventListener("click", () => {
   state.benchmarkMeasure = "index";
   renderCountryBenchmark();
 });
+ui.benchmarkPerThousandButton.addEventListener("click", () => {
+  state.benchmarkMeasure = "perThousand";
+  renderCountryBenchmark();
+});
 ui.benchmarkRankingYear.addEventListener("change", renderCountryBenchmark);
 ui.benchmarkHeatmapMeasure.addEventListener("change", renderCountryBenchmark);
 ui.benchmarkHorizon.addEventListener("change", renderCountryBenchmark);
@@ -775,6 +784,7 @@ async function loadDashboard() {
   applyDashboardRoute();
   renderCountryIntelligence();
   loadEuropeMap();
+  loadInsightPopulation().then(() => { if (insightPopulation.loaded) { renderOutlook(); applyDashboardRoute(); } });
 }
 
 function unique(values) {
@@ -977,6 +987,7 @@ function pointForCountryYear(country, year) {
 function metricForPoint(point, countryId, year, measure = ui.mapMeasure.value) {
   if (!point) return null;
   if (measure === "value") return point.value;
+  if (measure === "perThousand") return insightPerThousand(point.value, countryId, year);
 
   let baseline = null;
   if (point.type === "observed") {
@@ -1956,6 +1967,7 @@ function renderBenchmarkControls() {
   syncBenchmarkSelect(ui.benchmarkHorizon, horizons.map((horizon) => ({ value: horizon, label: `${horizon}-year` })), preferredHorizon);
   ui.benchmarkAbsoluteButton.setAttribute("aria-pressed", String(state.benchmarkMeasure === "absolute"));
   ui.benchmarkIndexButton.setAttribute("aria-pressed", String(state.benchmarkMeasure === "index"));
+  ui.benchmarkPerThousandButton.setAttribute("aria-pressed", String(state.benchmarkMeasure === "perThousand"));
 }
 
 function benchmarkEmpty(container, message) {
@@ -2009,17 +2021,18 @@ function renderBenchmarkTrendChart() {
     return row && safeNumber(row.value) !== 0;
   }));
   const indexed = state.benchmarkMeasure === "index";
+  const perCapita = state.benchmarkMeasure === "perThousand";
   const baseValues = new Map(countries.map((country) => [country.id, indexBaseYear === undefined
     ? null : safeNumber(benchmarkObservationMap(country.id).get(indexBaseYear)?.value)]));
   const chartRows = countries.map((country) => {
     const observed = benchmarkObservations(country.id)
       .filter((row) => safeNumber(row.year) >= startYear && safeNumber(row.year) <= endYear)
       .map((row) => ({ year: safeNumber(row.year), value: safeNumber(row.value), row, type: "observed" }))
-      .map((point) => ({ ...point, value: indexed ? (baseValues.get(country.id) ? point.value / baseValues.get(country.id) * 100 : null) : point.value }))
+      .map((point) => ({ ...point, value: indexed ? (baseValues.get(country.id) ? point.value / baseValues.get(country.id) * 100 : null) : perCapita ? insightPerThousand(point.value, country.id, point.year) : point.value }))
       .filter((point) => point.value !== null);
     const forecasts = benchmarkForecastRows(country.id)
       .map((row) => ({ year: safeNumber(row.target_year), value: safeNumber(row.prediction), row, type: "forecast", horizon: safeNumber(row.horizon) }))
-      .map((point) => ({ ...point, value: indexed ? (baseValues.get(country.id) ? point.value / baseValues.get(country.id) * 100 : null) : point.value }))
+      .map((point) => ({ ...point, value: indexed ? (baseValues.get(country.id) ? point.value / baseValues.get(country.id) * 100 : null) : perCapita ? insightPerThousand(point.value, country.id, point.year) : point.value }))
       .filter((point) => point.year !== null && point.value !== null);
     const latest = benchmarkLatestObservation(country.id);
     const forecastsComparable = latest && forecasts.some((point) => {
@@ -2027,7 +2040,7 @@ function renderBenchmarkTrendChart() {
       return baseline !== null && Math.abs(baseline - safeNumber(latest.value)) <= 0.000001;
     });
     const anchor = forecastsComparable && safeNumber(latest.year) >= startYear && safeNumber(latest.year) <= endYear
-      ? [{ year: safeNumber(latest.year), value: indexed ? (baseValues.get(country.id) ? safeNumber(latest.value) / baseValues.get(country.id) * 100 : null) : safeNumber(latest.value), row: latest, type: "observed" }]
+      ? [{ year: safeNumber(latest.year), value: indexed ? (baseValues.get(country.id) ? safeNumber(latest.value) / baseValues.get(country.id) * 100 : null) : perCapita ? insightPerThousand(safeNumber(latest.value), country.id, safeNumber(latest.year)) : safeNumber(latest.value), row: latest, type: "observed" }]
       : [];
     return { country, observed, forecasts, anchor };
   });
@@ -2061,7 +2074,7 @@ function renderBenchmarkTrendChart() {
     const yPos = y(value);
     svg.append(createSvg("line", { x1: margin.left, x2: width - margin.right, y1: yPos, y2: yPos, class: "benchmark-gridline" }));
     const label = createSvg("text", { x: margin.left - 9, y: yPos + 4, "text-anchor": "end", class: "benchmark-axis-label" });
-    label.textContent = indexed ? value.toFixed(0) : benchmarkCompactNumber(value);
+    label.textContent = indexed ? value.toFixed(0) : perCapita ? value.toFixed(2) : benchmarkCompactNumber(value);
     svg.append(label);
   }
   const yearTicks = unique(years).sort((a, b) => a - b);
@@ -2074,7 +2087,7 @@ function renderBenchmarkTrendChart() {
   });
   svg.append(createSvg("line", { x1: margin.left, x2: width - margin.right, y1: height - margin.bottom, y2: height - margin.bottom, class: "benchmark-axis-line" }));
   const yTitle = createSvg("text", { x: 17, y: height / 2, transform: `rotate(-90 17 ${height / 2})`, "text-anchor": "middle", class: "benchmark-axis-title" });
-  yTitle.textContent = indexed ? `Index (base ${indexBaseYear} = 100)` : "Persons per year";
+  yTitle.textContent = indexed ? `Index (base ${indexBaseYear} = 100)` : perCapita ? "Immigrants per 1,000 residents" : "Persons per year";
   svg.append(yTitle);
   const xTitle = createSvg("text", { x: margin.left + plotWidth / 2, y: height - 4, "text-anchor": "middle", class: "benchmark-axis-title" });
   xTitle.textContent = "Year";
@@ -2138,7 +2151,9 @@ function renderBenchmarkTrendChart() {
   });
   ui.benchmarkTrendSubtitle.textContent = indexed
     ? `Historical index normalized to 100 in ${indexBaseYear ?? "a shared base year"}; forecasts use the same country-specific base`
-    : `Annual immigration flows · ${startYear}–${endYear} common observed window`;
+    : perCapita
+      ? `Annual immigration per 1,000 residents · ${startYear}–${endYear} common observed window; forecasts use the latest published population`
+      : `Annual immigration flows · ${startYear}–${endYear} common observed window`;
   ui.benchmarkTrendNote.textContent = "The historical index changes only the chart scale; original values are unchanged. Forecasts are displayed as published; heatmap and dumbbell changes require a matching observed baseline.";
 }
 
@@ -2150,11 +2165,15 @@ function renderBenchmarkRanking() {
     ui.benchmarkRankingEmpty.hidden = false;
     return;
   }
+  const perCapita = state.benchmarkMeasure === "perThousand";
   const ranked = selectedBenchmarkCountries()
-    .map((country) => ({ country, point: benchmarkPointForYear(country.id, year) }))
+    .map((country) => {
+      const point = benchmarkPointForYear(country.id, year);
+      return { country, point: point && perCapita ? { ...point, value: insightPerThousand(point.value, country.id, year) } : point };
+    })
     .filter((item) => item.point && item.point.value !== null)
     .sort((a, b) => b.point.value - a.point.value);
-  ui.benchmarkRankingSubtitle.textContent = `${year} · annual immigration flow (persons/year)`;
+  ui.benchmarkRankingSubtitle.textContent = perCapita ? `${year} · annual immigration per 1,000 residents` : `${year} · annual immigration flow (persons/year)`;
   ui.benchmarkRankingEmpty.hidden = ranked.length > 0;
   if (!ranked.length) return;
   const max = Math.max(...ranked.map((item) => Math.abs(item.point.value)), 1);
@@ -2179,7 +2198,7 @@ function renderBenchmarkRanking() {
     bar.style.setProperty("--series-color", benchmarkColor(item.country.id));
     track.append(bar);
     const value = document.createElement("strong");
-    value.textContent = formatNumber(item.point.value);
+    value.textContent = perCapita ? item.point.value.toFixed(2) : formatNumber(item.point.value);
     const kind = document.createElement("small");
     kind.textContent = item.point.type === "Forecast" ? `${safeNumber(item.point.row.horizon)}-year forecast` : "Observed";
     row.append(rank, flag, name, track, value, kind);
@@ -2505,6 +2524,7 @@ async function renderMigrationContext() {
   renderMigrationHistoryChart();
   renderContextScatter();
   renderOtherContextIndicators();
+  renderCorrelationPanel();
 }
 
 function populateMigrationIndicatorOptions() {
@@ -3123,6 +3143,12 @@ function renderContextScatter() {
     point.append(title);
     points.append(point);
   });
+  const fit = insightRegressionLine(pairs);
+  if (fit) {
+    const lineStart = xDomain[0];
+    const lineEnd = xDomain[1];
+    points.prepend(createSvg("line", { x1: x(lineStart), y1: y(fit.intercept + fit.slope * lineStart), x2: x(lineEnd), y2: y(fit.intercept + fit.slope * lineEnd), class: "context-scatter-fit" }));
+  }
   svg.append(points);
 
   const xLabel = createSvg("text", { x: margin.left + plotWidth / 2, y: height - 4, "text-anchor": "middle", class: "benchmark-axis-title" });
@@ -3131,7 +3157,7 @@ function renderContextScatter() {
   yLabel.textContent = "Immigration · persons/year";
   svg.append(xLabel, yLabel);
   ui.contextScatterChart.append(svg);
-  ui.contextScatterStatus.textContent = `${pairs.length} matched years · scales fitted to ${indicator.indicator_label} in ${country.name}. Years without observed immigration are excluded.`;
+  ui.contextScatterStatus.textContent = `${pairs.length} matched years · ${insightScatterSentence(insightPairStats(pairs))} Descriptive only; the dashed line is a simple linear fit.`;
   ui.contextScatterZoomXOut.disabled = state.contextScatterZoomX <= 1.001;
   ui.contextScatterZoomYOut.disabled = state.contextScatterZoomY <= 1.001;
   ui.contextScatterZoomXIn.disabled = state.contextScatterZoomX >= 7.999;
@@ -3277,6 +3303,16 @@ function formatMetricValue(value, maximumFractionDigits = 2) {
     : new Intl.NumberFormat("en-GB", { maximumFractionDigits }).format(number);
 }
 
+function reliabilityNaiveScope(horizon) {
+  const selected = ui.reliabilityEntity.value;
+  if (selected === "all") return { horizon };
+  if (state.reliabilityScope === "city") {
+    const [countryIso2, ...rest] = selected.split("|");
+    return { horizon, entityId: rest.join("|"), countryIso2 };
+  }
+  return { horizon, entityId: selected };
+}
+
 function renderReliabilityHorizonCards() {
   ui.reliabilityHorizonCards.replaceChildren();
   const unit = state.reliabilityScope === "city" ? "% of resident population" : "persons per year";
@@ -3316,12 +3352,16 @@ function renderReliabilityHorizonCards() {
       : state.backtestViewsAvailable
         ? "Verified backtest metrics are not available for this horizon."
         : "Protected backtest views are not yet configured or accessible.";
+    const naive = naiveBaselineComparison({ level: state.reliabilityScope, ...reliabilityNaiveScope(horizon) });
+    const naiveLine = document.createElement("p");
+    naiveLine.className = `reliability-naive-line reliability-naive-line--${naiveBaselineTone(naive)}`;
+    naiveLine.textContent = `${naiveBaselineHeadline(naive)}. ${naiveBaselineDetail(naive)}`;
     const ranges = document.createElement("small");
     ranges.className = "reliability-horizon-card__ranges";
     ranges.textContent = rows.length
       ? `Published bounds on output rows · 80%: ${ranges80}/${rows.length} · 95%: ${ranges95}/${rows.length}`
       : "No output rows match the current filters.";
-    card.append(head, modelLabel, model, countRow, evidence, ranges);
+    card.append(head, modelLabel, model, countRow, evidence, naiveLine, ranges);
     ui.reliabilityHorizonCards.append(card);
   });
 }
@@ -3330,13 +3370,16 @@ function renderReliabilityMetricStatus() {
   ui.reliabilityMetricStatus.replaceChildren();
   const result = reliabilitySelectedMetric();
   const errorUnit = state.reliabilityScope === "city" ? "pp" : "persons/year";
+  const naive = naiveBaselineComparison({ level: state.reliabilityScope, ...reliabilityNaiveScope(Number(ui.reliabilityHorizon.value)) });
   [
     { label: "MAE", value: result ? `${formatMetricValue(result.mae)} ${errorUnit}` : "Not available", note: "Mean absolute error" },
     { label: "WAPE", value: result ? `${formatMetricValue(result.wape_pct, 1)}%` : "Not available", note: "Weighted absolute percentage error" },
     { label: "RMSE", value: result ? `${formatMetricValue(result.rmse)} ${errorUnit}` : "Not available", note: "Root mean squared error" },
     { label: "Evaluation sample", value: result ? `${result.n_observations} pairs · ${result.n_folds} folds` : "Not available", note: "Selected horizon and scope" },
+    { label: "Vs. naive baseline", value: naiveBaselineHeadline(naive), note: naiveBaselineDetail(naive), tone: naiveBaselineTone(naive) },
   ].forEach((metric) => {
     const item = document.createElement("article");
+    if (metric.tone) item.dataset.tone = metric.tone;
     const label = document.createElement("span");
     label.textContent = metric.label;
     const value = document.createElement("strong");
@@ -3674,6 +3717,7 @@ function renderCountryIntelligence() {
   renderCountryReliability();
   renderCityExplorer(country);
   renderCountryInsights(country, observations, currentCountryForecasts());
+  renderSummaryItems(document.querySelector("#countrySummary"), buildCountrySummary(country));
 }
 
 function renderCountryForecastCards(country) {
@@ -4029,6 +4073,14 @@ function renderCountryReliability() {
   ui.countryReliabilityN.textContent = rows.length
     ? rows.map((row) => `${safeNumber(row.horizon)}y ${formatNumber(row.n_observations)}/${formatNumber(row.n_folds)}`).join(" · ")
     : unavailable;
+  const naiveParts = [1, 3, 5].map((horizon) => ({ horizon, result: naiveBaselineComparison({ level: "country", horizon, entityId: state.selectedCountry }) }))
+    .filter((item) => item.result);
+  ui.countryReliabilityNaive.textContent = naiveParts.length
+    ? naiveParts.map(({ horizon, result }) => `${horizon}y ${result.verdict === "naive" ? "naive" : result.verdict === "similar" ? "≈" : `${result.improvement > 0 ? "−" : "+"}${Math.round(Math.abs(result.improvement) * 100)}%`}`).join(" · ")
+    : unavailable;
+  ui.countryReliabilityNaiveNote.textContent = naiveParts.length
+    ? `Error change vs. repeating the last observed value (− is better). ${naiveParts.some((item) => item.result.smallSample) ? "Small samples: read with caution." : ""}`
+    : "Compared with repeating the last observed value";
   ui.countryReliabilityNote.textContent = rows.length
     ? `Selection-backtest diagnostics for ${countryById(state.selectedCountry)?.name ?? state.selectedCountry}; pairs / folds by horizon. These are not independent holdout results. Production model${models.length === 1 ? "" : "s"}: ${models.join(", ") || "not published"}.`
     : state.backtestViewsAvailable
@@ -4252,6 +4304,14 @@ function renderCityReliability(city) {
     ? rows.map((row) => `${safeNumber(row.horizon)}y ${formatNumber(row.n_observations)}/${formatNumber(row.n_folds)}`).join(" · ")
     : emptyValue;
   ui.cityReliabilitySampleNote.textContent = rows.length ? "Evaluation pairs / folds by horizon" : emptyNote;
+  const cityNaive = city ? [1, 3].map((horizon) => ({ horizon, result: naiveBaselineComparison({ level: "city", horizon, entityId: city.id, countryIso2: city.countryId }) }))
+    .filter((item) => item.result) : [];
+  ui.cityReliabilityNaive.textContent = cityNaive.length
+    ? cityNaive.map(({ horizon, result }) => `${horizon}y ${result.verdict === "naive" ? "naive" : result.verdict === "similar" ? "≈" : `${result.improvement > 0 ? "−" : "+"}${Math.round(Math.abs(result.improvement) * 100)}%`}`).join(" · ")
+    : emptyValue;
+  ui.cityReliabilityNaiveNote.textContent = cityNaive.length
+    ? `Error change vs. repeating the last observed value (− is better). ${cityNaive.some((item) => item.result.smallSample) ? "Small samples: read with caution." : ""}`
+    : "Compared with repeating the last observed value";
 }
 
 function renderSelectedCity(city) {
@@ -4283,10 +4343,12 @@ function renderSelectedCity(city) {
   const cityContextKey = contextEntityCacheKey("city", city.id, city.countryId);
   const cachedCityContext = state.contextCache.get(cityContextKey);
   renderCityProfile(city, observations, forecasts, cachedCityContext ?? []);
+  renderSummaryItems(document.querySelector("#citySummary"), buildCitySummary(city, observations, forecasts, cachedCityContext ?? []));
   if (!cachedCityContext) {
     loadContextRows("city", city.id, city.countryId).then((contextRows) => {
       if (state.selectedCity === city.id && state.selectedCountry === city.countryId) {
         renderCityProfile(city, observations, forecasts, contextRows);
+        renderSummaryItems(document.querySelector("#citySummary"), buildCitySummary(city, observations, forecasts, contextRows));
       }
     });
   }
@@ -4886,7 +4948,16 @@ function entityForFeature(feature) {
   return listCountries().find((country) => keys.includes(normalizeName(country.name)) || keys.includes(normalizeName(country.id))) ?? null;
 }
 
+function mapMeasureIsSequential() {
+  return ui.mapMeasure.value === "value" || ui.mapMeasure.value === "perThousand";
+}
+
+function mapNumber(value) {
+  return ui.mapMeasure.value === "perThousand" ? value.toFixed(2) : numberFormatter.format(value);
+}
+
 function mapMetricLabel() {
+  if (ui.mapMeasure.value === "perThousand") return "immigrants per 1,000 residents";
   if (ui.mapMeasure.value === "change") return "change vs. reference (persons)";
   if (ui.mapMeasure.value === "percent") return "% change vs. reference";
   return "immigrants per year";
@@ -4903,7 +4974,7 @@ function blendHex(start, end, ratio) {
 function colourForValue(value, domain) {
   if (value === null || value === undefined) return "#11243a";
   const [min, max] = domain;
-  if (ui.mapMeasure.value !== "value") {
+  if (!mapMeasureIsSequential()) {
     const extent = Math.max(Math.abs(min), Math.abs(max), 1);
     const magnitude = Math.min(Math.abs(value) / extent, 1);
     if (value < 0) return blendHex("#14283d", "#47718d", magnitude);
@@ -4948,11 +5019,11 @@ function renderMap() {
   ui.mapCoverage.textContent = `${availableCount} of ${selectedData.length} countries with values`;
   ui.mapLegend.replaceChildren();
   const legendStart = document.createElement("span");
-  legendStart.textContent = values.length ? numberFormatter.format(domain[0]) : "Not available";
+  legendStart.textContent = values.length ? mapNumber(domain[0]) : "Not available";
   const legendBar = document.createElement("i");
-  legendBar.className = `map-legend__bar${ui.mapMeasure.value !== "value" ? " is-diverging" : ""}`;
+  legendBar.className = `map-legend__bar${!mapMeasureIsSequential() ? " is-diverging" : ""}`;
   const legendEnd = document.createElement("span");
-  legendEnd.textContent = values.length ? numberFormatter.format(domain[1]) : "Not available";
+  legendEnd.textContent = values.length ? mapNumber(domain[1]) : "Not available";
   const noData = document.createElement("span");
   noData.className = "map-legend__nodata";
   noData.innerHTML = '<i aria-hidden="true"></i>No data';
@@ -4979,7 +5050,7 @@ function renderMap() {
       stroke: country?.id === state.selectedCountry ? "#ffd2b6" : country ? "#e4a073" : "#425366",
       "stroke-width": country?.id === state.selectedCountry ? "1.8" : "0.7",
       "vector-effect": "non-scaling-stroke",
-      "aria-label": country ? `${name}: ${value === null ? "no data" : numberFormatter.format(value)} ${mapMetricLabel()}` : `${name}: not in current data scope`,
+      "aria-label": country ? `${name}: ${value === null ? "no data" : mapNumber(value)} ${mapMetricLabel()}` : `${name}: not in current data scope`,
     });
     countryPath.classList.add("map-country");
     if (country) {
@@ -5222,7 +5293,7 @@ function showMapTooltip(event, name, point, value) {
   const title = document.createElement("strong");
   title.textContent = name;
   const detail = document.createElement("span");
-  detail.textContent = value === null ? "No data for this year" : `${numberFormatter.format(value)} ${mapMetricLabel()}`;
+  detail.textContent = value === null ? "No data for this year" : `${mapNumber(value)} ${mapMetricLabel()}`;
   const stateLabel = document.createElement("small");
   stateLabel.textContent = point?.type === "forecast" ? "Forecast" : point?.type === "observed" ? "Observed" : "Not available";
   ui.mapTooltip.append(title, detail, stateLabel);
@@ -5486,7 +5557,7 @@ function renderRanking() {
     fill.style.width = `${Math.max(Math.abs(row.value) / max * 100, 1)}%`;
     bar.append(fill);
     const value = document.createElement("strong");
-    value.textContent = ui.mapMeasure.value === "percent" ? percentFormatter.format(row.value) : formatNumber(row.value);
+    value.textContent = ui.mapMeasure.value === "percent" ? percentFormatter.format(row.value) : ui.mapMeasure.value === "perThousand" ? row.value.toFixed(2) : formatNumber(row.value);
     button.append(rank, code, name, bar, value);
     button.addEventListener("click", () => selectCountry(row.id));
     item.append(button);
@@ -5528,7 +5599,7 @@ function renderInsights() {
   const selectedRows = state.selectedYear === null ? [] : dataRowsForYear(state.selectedYear);
   const topSelected = [...selectedRows].sort((a, b) => b.value - a.value)[0];
   items.push(topSelected
-    ? { title: "Cross-country view", value: topSelected.name, detail: `Highest available value in ${state.selectedYear}: ${ui.mapMeasure.value === "percent" ? percentFormatter.format(topSelected.value) : formatNumber(topSelected.value)} ${mapMetricLabel()}.` }
+    ? { title: "Cross-country view", value: topSelected.name, detail: `Highest available value in ${state.selectedYear}: ${ui.mapMeasure.value === "percent" ? percentFormatter.format(topSelected.value) : ui.mapMeasure.value === "perThousand" ? topSelected.value.toFixed(2) : formatNumber(topSelected.value)} ${mapMetricLabel()}.` }
     : { title: "Cross-country view", value: "Not available", detail: `No country values are available for ${state.selectedYear ?? "the selected year"}.` });
 
   items.forEach((item, index) => {

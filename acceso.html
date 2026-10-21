@@ -7,7 +7,7 @@
     <meta name="description" content="Acceso privado al dashboard de migrAI." />
     <title>Acceso privado · migrAI</title>
     <link rel="icon" href="migrai-mark.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=migration-context-labels-20261019" />
+    <link rel="stylesheet" href="styles.css?v=insights-20261021" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   </head>
   <body>
@@ -103,7 +103,7 @@
             <section class="outlook-panel map-panel" aria-labelledby="mapTitle">
               <div class="panel-heading">
                 <div><h2 id="mapTitle">Immigration to Europe</h2><p>Select a year to explore country-level patterns</p></div>
-                <div class="panel-controls"><label class="sr-only" for="mapMeasure">Map indicator</label><select id="mapMeasure"><option value="value">Total immigration</option><option value="change">Change vs. reference</option><option value="percent">% change vs. reference</option></select></div>
+                <div class="panel-controls"><label class="sr-only" for="mapMeasure">Map indicator</label><select id="mapMeasure"><option value="value">Total immigration</option><option value="change">Change vs. reference</option><option value="percent">% change vs. reference</option><option value="perThousand">Immigration per 1,000 residents</option></select></div>
               </div>
               <div class="map-toolbar"><label class="sr-only" for="mapCountrySelect">Selected country</label><select id="mapCountrySelect"><option value="all">All available countries</option></select><div class="map-controls"><div class="map-zoom" role="group" aria-label="Map zoom"><button id="mapZoomIn" type="button" aria-label="Zoom in">+</button><button id="mapZoomOut" type="button" aria-label="Zoom out" disabled>−</button><button id="mapReset" type="button" aria-label="Reset map view">⤢</button></div><div class="map-pan-controls" role="group" aria-label="Move map"><span aria-hidden="true"></span><button id="mapPanUp" type="button" aria-label="Move map up" title="Move map up" disabled>↑</button><span aria-hidden="true"></span><button id="mapPanLeft" type="button" aria-label="Move map left" title="Move map left" disabled>←</button><span class="map-pan-center" aria-hidden="true">·</span><button id="mapPanRight" type="button" aria-label="Move map right" title="Move map right" disabled>→</button><span aria-hidden="true"></span><button id="mapPanDown" type="button" aria-label="Move map down" title="Move map down" disabled>↓</button><span aria-hidden="true"></span></div></div></div>
               <div class="map-wrap"><div id="europeMap" class="europe-map" role="region" aria-label="Map of Europe showing immigration by country"><div class="map-empty">Loading country boundaries…</div></div><div id="mapTooltip" class="map-tooltip" hidden></div></div>
@@ -150,6 +150,11 @@
               <div id="countryForecastCards" class="country-forecast-cards" aria-label="Country forecast horizons"></div>
             </div>
 
+            <section class="outlook-panel exec-summary" aria-labelledby="countrySummaryTitle">
+              <div class="panel-heading"><div><h2 id="countrySummaryTitle">What this means</h2><p>Plain-language reading of this country's data, generated from the published values</p></div></div>
+              <div id="countrySummary" class="exec-summary__grid"></div>
+            </section>
+
             <section class="outlook-panel country-history-panel" aria-labelledby="countryHistoryTitle">
               <div class="panel-heading panel-heading--wrap country-history-heading">
                 <div><h2 id="countryHistoryTitle">Immigration trend and forecast</h2><p id="countryHistorySubtitle">Observed annual flow and available forecast horizons</p></div>
@@ -181,7 +186,7 @@
               </section>
               <section class="outlook-panel country-reliability-panel" aria-labelledby="countryReliabilityTitle">
                 <div class="panel-heading"><div><h2 id="countryReliabilityTitle">Forecast reliability</h2><p>Model performance and backtesting</p></div></div>
-                <div class="reliability-metrics"><article><span>MAE</span><strong id="countryReliabilityMae">Not available</strong><small>Mean absolute error · persons/year by horizon</small></article><article><span>WAPE</span><strong id="countryReliabilityWape">Not available</strong><small>Weighted absolute percentage error by horizon</small></article><article><span>Evaluation sample</span><strong id="countryReliabilityN">Not available</strong><small>Evaluation pairs / folds by horizon</small></article></div>
+                <div class="reliability-metrics"><article><span>MAE</span><strong id="countryReliabilityMae">Not available</strong><small>Mean absolute error · persons/year by horizon</small></article><article><span>WAPE</span><strong id="countryReliabilityWape">Not available</strong><small>Weighted absolute percentage error by horizon</small></article><article><span>Evaluation sample</span><strong id="countryReliabilityN">Not available</strong><small>Evaluation pairs / folds by horizon</small></article><article class="reliability-naive"><span>Vs. naive baseline</span><strong id="countryReliabilityNaive">Not available</strong><small id="countryReliabilityNaiveNote">Compared with repeating the last observed value</small></article></div>
                 <p id="countryReliabilityNote" class="analysis-note">Country-level selection-backtest diagnostics are shown by horizon when available. They are not independent holdout results.</p>
               </section>
             </div>
@@ -214,7 +219,7 @@
 
             <div class="benchmark-controls-row">
               <div class="benchmark-period-control"><label for="benchmarkPeriod">Historical window</label><select id="benchmarkPeriod" class="compact-select"><option value="all">All common years</option><option value="10">Last 10 common years</option><option value="5">Last 5 common years</option></select></div>
-              <div class="benchmark-measure-control"><span>Historical chart</span><div class="benchmark-segmented" role="group" aria-label="Historical chart measure"><button id="benchmarkAbsoluteButton" type="button" aria-pressed="true">Absolute values</button><button id="benchmarkIndexButton" type="button" aria-pressed="false">Historical index</button></div></div>
+              <div class="benchmark-measure-control"><span>Historical chart</span><div class="benchmark-segmented" role="group" aria-label="Historical chart measure"><button id="benchmarkAbsoluteButton" type="button" aria-pressed="true">Absolute values</button><button id="benchmarkIndexButton" type="button" aria-pressed="false">Historical index</button><button id="benchmarkPerThousandButton" type="button" aria-pressed="false">Per 1,000 residents</button></div></div>
               <p class="benchmark-concept-note"><strong>Country</strong> values are annual immigration flows (persons/year). They are not the same measure as the resident-population share shown for cities.</p>
             </div>
 
@@ -315,6 +320,18 @@
             </div>
 
             <div class="context-analysis-grid context-bottom-grid">
+              <section class="outlook-panel context-correlation-panel" aria-labelledby="contextCorrelationTitle">
+                <div class="panel-heading panel-heading--wrap"><div><h2 id="contextCorrelationTitle">What moves with immigration?</h2><p>Year-over-year changes in contextual indicators vs. immigration · descriptive, not causal</p></div>
+                  <div class="correlation-controls">
+                    <label>Scope <select id="correlationScope"><option value="all">All countries</option><option value="country">Selected country</option></select></label>
+                    <label id="correlationYearEffectsWrap" class="correlation-check"><input id="correlationYearEffects" type="checkbox" checked /> Remove Europe-wide yearly shocks</label>
+                  </div>
+                </div>
+                <div id="correlationSummary" class="correlation-summary" role="status" aria-live="polite">Open this page to compute relationships.</div>
+                <div id="contextCorrelationTable" class="correlation-table-wrap"></div>
+                <p id="correlationNote" class="analysis-note"></p>
+              </section>
+
               <section class="outlook-panel context-diaspora-panel" aria-labelledby="contextDiasporaTitle">
                 <div class="panel-heading"><div><h2 id="contextDiasporaTitle">Diaspora network structure</h2><p>Origin composition and concentration of migrant populations</p></div><span class="context-unavailable-tag">Not in current data release</span></div>
                 <div class="context-diaspora-empty" role="status">
@@ -430,6 +447,11 @@
               <article class="outlook-panel city-kpi"><span>City scope</span><strong id="cityKpiScope">—</strong><small id="cityKpiScopeNote">Published observations and horizons</small></article>
             </div>
 
+            <section class="outlook-panel exec-summary" aria-labelledby="citySummaryTitle">
+              <div class="panel-heading"><div><h2 id="citySummaryTitle">What this means</h2><p>Plain-language reading of this city's data, generated from the published values</p></div></div>
+              <div id="citySummary" class="exec-summary__grid"></div>
+            </section>
+
             <section class="outlook-panel city-trend-panel" aria-labelledby="cityTrendTitle">
               <div class="panel-heading panel-heading--wrap"><div><h2 id="cityTrendTitle">Foreign Population Share</h2><p>Observed history and available forecast targets · % of residents</p></div><div class="city-chart-legend"><span><i class="is-observed"></i>Observed</span><span><i class="is-forecast"></i>Forecast</span><span><i class="is-band"></i>Published uncertainty interval</span></div></div>
               <div id="cityTrendChart" class="city-trend-chart" role="img" aria-label="Historical and forecast foreign population share for the selected city"></div>
@@ -459,7 +481,7 @@
             <div class="city-lower-grid">
               <section class="outlook-panel city-reliability-panel" aria-labelledby="cityReliabilityTitle">
                 <div class="panel-heading"><div><h2 id="cityReliabilityTitle">City Model Reliability</h2><p>City-level evaluation evidence · percentage points</p></div></div>
-                <div class="reliability-metrics city-reliability-metrics"><article><span>MAE</span><strong id="cityReliabilityMae">Not published</strong><small id="cityReliabilityMaeNote">Error in percentage points, by horizon</small></article><article><span>WAPE</span><strong id="cityReliabilityWape">Not published</strong><small id="cityReliabilityWapeNote">Weighted percentage error, by horizon</small></article><article><span>R²</span><strong id="cityReliabilityR2">Not published</strong><small id="cityReliabilityR2Note">Not included in the published metric contract</small></article><article><span>Evaluation sample</span><strong id="cityReliabilitySample">Not published</strong><small id="cityReliabilitySampleNote">Pairs / folds, by horizon</small></article><article><span>Forecast intervals</span><strong id="cityReliabilityInterval">Checking</strong><small id="cityReliabilityIntervalNote">Interval evidence for selected horizons</small></article></div>
+                <div class="reliability-metrics city-reliability-metrics"><article><span>MAE</span><strong id="cityReliabilityMae">Not published</strong><small id="cityReliabilityMaeNote">Error in percentage points, by horizon</small></article><article><span>WAPE</span><strong id="cityReliabilityWape">Not published</strong><small id="cityReliabilityWapeNote">Weighted percentage error, by horizon</small></article><article><span>R²</span><strong id="cityReliabilityR2">Not published</strong><small id="cityReliabilityR2Note">Not included in the published metric contract</small></article><article><span>Evaluation sample</span><strong id="cityReliabilitySample">Not published</strong><small id="cityReliabilitySampleNote">Pairs / folds, by horizon</small></article><article class="reliability-naive"><span>Vs. naive baseline</span><strong id="cityReliabilityNaive">Not available</strong><small id="cityReliabilityNaiveNote">Compared with repeating the last observed value</small></article><article><span>Forecast intervals</span><strong id="cityReliabilityInterval">Checking</strong><small id="cityReliabilityIntervalNote">Interval evidence for selected horizons</small></article></div>
                 <p class="analysis-note">Accuracy metrics come from the registered candidate's selection backtest, separate from production forecasts. They are diagnostics, not an independent holdout; production intervals have no published backtest coverage score.</p>
               </section>
 
@@ -581,6 +603,7 @@
     <footer class="site-footer site-footer--compact"><div class="container footer-bottom"><span>© migrAI · Migration intelligence</span><span>Acceso privado · Supabase Auth</span></div></footer>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-    <script src="app.js?v=migration-context-labels-20261019" defer></script>
+    <script src="insights.js?v=insights-20261021" defer></script>
+    <script src="app.js?v=insights-20261021" defer></script>
   </body>
 </html>
