@@ -31,9 +31,9 @@
       "Nous combinons sources démographiques et signaux contextuels pour offrir une lecture claire, comparable et prête à explorer."],
     "01 — FUENTES": ["01 — SOURCES", "01 — SOURCES"],
     "Contexto con fundamento": ["Well-founded context", "Un contexte solide"],
-    "Datos de migración y asilo de Eurostat, indicadores contextuales de GDELT y referencias estadísticas del INE.": [
-      "Migration and asylum data from Eurostat, contextual indicators from GDELT and statistical references from INE.",
-      "Données de migration et d'asile d'Eurostat, indicateurs contextuels de GDELT et références statistiques de l'INE."],
+    "Datos de migración e indicadores contextuales de Eurostat, con referencias estadísticas del INE y el ISTAT.": [
+      "Migration data and contextual indicators from Eurostat, with statistical references from INE and ISTAT.",
+      "Données de migration et indicateurs contextuels d'Eurostat, avec des références statistiques de l'INE et de l'ISTAT."],
     "02 — PREPARACIÓN": ["02 — PREPARATION", "02 — PRÉPARATION"],
     "Datos listos para analizar": ["Data ready to analyse", "Des données prêtes à analyser"],
     "El pipeline organiza, limpia y valida la información; trata duplicados y valores ausentes antes de generar resultados.": [
