@@ -577,3 +577,153 @@ document.addEventListener("DOMContentLoaded", () => {
     document.querySelector(selector)?.addEventListener("change", () => renderCorrelationPanel());
   });
 });
+
+/* ---------- Alerts (European Outlook) ---------- */
+
+const ALERT_LARGE_PROJECTION_PERCENT = 50;
+
+function insightCountrySignals(entityId, name) {
+  const observations = state.observed
+    .filter((row) => String(row.entity_id) === String(entityId) && safeNumber(row.year) !== null && safeNumber(row.value) !== null)
+    .sort((a, b) => safeNumber(a.year) - safeNumber(b.year));
+  const latest = observations.at(-1);
+  if (!latest) return [];
+  const forecasts = state.forecasts
+    .filter((row) => String(row.entity_id) === String(entityId) && forecastIsAvailable(row) && safeNumber(row.prediction) !== null && safeNumber(row.target_year) !== null)
+    .sort((a, b) => safeNumber(a.horizon) - safeNumber(b.horizon));
+  const signals = [];
+  const changes = [];
+  for (let index = 1; index < observations.length; index += 1) {
+    if (safeNumber(observations[index].year) === safeNumber(observations[index - 1].year) + 1 && safeNumber(observations[index - 1].value) > 0) {
+      changes.push(Math.log(safeNumber(observations[index].value) / safeNumber(observations[index - 1].value)));
+    }
+  }
+  if (changes.length > 4) {
+    const history = changes.slice(0, -1);
+    const spread = insightStdDev(history);
+    const lastChange = changes.at(-1);
+    const zScore = spread ? (lastChange - insightMean(history)) / spread : 0;
+    if (Math.abs(zScore) > 2) {
+      signals.push({ severity: 3, magnitude: Math.abs(zScore), title: lastChange > 0 ? "Unusual rise" : "Unusual drop", detail: `${name}: ${insightSignedPercent((Math.exp(lastChange) - 1) * 100)} in ${safeNumber(latest.year)}, far outside its own yearly pattern (${Math.abs(zScore).toFixed(1)} standard deviations).` });
+    }
+  }
+  const latestValue = safeNumber(latest.value);
+  const large = forecasts
+    .map((row) => ({ row, change: insightPercentChange(latestValue, safeNumber(row.prediction)) }))
+    .filter((item) => item.change !== null && Math.abs(item.change) >= ALERT_LARGE_PROJECTION_PERCENT && safeNumber(item.row.horizon) > 1)
+    .sort((a, b) => Math.abs(b.change) - Math.abs(a.change))[0];
+  if (large) {
+    signals.push({ severity: 2, magnitude: Math.abs(large.change) / 100, title: "Large projected change", detail: `${name}: ${insightSignedPercent(large.change)} by ${safeNumber(large.row.target_year)} (${safeNumber(large.row.horizon)}-year model). Check the interval before acting on it.` });
+  }
+  const h3 = forecasts.find((row) => safeNumber(row.horizon) === 3);
+  const h5 = forecasts.find((row) => safeNumber(row.horizon) === 5);
+  if (h3 && h5 && safeNumber(h5.prediction) < safeNumber(h3.prediction) * 0.8) {
+    signals.push({ severity: 1, magnitude: 1 - safeNumber(h5.prediction) / safeNumber(h3.prediction), title: "Inconsistent horizons", detail: `${name}: the 5-year projection is ${Math.round((1 - safeNumber(h5.prediction) / safeNumber(h3.prediction)) * 100)}% lower than the 3-year one because each horizon uses a different method.` });
+  }
+  return signals.map((signal) => ({ ...signal, entityId: String(entityId), name }));
+}
+
+function renderOutlookAlerts() {
+  const container = document.querySelector("#outlookAlerts");
+  if (!container) return;
+  container.replaceChildren();
+  const alerts = listCountries().flatMap((country) => insightCountrySignals(country.id, country.name))
+    .sort((a, b) => b.severity - a.severity || b.magnitude - a.magnitude);
+  const subtitle = document.querySelector("#outlookAlertsSubtitle");
+  if (!alerts.length) {
+    subtitle.textContent = "No country currently triggers an alert";
+    return;
+  }
+  subtitle.textContent = `${alerts.length} signal${alerts.length === 1 ? "" : "s"} across ${new Set(alerts.map((alert) => alert.entityId)).size} countries · rule-based, from published values`;
+  const largeCount = new Set(alerts.filter((alert) => alert.title === "Large projected change").map((alert) => alert.entityId)).size;
+  const total = listCountries().length;
+  if (largeCount >= 8) {
+    const lead = document.createElement("p");
+    lead.className = "alerts-lead";
+    lead.textContent = `${largeCount} of ${total} countries have projections beyond ±${ALERT_LARGE_PROJECTION_PERCENT}%. When this many countries move together, treat it as a feature of the extrapolation models rather than country-specific news, and prioritise the unusual-change and inconsistency flags.`;
+    container.append(lead);
+  }
+  alerts.slice(0, 8).forEach((alert) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `alert-item alert-item--${alert.severity}`;
+    const badge = document.createElement("span");
+    badge.className = "alert-item__badge";
+    badge.textContent = alert.severity === 3 ? "HIGH" : alert.severity === 2 ? "MEDIUM" : "LOW";
+    const text = document.createElement("span");
+    const title = document.createElement("strong");
+    title.textContent = alert.title;
+    const detail = document.createElement("small");
+    detail.textContent = alert.detail;
+    text.append(title, detail);
+    button.append(badge, text);
+    button.addEventListener("click", () => { selectCountry(alert.entityId); navigateToDashboardPage("country-intelligence"); });
+    container.append(button);
+  });
+}
+
+/* ---------- Export and sharing ---------- */
+
+function csvCell(value) {
+  if (value === null || value === undefined) return "";
+  const text = String(value);
+  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function downloadCsv(filename, header, rows) {
+  const body = [header, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
+  const blob = new Blob([`﻿${body}\n`], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+const EXPORT_HEADER = ["level", "entity_id", "entity_name", "record_type", "year", "value", "unit", "horizon", "model_id", "lower_80", "upper_80", "lower_95", "upper_95", "forecast_status", "run_id"];
+
+function exportRowsFor(level, entityName, observed, forecasts, unit) {
+  const rows = observed.filter((row) => safeNumber(row.value) !== null).map((row) => [level, row.entity_id, entityName, "observed", row.year, row.value, unit, "", "", "", "", "", "", "", ""]);
+  forecasts.forEach((row) => rows.push([level, row.entity_id, entityName, "forecast", row.target_year, row.prediction, unit, row.horizon, row.model_id, row.lower_80, row.upper_80, row.lower_95, row.upper_95, row.forecast_status, row.run_id]));
+  return rows;
+}
+
+function exportCountryCsv() {
+  const country = currentCountry();
+  if (!country) return;
+  const observed = state.observed.filter((row) => String(row.entity_id) === String(country.id)).sort((a, b) => safeNumber(a.year) - safeNumber(b.year));
+  const forecasts = state.forecasts.filter((row) => String(row.entity_id) === String(country.id)).sort((a, b) => safeNumber(a.horizon) - safeNumber(b.horizon));
+  downloadCsv(`migrai-country-${country.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.csv`, EXPORT_HEADER, exportRowsFor("country", country.name, observed, forecasts, "persons per year"));
+}
+
+function currentCityRecord() {
+  return cityRecordsAcrossCountries().cities.find((item) => item.id === state.selectedCity && item.countryId === state.selectedCountry) ?? null;
+}
+
+function exportCityCsv() {
+  const city = currentCityRecord();
+  if (!city) return;
+  const observed = city.observed.slice().sort((a, b) => safeNumber(a.year) - safeNumber(b.year));
+  const forecasts = city.forecasts.slice().sort((a, b) => safeNumber(a.horizon) - safeNumber(b.horizon));
+  downloadCsv(`migrai-city-${city.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.csv`, EXPORT_HEADER, exportRowsFor("city", city.name, observed, forecasts, "% of residents"));
+}
+
+async function copyShareLink(button) {
+  const original = button.textContent;
+  try {
+    await navigator.clipboard.writeText(window.location.href);
+    button.textContent = "Link copied";
+  } catch {
+    button.textContent = "Copy failed";
+  }
+  window.setTimeout(() => { button.textContent = original; }, 1800);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelector("#countryExportCsv")?.addEventListener("click", exportCountryCsv);
+  document.querySelector("#cityExportCsv")?.addEventListener("click", exportCityCsv);
+  document.querySelectorAll(".js-copy-link").forEach((button) => button.addEventListener("click", () => copyShareLink(button)));
+});

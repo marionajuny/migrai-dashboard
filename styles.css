@@ -1342,3 +1342,25 @@ body.dashboard-mode .access-shell { width: 100%; min-height: 100vh; margin: 0; p
 .context-scatter-fit { stroke: #e8c86e; stroke-width: 1.4; stroke-dasharray: 5 4; opacity: .85; }
 .correlation-lead { margin: 0 0 8px; color: #e8c86e; }
 .correlation-check input { width: 16px; height: 16px; margin: 0; flex: none; }
+
+/* Alerts and actions */
+.exec-summary__actions { display: flex; gap: 8px; align-items: center; }
+.chip-button { padding: 6px 11px; border: 1px solid rgba(112, 141, 166, .35); border-radius: 999px; background: rgba(13, 31, 50, .8); color: #dfe7ee; font: inherit; font-size: .64rem; cursor: pointer; }
+.chip-button:hover { border-color: #f5a069; color: #fff; }
+.alerts-list { display: grid; gap: 7px; }
+.alert-item { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 10px; align-items: start; padding: 9px 11px; border: 1px solid rgba(112, 141, 166, .2); border-radius: 8px; background: rgba(13, 31, 50, .6); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.alert-item:hover { border-color: #f5a069; }
+.alert-item strong { display: block; color: #e7ecf0; font-size: .72rem; }
+.alert-item small { display: block; margin-top: 2px; color: #9db0c2; font-size: .64rem; line-height: 1.45; }
+.alert-item__badge { padding: 3px 0; border-radius: 4px; font-size: .55rem; font-weight: 700; letter-spacing: .06em; text-align: center; }
+.alert-item--3 .alert-item__badge { background: rgba(232, 128, 107, .2); color: #e8806b; }
+.alert-item--2 .alert-item__badge { background: rgba(232, 200, 110, .2); color: #e8c86e; }
+.alert-item--1 .alert-item__badge { background: rgba(95, 181, 212, .2); color: #5fb5d4; }
+
+/* Language selector (public website) */
+html:not(.i18n-ready) body { visibility: hidden; animation: i18n-reveal 0s 1.5s forwards; }
+@keyframes i18n-reveal { to { visibility: visible; } }
+.lang-select { padding: 6px 8px; border: 1px solid rgba(137, 160, 180, .35); border-radius: 8px; background: rgba(13, 31, 50, .85); color: #e7ecf0; font: inherit; font-size: .74rem; font-weight: 600; cursor: pointer; }
+.lang-select { width: auto; flex: none; margin-left: auto; }
+.header-inner .lang-select + .button--nav { margin-left: 8px; }
+.alerts-lead { margin: 0 0 4px; padding: 8px 10px; border-left: 2px solid #e8c86e; background: rgba(232, 200, 110, .08); color: #d8c98f; font-size: .66rem; line-height: 1.5; }

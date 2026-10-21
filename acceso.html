@@ -4,52 +4,52 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#081426" />
-    <meta name="description" content="Acceso privado al dashboard de migrAI." />
-    <title>Acceso privado · migrAI</title>
+    <meta name="description" content="Private access to the migrAI dashboard." />
+    <title>Private access · migrAI</title>
     <link rel="icon" href="migrai-mark.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=insights-20261021" />
+    <link rel="stylesheet" href="styles.css?v=insights-20261022" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   </head>
   <body>
     <header class="site-header">
       <div class="container header-inner">
-        <a class="brand" href="./" aria-label="migrAI, inicio"><img class="brand-mark" src="migrai-mark.svg" alt="" /><span class="brand-name">migr<span>AI</span></span></a>
-        <nav class="site-nav" aria-label="Navegación principal"><a href="./">Producto</a><a href="planes.html">Planes</a><a href="equipo.html">Equipo</a></nav>
+        <a class="brand" href="./" aria-label="migrAI, home"><img class="brand-mark" src="migrai-mark.svg" alt="" /><span class="brand-name">migr<span>AI</span></span></a>
+        <nav class="site-nav" aria-label="Main navigation"><a href="./">Product</a><a href="planes.html">Plans</a><a href="equipo.html">Team</a></nav>
       </div>
     </header>
 
     <main class="container access-shell">
       <section id="authView" class="access-layout" aria-labelledby="authTitle">
         <div class="access-copy">
-          <p class="eyebrow"><span class="eyebrow-line"></span> Plataforma de análisis</p>
-          <h1 id="authTitle">Una nueva perspectiva sobre los movimientos que <span>transforman territorios.</span></h1>
-          <p class="access-lede">Consulta observaciones y previsiones migratorias en un espacio privado diseñado para explorar tendencias por país, ciudad y horizonte.</p>
-          <div class="access-features"><span><i>01</i> Histórico y previsiones en una misma lectura</span><span><i>02</i> Intervalos de incertidumbre visibles</span><span><i>03</i> Datos protegidos con autenticación</span></div>
-          <div class="sales-note"><span class="sales-symbol" aria-hidden="true">↗</span><p><strong>¿Necesitas acceso?</strong><br />Contacta con nuestro equipo para valorar qué cobertura se adapta mejor a tu análisis.</p><a href="equipo.html">Conocer al equipo</a></div>
+          <p class="eyebrow"><span class="eyebrow-line"></span> Analysis platform</p>
+          <h1 id="authTitle">A new perspective on the movements that <span>transform territories.</span></h1>
+          <p class="access-lede">Explore migration observations and forecasts in a private space designed to examine trends by country, city and horizon.</p>
+          <div class="access-features"><span><i>01</i> History and forecasts in a single view</span><span><i>02</i> Visible uncertainty intervals</span><span><i>03</i> Data protected by authentication</span></div>
+          <div class="sales-note"><span class="sales-symbol" aria-hidden="true">↗</span><p><strong>Need access?</strong><br />Contact our team to find out which coverage fits your analysis.</p><a href="equipo.html">Meet the team</a></div>
         </div>
 
         <div class="auth-card">
-          <div class="card-kicker"><span class="live-dot"></span> ÁREA PRIVADA</div>
-          <h2>Bienvenida/o de nuevo</h2>
-          <p class="muted">Inicia sesión con una cuenta previamente invitada.</p>
+          <div class="card-kicker"><span class="live-dot"></span> PRIVATE AREA</div>
+          <h2>Welcome back</h2>
+          <p class="muted">Sign in with a previously invited account.</p>
           <form id="loginForm" class="form-stack">
-            <label>Correo electrónico<input id="emailInput" type="email" autocomplete="email" placeholder="nombre@organizacion.com" required /></label>
-            <label>Contraseña<input id="passwordInput" type="password" autocomplete="current-password" placeholder="Tu contraseña" required minlength="8" /></label>
-            <button class="button button--primary button--full" type="submit">Entrar al dashboard <span aria-hidden="true">↗</span></button>
+            <label>Email<input id="emailInput" type="email" autocomplete="email" placeholder="name@organisation.com" required /></label>
+            <label>Password<input id="passwordInput" type="password" autocomplete="current-password" placeholder="Your password" required minlength="8" /></label>
+            <button class="button button--primary button--full" type="submit">Enter the dashboard <span aria-hidden="true">↗</span></button>
           </form>
-          <button id="resetButton" class="text-button" type="button">Crear o restablecer mi contraseña</button>
+          <button id="resetButton" class="text-button" type="button">Create or reset my password</button>
           <p id="authMessage" class="form-message" role="status" aria-live="polite"></p>
-          <div class="secure-note"><span aria-hidden="true">⌑</span> Conexión autenticada con Supabase</div>
+          <div class="secure-note"><span aria-hidden="true">⌑</span> Authenticated connection with Supabase</div>
         </div>
       </section>
 
       <section id="passwordView" class="access-layout password-layout" aria-labelledby="passwordTitle" hidden>
-        <div class="access-copy"><p class="eyebrow"><span class="eyebrow-line"></span> Cuenta migrAI</p><h1 id="passwordTitle">Define una contraseña <span>segura.</span></h1><p class="access-lede">Elige una contraseña nueva para continuar al espacio privado. Se enviará directamente a Supabase y no se almacenará en este sitio.</p></div>
-        <div class="auth-card"><div class="card-kicker"><span class="live-dot"></span> CONFIGURACIÓN DE CUENTA</div><h2>Nueva contraseña</h2><p class="muted">Utiliza al menos 10 caracteres.</p>
+        <div class="access-copy"><p class="eyebrow"><span class="eyebrow-line"></span> migrAI account</p><h1 id="passwordTitle">Set a <span>secure</span> password.</h1><p class="access-lede">Choose a new password to continue to the private area. It is sent directly to Supabase and is not stored on this site.</p></div>
+        <div class="auth-card"><div class="card-kicker"><span class="live-dot"></span> ACCOUNT SETUP</div><h2>New password</h2><p class="muted">Use at least 10 characters.</p>
           <form id="passwordForm" class="form-stack">
-            <label>Contraseña<input id="newPasswordInput" type="password" autocomplete="new-password" required minlength="10" placeholder="Mínimo 10 caracteres" /></label>
-            <label>Repite la contraseña<input id="repeatPasswordInput" type="password" autocomplete="new-password" required minlength="10" placeholder="Vuelve a escribirla" /></label>
-            <button class="button button--primary button--full" type="submit">Guardar contraseña <span aria-hidden="true">↗</span></button>
+            <label>Password<input id="newPasswordInput" type="password" autocomplete="new-password" required minlength="10" placeholder="At least 10 characters" /></label>
+            <label>Repeat the password<input id="repeatPasswordInput" type="password" autocomplete="new-password" required minlength="10" placeholder="Type it again" /></label>
+            <button class="button button--primary button--full" type="submit">Save password <span aria-hidden="true">↗</span></button>
           </form>
           <p id="passwordMessage" class="form-message" role="status" aria-live="polite"></p>
         </div>
@@ -63,10 +63,10 @@
               <span>migr<span>AI</span></span>
             </a>
             <nav class="dashboard-public-nav" aria-label="migrAI website">
-              <a href="planes.html">Planes</a>
-              <a href="equipo.html">Equipo</a>
+              <a href="planes.html">Plans</a>
+              <a href="equipo.html">Team</a>
             </nav>
-            <a id="dashboardHomeLink" class="dashboard-home-link" href="./"><span aria-hidden="true">←</span> Volver al inicio</a>
+            <a id="dashboardHomeLink" class="dashboard-home-link" href="./"><span aria-hidden="true">←</span> Back to home</a>
           </div>
           <nav class="dashboard-nav" aria-label="Dashboard sections">
             <a id="navEuropeanOutlook" class="dashboard-nav__item is-active" aria-current="page" href="#european-outlook"><span class="nav-icon" aria-hidden="true">▥</span><span>European Outlook</span></a>
@@ -136,6 +136,12 @@
               <div class="panel-heading"><div><h2 id="insightsTitle">Key insights</h2><p>Calculated from the available production data</p></div></div>
               <div id="insightsList" class="insights-list"></div>
             </section>
+
+            <section class="outlook-panel alerts-panel" aria-labelledby="outlookAlertsTitle">
+              <div class="panel-heading"><div><h2 id="outlookAlertsTitle">Alerts</h2><p id="outlookAlertsSubtitle">Countries worth a closer look</p></div></div>
+              <div id="outlookAlerts" class="alerts-list"></div>
+              <p class="analysis-note">Alerts are rule-based flags on published values (unusual yearly change, very large projections, inconsistent horizons). They point where to look; they do not explain causes.</p>
+            </section>
           </div>
           </section>
 
@@ -151,7 +157,7 @@
             </div>
 
             <section class="outlook-panel exec-summary" aria-labelledby="countrySummaryTitle">
-              <div class="panel-heading"><div><h2 id="countrySummaryTitle">What this means</h2><p>Plain-language reading of this country's data, generated from the published values</p></div></div>
+              <div class="panel-heading panel-heading--wrap"><div><h2 id="countrySummaryTitle">What this means</h2><p>Plain-language reading of this country's data, generated from the published values</p></div><div class="exec-summary__actions"><button id="countryExportCsv" class="chip-button" type="button">Download CSV</button><button class="chip-button js-copy-link" type="button">Copy link</button></div></div>
               <div id="countrySummary" class="exec-summary__grid"></div>
             </section>
 
@@ -448,7 +454,7 @@
             </div>
 
             <section class="outlook-panel exec-summary" aria-labelledby="citySummaryTitle">
-              <div class="panel-heading"><div><h2 id="citySummaryTitle">What this means</h2><p>Plain-language reading of this city's data, generated from the published values</p></div></div>
+              <div class="panel-heading panel-heading--wrap"><div><h2 id="citySummaryTitle">What this means</h2><p>Plain-language reading of this city's data, generated from the published values</p></div><div class="exec-summary__actions"><button id="cityExportCsv" class="chip-button" type="button">Download CSV</button><button class="chip-button js-copy-link" type="button">Copy link</button></div></div>
               <div id="citySummary" class="exec-summary__grid"></div>
             </section>
 
@@ -603,7 +609,7 @@
     <footer class="site-footer site-footer--compact"><div class="container footer-bottom"><span>© migrAI · Migration intelligence</span><span>Acceso privado · Supabase Auth</span></div></footer>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
-    <script src="insights.js?v=insights-20261021" defer></script>
-    <script src="app.js?v=insights-20261021" defer></script>
+    <script src="insights.js?v=insights-20261022" defer></script>
+    <script src="app.js?v=insights-20261022" defer></script>
   </body>
 </html>

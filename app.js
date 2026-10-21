@@ -372,7 +372,7 @@ ui.loginForm.addEventListener("submit", async (event) => {
   });
 
   if (error) {
-    setMessage(ui.authMessage, "No se pudo iniciar sesión. Comprueba el correo y la contraseña.", "error");
+    setMessage(ui.authMessage, "Sign-in failed. Check your email and password.", "error");
   }
   setBusy(button, false);
 });
@@ -380,7 +380,7 @@ ui.loginForm.addEventListener("submit", async (event) => {
 ui.resetButton.addEventListener("click", async () => {
   const email = ui.emailInput.value.trim();
   if (!email) {
-    setMessage(ui.authMessage, "Escribe primero tu correo electrónico.", "error");
+    setMessage(ui.authMessage, "Enter your email address first.", "error");
     ui.emailInput.focus();
     return;
   }
@@ -390,10 +390,10 @@ ui.resetButton.addEventListener("click", async () => {
   setBusy(ui.resetButton, false);
 
   if (error) {
-    setMessage(ui.authMessage, "No se pudo enviar el enlace. Inténtalo de nuevo en unos minutos.", "error");
+    setMessage(ui.authMessage, "The link could not be sent. Please try again in a few minutes.", "error");
     return;
   }
-  setMessage(ui.authMessage, "Revisa tu correo: te hemos enviado un enlace para definir la contraseña.");
+  setMessage(ui.authMessage, "Check your email: we have sent you a link to set your password.");
 });
 
 ui.passwordForm.addEventListener("submit", async (event) => {
@@ -403,7 +403,7 @@ ui.passwordForm.addEventListener("submit", async (event) => {
   const button = ui.passwordForm.querySelector('button[type="submit"]');
 
   if (password !== repeated) {
-    setMessage(ui.passwordMessage, "Las contraseñas no coinciden.", "error");
+    setMessage(ui.passwordMessage, "The passwords do not match.", "error");
     return;
   }
 
@@ -412,12 +412,12 @@ ui.passwordForm.addEventListener("submit", async (event) => {
   setBusy(button, false);
 
   if (error) {
-    setMessage(ui.passwordMessage, "No se pudo guardar la contraseña. Solicita un enlace nuevo.", "error");
+    setMessage(ui.passwordMessage, "The password could not be saved. Request a new link.", "error");
     return;
   }
 
   passwordSetupFlow = false;
-  setMessage(ui.passwordMessage, "Contraseña actualizada. Abriendo el dashboard…");
+  setMessage(ui.passwordMessage, "Password updated. Opening the dashboard…");
   const { data } = await supabaseClient.auth.getSession();
   window.history.replaceState({}, document.title, window.location.pathname);
   await handleSession(data.session);
@@ -780,6 +780,7 @@ async function loadDashboard() {
   populateIntelligenceCountryControl();
   populateMigrationCountryControl();
   renderOutlook();
+  renderOutlookAlerts();
   renderDataMethodology();
   applyDashboardRoute();
   renderCountryIntelligence();
@@ -1796,10 +1797,9 @@ function benchmarkCountryCoverage(countryId) {
 
 function defaultBenchmarkCountries() {
   return listCountries()
-    .map((country) => ({ ...country, coverage: benchmarkCountryCoverage(country.id) }))
-    .sort((a, b) => b.coverage.observed - a.coverage.observed
-      || b.coverage.forecasts - a.coverage.forecasts
-      || a.name.localeCompare(b.name, "en"))
+    .map((country) => ({ ...country, coverage: benchmarkCountryCoverage(country.id), latest: safeNumber(benchmarkLatestObservation(country.id)?.value) ?? 0 }))
+    .filter((country) => country.coverage.observed > 0)
+    .sort((a, b) => b.latest - a.latest || a.name.localeCompare(b.name, "en"))
     .slice(0, 5)
     .map((country) => country.id);
 }
@@ -3337,7 +3337,7 @@ function renderReliabilityHorizonCards() {
     modelLabel.textContent = "Model label";
     const model = document.createElement("strong");
     model.className = "reliability-horizon-card__model";
-    model.textContent = models.length === 1 ? models[0] : models.length > 1 ? `${models.length} model labels in selected records` : "Not published in output records";
+    model.textContent = models.length === 1 ? modelDisplayName(models[0]) : models.length > 1 ? `${models.length} model labels in selected records` : "Not published in output records";
     const countRow = document.createElement("div");
     countRow.className = "reliability-horizon-card__count";
     const count = document.createElement("strong");
@@ -3737,11 +3737,16 @@ function renderCountryForecastCards(country) {
     value.textContent = available ? formatNumber(safeNumber(row.prediction)) : "Not available";
     const note = document.createElement("small");
     note.textContent = available
-      ? `${country.name} · persons per year${forecastModelLabel(row) ? ` · ${forecastModelLabel(row)}` : ""}`
+      ? `${country.name} · persons per year${forecastModelLabel(row) ? ` · ${modelDisplayName(forecastModelLabel(row))}` : ""}`
       : row ? "No valid forecast for this horizon" : "No forecast in the latest Country view";
     card.append(heading, target, value, note);
     ui.countryForecastCards.append(card);
   });
+}
+
+function modelDisplayName(modelId) {
+  const names = { M0_PERSISTENCE: "Repeats the last value", M0_DRIFT: "Linear drift", M0_RIDGE_AR: "Autoregressive (ridge)" };
+  return names[modelId] ? `${names[modelId]} · ${modelId}` : modelId;
 }
 
 function forecastModelLabel(row) {
@@ -5636,7 +5641,7 @@ async function initialize() {
   const { data, error } = await supabaseClient.auth.getSession();
 
   if (error) {
-    setMessage(ui.authMessage, "No se pudo validar la sesión. Recarga la página.", "error");
+    setMessage(ui.authMessage, "The session could not be validated. Reload the page.", "error");
     showView("auth");
     return;
   }
