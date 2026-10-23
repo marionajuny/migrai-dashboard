@@ -7,7 +7,7 @@
     <meta name="description" content="Private access to the migrAI dashboard." />
     <title>Private access · migrAI</title>
     <link rel="icon" href="migrai-mark.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=eurostat-social-impact-20261024" />
+    <link rel="stylesheet" href="styles.css?v=social-impact-dual-axis-20261024" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   </head>
   <body>
@@ -515,8 +515,12 @@
             <div class="social-impact-layout">
               <section id="socialImpactEurostatPanel" class="outlook-panel social-impact-eurostat-panel" role="tabpanel" aria-labelledby="socialImpactPageHeading">
                 <div class="panel-heading panel-heading--wrap">
-                  <div><h2 id="socialImpactIndicatorTitle">Eurostat observations</h2><p id="socialImpactIndicatorDefinition">Historical values only. No projection is calculated for these indicators.</p></div>
-                  <span id="socialImpactSourceBadge" class="social-impact-source-badge">EUROSTAT · HISTORICAL</span>
+                  <div><h2 id="socialImpactIndicatorTitle">Eurostat observations and MigrAI outlook</h2><p id="socialImpactIndicatorDefinition">Eurostat indicators remain historical; the country-level migration outlook uses the secondary axis.</p></div>
+                  <span id="socialImpactSourceBadge" class="social-impact-source-badge">EUROSTAT · MIGRAI</span>
+                </div>
+                <div id="socialImpactComparisonBanner" class="social-impact-comparison-banner" role="note" hidden>
+                  <strong>Context only · no direct comparison</strong>
+                  <p id="socialImpactComparisonText"></p>
                 </div>
                 <div id="socialImpactFilterRow" class="social-impact-filter-row">
                   <label id="socialImpactRegionField" hidden><span>Region</span><select id="socialImpactRegion" class="compact-select"></select></label>
@@ -527,11 +531,11 @@
                   <article><span>Latest observed year</span><strong id="socialImpactLatestYear">—</strong></article>
                   <article><span id="socialImpactLatestValueLabel">Latest value</span><strong id="socialImpactLatestValue">—</strong></article>
                   <article><span>Observed year range</span><strong id="socialImpactCoverage">—</strong></article>
-                  <article><span>Published observations</span><strong id="socialImpactObservationCount">—</strong></article>
+                  <article><span>Displayed values</span><strong id="socialImpactObservationCount">—</strong></article>
                 </div>
                 <div id="socialImpactLoading" class="context-empty-state" hidden><span class="context-empty-icon" aria-hidden="true">◌</span><strong>Loading Eurostat observations</strong><p>Reading the authenticated, published data view.</p></div>
                 <div id="socialImpactEmpty" class="context-empty-state" hidden><span class="context-empty-icon" aria-hidden="true">◎</span><strong>No values for this selection</strong><p>Choose another measure, breakdown or region. Missing observations are not filled or inferred.</p></div>
-                <div id="socialImpactChart" class="social-impact-chart" role="img" aria-label="Historical Eurostat observations"></div>
+                <div id="socialImpactChart" class="social-impact-chart" role="img" aria-label="Eurostat historical observations with country-level MigrAI migration history and forecasts on a secondary axis"></div>
                 <div class="social-impact-latest-wrap">
                   <div class="social-impact-table-heading"><h3>Latest available values</h3><span id="socialImpactLatestTableNote"></span></div>
                   <div class="methodology-table-scroll">
@@ -545,20 +549,14 @@
                 <p id="socialImpactProvenance" class="analysis-note social-impact-provenance"></p>
               </section>
 
-              <aside class="outlook-panel social-impact-forecast-panel" aria-labelledby="socialImpactForecastTitle">
-                <div class="panel-heading"><div><h2 id="socialImpactForecastTitle">MigrAI country outlook</h2><p id="socialImpactForecastCountry">Published migration forecasts for the selected country</p></div></div>
-                <div id="socialImpactForecastCards" class="social-impact-forecast-cards"></div>
-                <div id="socialImpactForecastChart" class="social-impact-forecast-chart" role="img" aria-label="Published observed migration and forecast values"></div>
-                <p id="socialImpactForecastNote" class="analysis-note">Forecasts remain separate from the Eurostat indicators; no causal effect is estimated.</p>
-              </aside>
             </div>
 
             <section class="outlook-panel social-impact-scope-panel" aria-label="How to interpret these indicators">
               <div class="panel-heading"><div><h2>How to interpret this comparison</h2><p>Different populations, units and territorial levels are kept distinct</p></div></div>
               <div class="social-impact-scope-grid">
-                <p><strong>Eurostat, left:</strong> observed country or NUTS 2 statistics, with the published unit and quality status. The latest year varies by source.</p>
-                <p><strong>MigrAI, right:</strong> immigration forecasts already published for this country. The display does not recompute or extend the Eurostat series.</p>
-                <p>Resident household, income, housing, health and education indicators describe the resident population or service capacity. They do not identify the circumstances of individual new arrivals or establish causal effects.</p>
+                <p><strong>Eurostat, primary axis:</strong> observed country or NUTS 2 statistics, with the published unit and quality status. The latest year varies by source.</p>
+                <p><strong>MigrAI, secondary axis:</strong> published country-level immigration observations and forecasts. The forecast series is not recalculated from Eurostat indicators.</p>
+                <p>Overlaying different measures can help explore co-movement. It does not make their units or geographic levels directly comparable, and correlation does not establish causality.</p>
               </div>
             </section>
           </section>
@@ -668,6 +666,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
     <script src="insights.js?v=insights-20261023" defer></script>
-    <script src="app.js?v=eurostat-social-impact-20261024" defer></script>
+    <script src="app.js?v=social-impact-dual-axis-20261024" defer></script>
   </body>
 </html>
