@@ -1,9 +1,10 @@
 /* Language selector for the public website (landing, plans, team, checkout).
    The dashboard (acceso.html) is intentionally English-only and does not load this file.
-   The HTML source is Spanish; each Spanish string maps to [English, French]. English is the default. */
+   The HTML source is Spanish; translations are provided for Catalan, English and French.
+   If the visitor has not chosen a language, the browser preference is used. */
 (function () {
-  const LANGS = ["en", "es", "fr"];
-  const LABELS = { en: "EN", es: "ES", fr: "FR" };
+  const LANGS = ["es", "ca", "en", "fr"];
+  const LABELS = { es: "ES", ca: "CA", en: "EN", fr: "FR" };
   const DICT = {
     "migrAI — Inteligencia migratoria": ["migrAI — Migration intelligence", "migrAI — Intelligence migratoire"],
     "Producto": ["Product", "Produit"],
@@ -187,10 +188,155 @@
     "Selecciona un plan para consultar esta demostración.": ["Select a plan to view this demo.", "Sélectionnez une offre pour consulter cette démo."],
   };
 
+  const CA = {
+    "migrAI — Inteligencia migratoria": "migrAI — Intel·ligència migratòria",
+    "Producto": "Producte",
+    "Planes": "Plans",
+    "Equipo": "Equip",
+    "Acceso privado": "Accés privat",
+    "Inteligencia migratoria · Europa": "Intel·ligència migratòria · Europa",
+    "Leer el presente.": "Llegir el present.",
+    "Anticipar el movimiento.": "Anticipar el moviment.",
+    "migrAI convierte datos de migración y señales contextuales en previsiones territoriales que ayudan a planificar servicios, ciudades y oportunidades con más perspectiva.": "migrAI transforma dades migratòries i senyals contextuals en previsions territorials que ajuden a planificar serveis, ciutats i oportunitats amb més perspectiva.",
+    "Explorar planes": "Explora els plans",
+    "Conoce cómo funciona": "Descobreix com funciona",
+    "Datos observados y previstos": "Dades observades i previstes",
+    "Lectura por país y ciudad": "Anàlisi per país i ciutat",
+    "Intervalos de incertidumbre": "Intervals d'incertesa",
+    "Del dato a la decisión": "De la dada a la decisió",
+    "Señales conectadas, lectura territorial": "Senyals connectats, anàlisi territorial",
+    "Una cadena de valor transparente": "Una cadena de valor transparent",
+    "Del dato disperso a": "De les dades disperses a",
+    "una visión conectada.": "una visió connectada.",
+    "Combinamos fuentes demográficas y señales contextuales para ofrecer una lectura clara, comparable y preparada para explorar.": "Combinem fonts demogràfiques i senyals contextuals per oferir una anàlisi clara, comparable i preparada per explorar.",
+    "01 — FUENTES": "01 — FONTS",
+    "Contexto con fundamento": "Context amb fonament",
+    "Datos de migración e indicadores contextuales de Eurostat, con referencias estadísticas del INE y el ISTAT.": "Dades de migració i indicadors contextuals d'Eurostat, amb referències estadístiques de l'INE i l'ISTAT.",
+    "02 — PREPARACIÓN": "02 — PREPARACIÓ",
+    "Datos listos para analizar": "Dades a punt per analitzar",
+    "El pipeline organiza, limpia y valida la información; trata duplicados y valores ausentes antes de generar resultados.": "El pipeline organitza, neteja i valida la informació; gestiona els duplicats i les dades absents abans de generar resultats.",
+    "VALIDACIÓN": "VALIDACIÓ",
+    "CALIDAD": "QUALITAT",
+    "TRAZABILIDAD": "TRAÇABILITAT",
+    "03 — EXPLORACIÓN": "03 — EXPLORACIÓ",
+    "Una lectura accionable": "Una anàlisi útil per actuar",
+    "Explora observaciones, previsiones, horizontes e intervalos de incertidumbre desde un dashboard privado.": "Explora observacions, previsions, horitzons i intervals d'incertesa des d'un tauler privat.",
+    "PAÍSES": "PAÏSOS",
+    "CIUDADES": "CIUTATS",
+    "HORIZONTES": "HORITZONS",
+    "Pensado para anticipar necesidades": "Pensat per anticipar necessitats",
+    "Planificar mejor empieza": "Planificar millor comença",
+    "por hacer mejores preguntas.": "fent millors preguntes.",
+    "Una herramienta de análisis para explorar proyecciones y poner los cambios territoriales en contexto. No sustituye el criterio experto: lo acompaña.": "Una eina d'anàlisi per explorar projeccions i contextualitzar els canvis territorials. No substitueix el criteri expert: l'acompanya.",
+    "Planificación urbana": "Planificació urbana",
+    "Explora cómo pueden evolucionar las necesidades de vivienda, movilidad y servicios en distintos territorios.": "Explora com poden evolucionar les necessitats d'habitatge, mobilitat i serveis en diferents territoris.",
+    "Capacidad de servicios": "Capacitat dels serveis",
+    "Contrasta señales y previsiones para apoyar conversaciones sobre educación, salud e integración.": "Contrasta senyals i previsions per afavorir el debat sobre educació, salut i integració.",
+    "Análisis territorial": "Anàlisi territorial",
+    "Compara niveles geográficos y horizontes para entender tendencias y plantear escenarios de trabajo.": "Compara àmbits geogràfics i horitzons per entendre les tendències i plantejar escenaris de treball.",
+    "Contexto para inversión": "Context per a la inversió",
+    "Añade una perspectiva demográfica de largo plazo a la evaluación de mercados y activos urbanos.": "Afegeix una perspectiva demogràfica a llarg termini a l'avaluació de mercats i actius urbans.",
+    "Los resultados son estimaciones analíticas y deben interpretarse junto con otras fuentes y conocimiento local.": "Els resultats són estimacions analítiques i s'han d'interpretar juntament amb altres fonts i el coneixement local.",
+    "Siguiente paso": "Pas següent",
+    "Encuentra la cobertura": "Troba la cobertura",
+    "que encaja con tu análisis.": "que s'adapta a la teva anàlisi.",
+    "Ver opciones de acceso": "Consulta les opcions d'accés",
+    "Inteligencia migratoria para entender el cambio y planificar con perspectiva.": "Intel·ligència migratòria per entendre el canvi i planificar amb perspectiva.",
+    "Datos para una planificación con perspectiva.": "Dades per planificar amb perspectiva.",
+    "Planes de acceso · migrAI": "Plans d'accés · migrAI",
+    "Acceso a migrAI": "Accés a migrAI",
+    "La cobertura adecuada": "La cobertura adequada",
+    "para cada análisis.": "per a cada anàlisi.",
+    "Elige una cobertura por territorio. Nuestro equipo puede orientarte sobre el alcance disponible y la mejor forma de incorporar migrAI a tu trabajo.": "Tria una cobertura territorial. El nostre equip t'assessorarà sobre l'abast disponible i la millor manera d'incorporar migrAI a la teva feina.",
+    "Acceso privado · Alta de usuarios por invitación": "Accés privat · Alta d'usuaris per invitació",
+    "COBERTURA FOCALIZADA": "COBERTURA FOCALITZADA",
+    "Esencial": "Essencial",
+    "Una mirada profunda a un país seleccionado.": "Una anàlisi aprofundida d'un país seleccionat.",
+    "A consultar": "A consultar",
+    "según cobertura y necesidades": "segons la cobertura i les necessitats",
+    "Un país de la cobertura disponible": "Un país de la cobertura disponible",
+    "Histórico observado y previsiones": "Històric observat i previsions",
+    "Acceso privado al dashboard": "Accés privat al tauler",
+    "Solicitar plan Esencial": "Sol·licita el pla Essencial",
+    "Checkout de demostración · sin cobro": "Procés de compra de demostració · sense càrrec",
+    "MÁXIMA COBERTURA": "MÀXIMA COBERTURA",
+    "ANÁLISIS MULTITERRITORIO": "ANÀLISI MULTITERRITORIAL",
+    "Completo": "Complet",
+    "Todos los países incluidos en el estudio.": "Tots els països inclosos en l'estudi.",
+    "propuesta según alcance": "proposta segons l'abast",
+    "Todos los países analizados": "Tots els països analitzats",
+    "Comparación entre territorios": "Comparació entre territoris",
+    "Histórico y previsiones disponibles": "Històric i previsions disponibles",
+    "Acceso privado para usuarios invitados": "Accés privat per a usuaris convidats",
+    "Solicitar plan Completo": "Sol·licita el pla Complet",
+    "¿No sabes cuál elegir?": "No saps quin triar?",
+    "Hablemos de tu cobertura.": "Parlem de la teva cobertura.",
+    "Contacta con el equipo para valorar qué plan se adapta mejor a tu análisis y a los territorios que necesitas explorar.": "Contacta amb l'equip per valorar quin pla s'adapta millor a la teva anàlisi i als territoris que necessites explorar.",
+    "Conocer al equipo": "Coneix l'equip",
+    "Nota: esta web es una demostración. Los botones abren una pantalla informativa; no hay pasarela de pago conectada, no se procesan cargos y la selección de un plan no crea una cuenta ni concede acceso. Las credenciales del dashboard se emiten por invitación.": "Nota: aquest lloc web és una demostració. Els botons obren una pantalla informativa; no hi ha cap passarel·la de pagament connectada, no es processen càrrecs i triar un pla no crea cap compte ni concedeix accés. Les credencials del tauler s'emeten per invitació.",
+    "Equipo · migrAI": "Equip · migrAI",
+    "El equipo fundador": "L'equip fundador",
+    "Datos con contexto.": "Dades amb context.",
+    "Perspectivas que conectan.": "Perspectives que connecten.",
+    "En migrAI combinamos ciencia de datos, tecnología y estrategia de producto para convertir información compleja en perspectivas útiles para quienes planifican ciudades y territorios.": "A migrAI combinem ciència de dades, tecnologia i estratègia de producte per transformar informació complexa en perspectives útils per a qui planifica ciutats i territoris.",
+    "Cofundadora y Directora de Datos (CDO)": "Cofundadora i directora de dades (CDO)",
+    "Graduada en Matemáticas y Administración y Dirección de Empresas por la Universidad de Barcelona, y con un máster en Data Science and Engineering por la UPC. Cuenta con experiencia profesional en análisis y gobierno del dato en empresas como Allianz, Grupo Planeta y KPMG. En migrAI lidera la estrategia de datos, el desarrollo de modelos predictivos y la calidad analítica, garantizando que la información se transforme en predicciones rigurosas y conocimiento útil para la toma de decisiones.": "Graduada en Matemàtiques i Administració i Direcció d'Empreses per la Universitat de Barcelona, i amb un màster en Data Science and Engineering per la UPC. Té experiència professional en anàlisi i governança de dades en empreses com Allianz, Grupo Planeta i KPMG. A migrAI lidera l'estratègia de dades, el desenvolupament de models predictius i la qualitat analítica, i vetlla perquè la informació es transformi en prediccions rigoroses i coneixement útil per prendre decisions.",
+    "Cofundadora y Directora de Tecnología (CTO)": "Cofundadora i directora de tecnologia (CTO)",
+    "Especialista en inteligencia artificial e ingeniería de datos, con experiencia profesional en el área de AI & Data de EY y formación de máster en Data Science and Engineering por la UPC. En migrAI dirige la arquitectura tecnológica, la infraestructura de datos y el desarrollo de soluciones escalables. Es responsable de diseñar y mantener los procesos automatizados que permiten integrar múltiples fuentes de información y generar predicciones actualizadas de manera eficiente y fiable.": "Especialista en intel·ligència artificial i enginyeria de dades, amb experiència professional a l'àrea d'AI & Data d'EY i formació de màster en Data Science and Engineering per la UPC. A migrAI dirigeix l'arquitectura tecnològica, la infraestructura de dades i el desenvolupament de solucions escalables. Dissenya i manté els processos automatitzats que integren múltiples fonts d'informació i generen prediccions actualitzades de manera eficient i fiable.",
+    "Cofundadora y Directora de Producto (CPO)": "Cofundadora i directora de producte (CPO)",
+    "Consultora sénior de innovación especializada en inteligencia artificial, automatización y análisis de datos, con experiencia profesional en EY. Combina conocimientos tecnológicos con una visión estratégica orientada al desarrollo de soluciones empresariales. En migrAI lidera la estrategia de producto, la innovación y la experiencia de usuario, transformando modelos predictivos complejos en herramientas intuitivas y accesibles que aportan valor a instituciones, organizaciones y responsables de planificación.": "Consultora sènior d'innovació especialitzada en intel·ligència artificial, automatització i anàlisi de dades, amb experiència professional a EY. Combina coneixements tecnològics amb una visió estratègica orientada al desenvolupament de solucions empresarials. A migrAI lidera l'estratègia de producte, la innovació i l'experiència d'usuari, i transforma models predictius complexos en eines intuïtives i accessibles que aporten valor a institucions, organitzacions i responsables de planificació.",
+    "¿Hablamos?": "En parlem?",
+    "Cuéntanos qué quieres explorar.": "Explica'ns què vols explorar.",
+    "Consulta las opciones de acceso y cobertura para encontrar la que mejor se adapte a tus necesidades de análisis.": "Consulta les opcions d'accés i cobertura per trobar la que s'adapta millor a les teves necessitats d'anàlisi.",
+    "Explorar opciones": "Explora les opcions",
+    "Los retratos son ilustraciones provisionales, no fotografías de las integrantes del equipo.": "Els retrats són il·lustracions provisionals, no fotografies de les membres de l'equip.",
+    "Selección de plan · migrAI": "Selecció del pla · migrAI",
+    "← Volver a planes": "← Torna als plans",
+    "ENTORNO DE DEMOSTRACIÓN": "ENTORN DE DEMOSTRACIÓ",
+    "La pasarela de pago": "La passarel·la de pagament",
+    "aún no está conectada.": "encara no està connectada.",
+    "Has seleccionado una opción de acceso.": "Has seleccionat una opció d'accés.",
+    "No introduzcas datos de pago.": "No introdueixis dades de pagament.",
+    "Esta pantalla no procesa pagos, no crea pedidos y no genera credenciales. La compra está desactivada en esta demo.": "Aquesta pantalla no processa pagaments, no crea comandes ni genera credencials. La compra està desactivada en aquesta demostració.",
+    "Pago no disponible": "Pagament no disponible",
+    "Volver a comparar planes": "Torna a comparar els plans",
+    "Demostración · sin procesamiento de pagos": "Demostració · sense processament de pagaments",
+    "migrAI transforma datos de migración en previsiones territoriales para ayudar a planificar con perspectiva.": "migrAI transforma dades migratòries en previsions territorials per ajudar a planificar amb perspectiva.",
+    "migrAI, inicio": "migrAI, inici",
+    "Navegación principal": "Navegació principal",
+    "Características del producto": "Característiques del producte",
+    "Mapa de Europa con flujos migratorios": "Mapa d'Europa amb fluxos migratoris",
+    "Capacidades": "Capacitats",
+    "Navegación del pie": "Navegació del peu de pàgina",
+    "Explora las opciones de cobertura y acceso a migrAI.": "Explora les opcions de cobertura i accés a migrAI.",
+    "Planes disponibles": "Plans disponibles",
+    "Conoce al equipo fundador de migrAI y su enfoque interdisciplinar en datos, tecnología e inteligencia migratoria.": "Coneix l'equip fundador de migrAI i el seu enfocament interdisciplinari en dades, tecnologia i intel·ligència migratòria.",
+    "Equipo fundador de migrAI": "Equip fundador de migrAI",
+    "Ilustración provisional de mujer, retrato de Maria Alpuente": "Il·lustració provisional d'una dona, retrat de Maria Alpuente",
+    "Ilustración provisional de mujer, retrato de Queralt Navarro": "Il·lustració provisional d'una dona, retrat de Queralt Navarro",
+    "Ilustración provisional de mujer, retrato de Mariona Juny": "Il·lustració provisional d'una dona, retrat de Mariona Juny",
+    "Pantalla de demostración de selección de plan migrAI.": "Pantalla de demostració de selecció de pla de migrAI.",
+    "Plan Esencial · cobertura de un país": "Pla Essencial · cobertura d'un país",
+    "Plan Completo · todos los países del estudio": "Pla Complet · tots els països de l'estudi",
+    "Opción seleccionada:": "Opció seleccionada:",
+    "Selecciona un plan para consultar esta demostración.": "Selecciona un pla per consultar aquesta demostració."
+  };
+
   const norm = (text) => text.replace(/\s+/g, " ").trim();
-  const read = () => { try { return window.localStorage.getItem("migrai-lang"); } catch { return null; } };
-  const write = (value) => { try { window.localStorage.setItem("migrai-lang", value); } catch { /* storage unavailable */ } };
-  let current = LANGS.includes(read()) ? read() : "en";
+  const readChoice = () => { try { return window.localStorage.getItem("migrai-lang-choice"); } catch { return null; } };
+  const writeChoice = (value) => { try { window.localStorage.setItem("migrai-lang-choice", value); } catch { /* storage unavailable */ } };
+  function detectBrowserLanguage() {
+    const preferences = Array.isArray(navigator.languages) && navigator.languages.length
+      ? navigator.languages
+      : [navigator.language];
+    for (const preference of preferences) {
+      const baseLanguage = String(preference || "").trim().toLowerCase().split(/[-_]/)[0];
+      if (LANGS.includes(baseLanguage)) return baseLanguage;
+    }
+    return "es";
+  }
+  const savedChoice = readChoice();
+  let current = LANGS.includes(savedChoice) ? savedChoice : detectBrowserLanguage();
 
   const textItems = [];
   const attrItems = [];
@@ -198,6 +344,7 @@
 
   function translate(source, lang) {
     if (lang === "es") return source;
+    if (lang === "ca") return CA[source] ?? source;
     const entry = DICT[source];
     return entry ? entry[lang === "en" ? 0 : 1] : source;
   }
@@ -219,7 +366,7 @@
     if (description) attrItems.push({ element: description, name: "content", original: description.getAttribute("content") });
   }
 
-  function apply(lang) {
+  function apply(lang, persistChoice = false) {
     textItems.forEach((item) => {
       const source = norm(item.original);
       const lead = item.original.match(/^\s*/)[0];
@@ -229,14 +376,19 @@
     attrItems.forEach((item) => item.element.setAttribute(item.name, lang === "es" ? item.original : translate(norm(item.original), lang)));
     document.documentElement.lang = lang;
     current = lang;
-    write(lang);
+    const selector = document.querySelector(".lang-select");
+    if (selector) {
+      selector.value = lang;
+      selector.setAttribute("aria-label", { es: "Idioma", ca: "Idioma", en: "Language", fr: "Langue" }[lang]);
+    }
+    if (persistChoice) writeChoice(lang);
     document.dispatchEvent(new CustomEvent("migrai:lang", { detail: { lang } }));
   }
 
   function buildSelector() {
     const select = document.createElement("select");
     select.className = "lang-select";
-    select.setAttribute("aria-label", "Language");
+    select.setAttribute("aria-label", "Idioma");
     LANGS.forEach((lang) => {
       const option = document.createElement("option");
       option.value = lang;
@@ -244,7 +396,7 @@
       select.append(option);
     });
     select.value = current;
-    select.addEventListener("change", () => apply(select.value));
+    select.addEventListener("change", () => apply(select.value, true));
     const inner = document.querySelector(".header-inner");
     if (!inner) return;
     const accessButton = inner.querySelector(".button--nav");
