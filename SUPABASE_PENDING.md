@@ -36,3 +36,11 @@ La inspección de solo lectura encontró `SELECT` permitido para `authenticated`
 ## Scripts del repositorio
 
 `supabase_rls.sql`, `supabase_backtest_rls.sql` y `supabase_context_rls.sql` son referencias versionadas. No volver a ejecutarlas como parte de esta integración: la exposición y el acceso de lectura de las vistas se verificaron en la inspección indicada arriba. Cualquier cambio futuro de RLS, Data API o esquema requiere revisión específica y verificación posterior.
+
+## Eurostat: integración de Social Impact
+
+La nueva página del dashboard consulta `migrai.eurostat_dashboard_latest` con la sesión autenticada. La vista debe publicar las series curadas de arrivals, housing, health y education, junto con sus desgloses, unidad, geografía, estado de calidad y referencias de fuente. El cliente no consulta tablas de staging ni escribe datos.
+
+El cliente agrega las clases de edad Eurostat en seis bandas (0–14, 15–29, 30–44, 45–64, 65–79 y 80+) utilizando categorías no solapadas; si faltan componentes no estima el total de la banda. Las observaciones y previsiones publicadas de migración se integran como una segunda serie temporal, en un eje separado y con avisos sobre unidades/geografías no comparables y ausencia de inferencia causal.
+
+Este cambio de frontend no ejecuta SQL ni altera Supabase. Antes de publicar la página en `main`, confirma que la vista existe en el mismo proyecto que usa el dashboard y que `SELECT` está concedido a `authenticated` pero no a `anon`; revisa también que solo se expongan las columnas curadas y que la vista conserve la política de acceso prevista para las tablas subyacentes. Si la vista o el permiso aún no está aplicado, la sección mostrará un estado de error y no debe intentarse un arreglo manual desde el dashboard.

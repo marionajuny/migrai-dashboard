@@ -7,7 +7,7 @@
     <meta name="description" content="Private access to the migrAI dashboard." />
     <title>Private access · migrAI</title>
     <link rel="icon" href="migrai-mark.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=reliability-alignment-20261023" />
+    <link rel="stylesheet" href="styles.css?v=dashboard-header-tools-20261024" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   </head>
   <body>
@@ -62,17 +62,26 @@
               <img src="migrai-mark.svg" alt="" />
               <span>migr<span>AI</span></span>
             </a>
-            <nav class="dashboard-public-nav" aria-label="migrAI website">
+            <nav class="dashboard-public-nav site-nav" aria-label="migrAI website">
+              <a id="dashboardHomeLink" href="./">Home</a>
               <a href="planes.html">Plans</a>
               <a href="equipo.html">Team</a>
             </nav>
-            <a id="dashboardHomeLink" class="dashboard-home-link" href="./"><span aria-hidden="true">←</span> Back to home</a>
+            <div class="dashboard-tools">
+              <label class="global-search"><span aria-hidden="true">⌕</span><input id="countrySearch" type="search" list="countrySearchOptions" placeholder="Search countries…" aria-label="Search countries" /><datalist id="countrySearchOptions"></datalist></label>
+              <button id="helpToggle" class="icon-button" type="button" aria-label="About this dashboard" title="About this dashboard">?</button>
+              <div id="sessionControls" class="dashboard-profile" hidden>
+                <button id="profileToggle" class="profile-toggle" type="button" aria-expanded="false" aria-controls="profileMenu"><span class="profile-avatar" aria-hidden="true">M</span><span class="profile-chevron" aria-hidden="true">⌄</span></button>
+                <div id="profileMenu" class="profile-menu" hidden><span id="sessionEmail" class="session-email"></span><button id="logoutButton" class="button button--nav button--nav-quiet" type="button">Sign out</button></div>
+              </div>
+            </div>
           </div>
           <nav class="dashboard-nav" aria-label="Dashboard sections">
             <a id="navEuropeanOutlook" class="dashboard-nav__item is-active" aria-current="page" href="#european-outlook"><span class="nav-icon" aria-hidden="true">▥</span><span>European Outlook</span></a>
             <a id="navCountryIntelligence" class="dashboard-nav__item" href="#country-intelligence"><span class="nav-icon" aria-hidden="true">◎</span><span>Country Intelligence</span></a>
             <a id="navCountryBenchmark" class="dashboard-nav__item" href="#country-benchmark"><span class="nav-icon" aria-hidden="true">▤</span><span>Country Benchmark</span></a>
             <a id="navMigrationContext" class="dashboard-nav__item" href="#migration-context"><span class="nav-icon" aria-hidden="true">▣</span><span>Migration Context</span></a>
+            <a id="navSocialImpact" class="dashboard-nav__item" href="#social-impact"><span class="nav-icon" aria-hidden="true">⌁</span><span>Social Impact</span></a>
             <a id="navForecastReliability" class="dashboard-nav__item" href="#forecast-reliability"><span class="nav-icon" aria-hidden="true">⬡</span><span>Forecast Reliability</span></a>
             <a id="navCityIntelligence" class="dashboard-nav__item" href="#city-intelligence"><span class="nav-icon" aria-hidden="true">⌖</span><span>City Intelligence</span></a>
             <a id="navMethodology" class="dashboard-nav__item" href="#data-methodology"><span class="nav-icon" aria-hidden="true">▤</span><span>Data &amp; Methodology</span></a>
@@ -85,14 +94,6 @@
               <p id="dashboardEyebrow" class="eyebrow">EUROPE · MIGRATION INTELLIGENCE</p>
               <h1 id="dashboardTitle">European Migration Outlook</h1>
               <p id="dashboardSubtitle">Explore historical immigration and future forecasts</p>
-            </div>
-            <div class="dashboard-tools">
-              <label class="global-search"><span aria-hidden="true">⌕</span><input id="countrySearch" type="search" list="countrySearchOptions" placeholder="Search countries…" aria-label="Search countries" /><datalist id="countrySearchOptions"></datalist></label>
-              <button id="helpToggle" class="icon-button" type="button" aria-label="About this dashboard" title="About this dashboard">?</button>
-              <div id="sessionControls" class="dashboard-profile" hidden>
-                <button id="profileToggle" class="profile-toggle" type="button" aria-expanded="false" aria-controls="profileMenu"><span class="profile-avatar" aria-hidden="true">M</span><span class="profile-chevron" aria-hidden="true">⌄</span></button>
-                <div id="profileMenu" class="profile-menu" hidden><span id="sessionEmail" class="session-email"></span><button id="logoutButton" class="button button--nav button--nav-quiet" type="button">Sign out</button></div>
-              </div>
             </div>
           </header>
 
@@ -493,6 +494,73 @@
             </div>
           </section>
 
+          <section id="socialImpactPage" class="dashboard-page social-impact-page" aria-labelledby="socialImpactPageHeading" hidden>
+            <section class="outlook-panel social-impact-selector" aria-labelledby="socialImpactPageHeading">
+              <div class="panel-heading panel-heading--wrap">
+                <div><h2 id="socialImpactPageHeading">Social impact indicators</h2><p>Explore observed Eurostat indicators alongside MigrAI's published country outlook</p></div>
+                <div class="social-impact-controls">
+                  <label><span>Country</span><select id="socialImpactCountry" class="compact-select" aria-label="Select country for social impact indicators"></select></label>
+                  <label><span>Eurostat indicator</span><select id="socialImpactIndicator" class="compact-select" aria-label="Select a Eurostat indicator" disabled><option value="">Loading indicators…</option></select></label>
+                </div>
+              </div>
+              <div id="socialImpactTabs" class="social-impact-tabs" role="tablist" aria-label="Eurostat indicator sections">
+                <button type="button" role="tab" aria-selected="true" aria-controls="socialImpactEurostatPanel" data-social-section="arrivals">Who arrives</button>
+                <button type="button" role="tab" aria-selected="false" aria-controls="socialImpactEurostatPanel" data-social-section="housing">Housing</button>
+                <button type="button" role="tab" aria-selected="false" aria-controls="socialImpactEurostatPanel" data-social-section="health">Health</button>
+                <button type="button" role="tab" aria-selected="false" aria-controls="socialImpactEurostatPanel" data-social-section="education">Education</button>
+              </div>
+              <p id="socialImpactSectionIntro" class="social-impact-section-intro">Demographic and household indicators from Eurostat. Select a measure and breakdown to explore the published historical series.</p>
+            </section>
+
+            <div class="social-impact-layout">
+              <section id="socialImpactEurostatPanel" class="outlook-panel social-impact-eurostat-panel" role="tabpanel" aria-labelledby="socialImpactPageHeading">
+                <div class="panel-heading panel-heading--wrap">
+                  <div><h2 id="socialImpactIndicatorTitle">Eurostat observations and MigrAI outlook</h2><p id="socialImpactIndicatorDefinition">Eurostat indicators remain historical; the country-level migration outlook uses the secondary axis.</p></div>
+                  <span id="socialImpactSourceBadge" class="social-impact-source-badge">EUROSTAT · MIGRAI</span>
+                </div>
+                <div id="socialImpactComparisonBanner" class="social-impact-comparison-banner" role="note" hidden>
+                  <strong>Context only · no direct comparison</strong>
+                  <p id="socialImpactComparisonText"></p>
+                </div>
+                <div id="socialImpactFilterRow" class="social-impact-filter-row">
+                  <label id="socialImpactRegionField" hidden><span>Region</span><select id="socialImpactRegion" class="compact-select"></select></label>
+                  <label id="socialImpactBreakdownField" hidden><span>Compare by</span><select id="socialImpactBreakdown" class="compact-select"></select></label>
+                </div>
+                <div id="socialImpactDimensionFilters" class="social-impact-dimension-filters"></div>
+                <div class="social-impact-stat-grid">
+                  <article><span>Latest observed year</span><strong id="socialImpactLatestYear">—</strong></article>
+                  <article><span id="socialImpactLatestValueLabel">Latest value</span><strong id="socialImpactLatestValue">—</strong></article>
+                  <article><span>Observed year range</span><strong id="socialImpactCoverage">—</strong></article>
+                  <article><span>Displayed values</span><strong id="socialImpactObservationCount">—</strong></article>
+                </div>
+                <div id="socialImpactLoading" class="context-empty-state" hidden><span class="context-empty-icon" aria-hidden="true">◌</span><strong>Loading Eurostat observations</strong><p>Reading the authenticated, published data view.</p></div>
+                <div id="socialImpactEmpty" class="context-empty-state" hidden><span class="context-empty-icon" aria-hidden="true">◎</span><strong>No values for this selection</strong><p>Choose another measure, breakdown or region. Missing observations are not filled or inferred.</p></div>
+                <div id="socialImpactChart" class="social-impact-chart" role="img" aria-label="Eurostat historical observations with country-level MigrAI migration history and forecasts on a secondary axis"></div>
+                <div class="social-impact-latest-wrap">
+                  <div class="social-impact-table-heading"><h3>Latest available values</h3><span id="socialImpactLatestTableNote"></span></div>
+                  <div class="methodology-table-scroll">
+                    <table class="methodology-status-table social-impact-table">
+                      <thead><tr><th scope="col">Territory / series</th><th scope="col">Year</th><th scope="col">Value</th><th scope="col">Unit</th><th scope="col">Eurostat status</th></tr></thead>
+                      <tbody id="socialImpactLatestRows"></tbody>
+                    </table>
+                  </div>
+                </div>
+                <p id="socialImpactCaveat" class="analysis-note"></p>
+                <p id="socialImpactProvenance" class="analysis-note social-impact-provenance"></p>
+              </section>
+
+            </div>
+
+            <section class="outlook-panel social-impact-scope-panel" aria-label="How to interpret these indicators">
+              <div class="panel-heading"><div><h2>How to interpret this comparison</h2><p>Different populations, units and territorial levels are kept distinct</p></div></div>
+              <div class="social-impact-scope-grid">
+                <p><strong>Eurostat, primary axis:</strong> observed country or NUTS 2 statistics, with the published unit and quality status. The latest year varies by source.</p>
+                <p><strong>MigrAI, secondary axis:</strong> published country-level immigration observations and forecasts. The forecast series is not recalculated from Eurostat indicators.</p>
+                <p>Overlaying different measures can help explore co-movement. It does not make their units or geographic levels directly comparable, and correlation does not establish causality.</p>
+              </div>
+            </section>
+          </section>
+
           <section id="dataMethodologyPage" class="dashboard-page methodology-page" aria-labelledby="methodologyCoverageTitle" hidden>
             <section class="methodology-summary-grid" aria-label="Published data summary">
               <article class="outlook-panel methodology-summary-card"><span>Observed records</span><strong id="methodologyObservedCount">—</strong><small>Valid values in published views</small></article>
@@ -598,6 +666,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
     <script src="insights.js?v=insights-20261023" defer></script>
-    <script src="app.js?v=insights-20261023" defer></script>
+    <script src="app.js?v=social-impact-dual-axis-20261024" defer></script>
   </body>
 </html>

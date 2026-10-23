@@ -49,6 +49,7 @@ const ui = {
   reliabilityPage: document.querySelector("#forecastReliabilityPage"),
   cityPage: document.querySelector("#cityIntelligencePage"),
   methodologyPage: document.querySelector("#dataMethodologyPage"),
+  socialImpactPage: document.querySelector("#socialImpactPage"),
   navEuropean: document.querySelector("#navEuropeanOutlook"),
   navCountry: document.querySelector("#navCountryIntelligence"),
   navBenchmark: document.querySelector("#navCountryBenchmark"),
@@ -56,6 +57,7 @@ const ui = {
   navReliability: document.querySelector("#navForecastReliability"),
   navCity: document.querySelector("#navCityIntelligence"),
   navMethodology: document.querySelector("#navMethodology"),
+  navSocialImpact: document.querySelector("#navSocialImpact"),
   countrySearch: document.querySelector("#countrySearch"),
   countrySearchOptions: document.querySelector("#countrySearchOptions"),
   mapMeasure: document.querySelector("#mapMeasure"),
@@ -266,6 +268,31 @@ const ui = {
   methodologyRunFilter: document.querySelector("#methodologyRunFilter"),
   methodologyStatusRows: document.querySelector("#methodologyStatusRows"),
   methodologyStatusNote: document.querySelector("#methodologyStatusNote"),
+  socialImpactCountry: document.querySelector("#socialImpactCountry"),
+  socialImpactTabs: document.querySelector("#socialImpactTabs"),
+  socialImpactSectionIntro: document.querySelector("#socialImpactSectionIntro"),
+  socialImpactIndicator: document.querySelector("#socialImpactIndicator"),
+  socialImpactRegionField: document.querySelector("#socialImpactRegionField"),
+  socialImpactRegion: document.querySelector("#socialImpactRegion"),
+  socialImpactBreakdownField: document.querySelector("#socialImpactBreakdownField"),
+  socialImpactBreakdown: document.querySelector("#socialImpactBreakdown"),
+  socialImpactDimensionFilters: document.querySelector("#socialImpactDimensionFilters"),
+  socialImpactIndicatorTitle: document.querySelector("#socialImpactIndicatorTitle"),
+  socialImpactIndicatorDefinition: document.querySelector("#socialImpactIndicatorDefinition"),
+  socialImpactLatestYear: document.querySelector("#socialImpactLatestYear"),
+  socialImpactLatestValueLabel: document.querySelector("#socialImpactLatestValueLabel"),
+  socialImpactLatestValue: document.querySelector("#socialImpactLatestValue"),
+  socialImpactCoverage: document.querySelector("#socialImpactCoverage"),
+  socialImpactObservationCount: document.querySelector("#socialImpactObservationCount"),
+  socialImpactLoading: document.querySelector("#socialImpactLoading"),
+  socialImpactEmpty: document.querySelector("#socialImpactEmpty"),
+  socialImpactChart: document.querySelector("#socialImpactChart"),
+  socialImpactLatestTableNote: document.querySelector("#socialImpactLatestTableNote"),
+  socialImpactLatestRows: document.querySelector("#socialImpactLatestRows"),
+  socialImpactCaveat: document.querySelector("#socialImpactCaveat"),
+  socialImpactProvenance: document.querySelector("#socialImpactProvenance"),
+  socialImpactComparisonBanner: document.querySelector("#socialImpactComparisonBanner"),
+  socialImpactComparisonText: document.querySelector("#socialImpactComparisonText"),
 };
 
 const state = {
@@ -314,6 +341,134 @@ const state = {
   benchmarkMeasure: "absolute",
   reliabilityScope: "country",
   methodologySource: "all",
+  socialImpactSection: "arrivals",
+  socialImpactIndicator: null,
+  socialImpactRegion: "all",
+  socialImpactBreakdown: null,
+  socialImpactDimensionValues: {},
+  socialImpactCache: new Map(),
+  socialImpactDatasetRows: [],
+  socialImpactControlKey: null,
+  socialImpactRequestId: 0,
+};
+
+const EUROSTAT_SOCIAL_SECTIONS = {
+  arrivals: {
+    title: "Who arrives",
+    intro: "Explore annual arrivals with six grouped age bands, citizenship, previous residence, first permits, resident household composition and income context.",
+    datasets: ["migr_imm8", "migr_imm2ctz", "migr_imm1ctz", "migr_imm5prv", "migr_resfirst", "lfst_hhmgscomp", "ilc_di15"],
+  },
+  housing: {
+    title: "Housing",
+    intro: "Compare migration and housing indicators, including overcrowding, housing-cost pressure and tenure by citizenship group.",
+    datasets: ["ilc_lvho15", "ilc_lvho25", "ilc_lvps15"],
+  },
+  health: {
+    title: "Health",
+    intro: "Explore hospital bed capacity by NUTS 2 region and survey estimates of unmet medical needs by citizenship and reason.",
+    datasets: ["hlth_rs_bdsrg2", "hlth_silc_30"],
+  },
+  education: {
+    title: "Education",
+    intro: "Compare enrolments by education level and NUTS 2 region, and pupil-to-teacher ratios by education level.",
+    datasets: ["educ_uoe_enra11", "educ_uoe_perp04"],
+  },
+};
+
+const EUROSTAT_SOCIAL_COUNTRY_CODES = {
+  austria: "AT", belgium: "BE", bulgaria: "BG", cyprus: "CY", czechia: "CZ",
+  germany: "DE", denmark: "DK", estonia: "EE", greece: "GR", spain: "ES",
+  finland: "FI", france: "FR", croatia: "HR", hungary: "HU", ireland: "IE",
+  iceland: "IS", italy: "IT", lithuania: "LT", luxembourg: "LU", latvia: "LV",
+  malta: "MT", netherlands: "NL", norway: "NO", poland: "PL", portugal: "PT",
+  romania: "RO", sweden: "SE", slovenia: "SI", slovakia: "SK",
+  switzerland: "CH", turkey: "TR", unitedkingdom: "UK", serbia: "RS",
+  ukraine: "UA", albania: "AL", bosniaandherzegovina: "BA", montenegro: "ME",
+  northmacedonia: "MK",
+};
+
+const EUROSTAT_SOCIAL_CODE_ALIASES = {
+  aut: "AT", bel: "BE", bgr: "BG", cyp: "CY", cze: "CZ", deu: "DE",
+  dnk: "DK", est: "EE", grc: "GR", esp: "ES", fin: "FI", fra: "FR",
+  hrv: "HR", hun: "HU", irl: "IE", isl: "IS", ita: "IT", ltu: "LT",
+  lux: "LU", lva: "LV", mlt: "MT", nld: "NL", nor: "NO", pol: "PL",
+  prt: "PT", rou: "RO", swe: "SE", svn: "SI", svk: "SK", che: "CH",
+  tur: "TR", gbr: "UK", srb: "RS", ukr: "UA", alb: "AL", bih: "BA",
+  mne: "ME", mkd: "MK",
+};
+
+const EUROSTAT_SOCIAL_DEFAULT_BREAKDOWNS = {
+  migr_imm8: "age",
+  migr_imm2ctz: "citizen",
+  migr_imm1ctz: "citizen",
+  migr_imm5prv: "partner",
+  migr_resfirst: "reason",
+  lfst_hhmgscomp: "phhcomp",
+  ilc_di15: "citizen",
+  ilc_lvho15: "citizen",
+  ilc_lvho25: "citizen",
+  ilc_lvps15: "tenure",
+  hlth_silc_30: "citizen",
+  educ_uoe_perp04: "isced11",
+};
+
+const EUROSTAT_SOCIAL_AGE_BANDS = [
+  { code: "AGE_0_14", label: "0–14", from: 0, to: 15 },
+  { code: "AGE_15_29", label: "15–29", from: 15, to: 30 },
+  { code: "AGE_30_44", label: "30–44", from: 30, to: 45 },
+  { code: "AGE_45_64", label: "45–64", from: 45, to: 65 },
+  { code: "AGE_65_79", label: "65–79", from: 65, to: 80 },
+  { code: "AGE_80_PLUS", label: "80+", from: 80, to: Number.POSITIVE_INFINITY },
+];
+
+const EUROSTAT_SOCIAL_FILTER_DEFAULTS = {
+  "migr_imm8.sex": "T",
+  "migr_imm8.agedef": "COMPLET",
+  "migr_imm2ctz.sex": "T",
+  "migr_imm2ctz.agedef": "COMPLET",
+  "migr_imm2ctz.age": "TOTAL",
+  "migr_imm1ctz.sex": "T",
+  "migr_imm1ctz.agedef": "COMPLET",
+  "migr_imm1ctz.age": "TOTAL",
+  "migr_imm5prv.sex": "T",
+  "migr_imm5prv.agedef": "COMPLET",
+  "migr_imm5prv.age": "TOTAL",
+  "migr_resfirst.citizen": "TOTAL",
+  "lfst_hhmgscomp.hhwkstat": "TOTAL",
+  "lfst_hhmgscomp.mgstatus": "FBO_A",
+  "ilc_di15.sex": "T",
+  "ilc_di15.age": "Y_GE18",
+  "ilc_di15.statinfo": "MEAN_EI",
+  "ilc_lvho15.sex": "T",
+  "ilc_lvho15.age": "Y_GE18",
+  "ilc_lvho25.sex": "T",
+  "ilc_lvho25.age": "Y_GE18",
+  "ilc_lvps15.sex": "T",
+  "ilc_lvps15.age": "Y_GE18",
+  "hlth_rs_bdsrg2.unit": "HAB_P",
+  "hlth_silc_30.sex": "T",
+  "hlth_silc_30.age": "Y_GE16",
+  "hlth_silc_30.unit": "PC",
+  "hlth_silc_30.reason": "TOTAL",
+  "educ_uoe_enra11.sex": "T",
+  "educ_uoe_perp04.unit": "RT",
+};
+
+const EUROSTAT_SOCIAL_CAVEATS = {
+  immigration_by_age_sex: "Age and sex describe reported immigration flows; these counts do not identify family membership or household size.",
+  immigration_by_citizenship_group: "Citizenship groups describe recorded citizenship, not country of birth.",
+  immigration_by_citizenship: "Citizenship is not the same as country of birth or previous residence.",
+  immigration_by_previous_residence: "Previous residence is a location measure; it does not establish nationality or birthplace.",
+  first_residence_permits_by_reason_duration: "Residence permits are administrative authorisations, not a count of all arrivals or household members.",
+  households_by_migration_background: "Household composition describes resident private households, not the family composition of new arrivals.",
+  income_by_citizenship_group: "Income describes residents aged 18+ by current citizenship; it does not measure the economic capacity of newly arriving people.",
+  housing_overcrowding_by_citizenship: "This is a resident-population measure by citizenship, not an estimate specific to recent arrivals.",
+  housing_cost_overburden_by_citizenship: "This is a resident-population measure by citizenship, not an estimate specific to recent arrivals.",
+  housing_tenure_by_citizenship: "This is a resident-population measure by citizenship, not an estimate specific to recent arrivals.",
+  hospital_beds_nuts2: "Regional reporting and availability vary. The selected unit distinguishes bed counts from beds per 100,000 inhabitants.",
+  unmet_medical_needs_by_citizenship: "Survey estimates describe resident populations, not counts of patients or recent arrivals.",
+  students_enrolled_nuts2: "Enrolments are not identified as migrant pupils and are not normalised by population size.",
+  pupil_teacher_ratio: "Published at national level; methodological differences can affect comparisons between countries.",
 };
 
 const numberFormatter = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 0 });
@@ -521,6 +676,48 @@ ui.navMethodology.addEventListener("click", (event) => {
   event.preventDefault();
   navigateToDashboardPage("data-methodology");
 });
+ui.navSocialImpact.addEventListener("click", (event) => {
+  event.preventDefault();
+  navigateToDashboardPage("social-impact");
+});
+ui.socialImpactTabs.addEventListener("click", (event) => {
+  const tab = event.target.closest("[data-social-section]");
+  if (!tab) return;
+  state.socialImpactSection = tab.dataset.socialSection;
+  state.socialImpactIndicator = null;
+  state.socialImpactRegion = "all";
+  state.socialImpactBreakdown = null;
+  state.socialImpactDimensionValues = {};
+  ui.socialImpactTabs.querySelectorAll("[data-social-section]").forEach((button) => {
+    button.setAttribute("aria-selected", String(button === tab));
+  });
+  renderEurostatSocialImpact();
+});
+ui.socialImpactCountry.addEventListener("change", () => {
+  if (!ui.socialImpactCountry.value) return;
+  selectCountry(ui.socialImpactCountry.value);
+});
+ui.socialImpactIndicator.addEventListener("change", () => {
+  state.socialImpactIndicator = ui.socialImpactIndicator.value || null;
+  state.socialImpactRegion = "all";
+  state.socialImpactBreakdown = null;
+  state.socialImpactDimensionValues = {};
+  renderEurostatSocialObservations();
+});
+ui.socialImpactRegion.addEventListener("change", () => {
+  state.socialImpactRegion = ui.socialImpactRegion.value || "all";
+  renderEurostatSocialObservations();
+});
+ui.socialImpactBreakdown.addEventListener("change", () => {
+  state.socialImpactBreakdown = ui.socialImpactBreakdown.value || "none";
+  renderEurostatSocialObservations();
+});
+ui.socialImpactDimensionFilters.addEventListener("change", (event) => {
+  const control = event.target.closest("[data-social-dimension]");
+  if (!control) return;
+  state.socialImpactDimensionValues[control.dataset.socialDimension] = control.value;
+  renderEurostatSocialObservations();
+});
 ui.methodologyCoverageLevel.addEventListener("change", renderDataMethodologyCoverage);
 ui.methodologySourceFilter.addEventListener("change", () => {
   state.methodologySource = ui.methodologySourceFilter.value;
@@ -654,6 +851,7 @@ window.addEventListener("resize", () => {
     renderContextScatter();
   }
   if (state.activePage === "city-intelligence") renderCityTrendChart();
+  if (state.activePage === "social-impact") renderEurostatSocialObservations();
 });
 ui.intelligenceCountrySelect.addEventListener("change", () => {
   selectCountry(ui.intelligenceCountrySelect.value);
@@ -1203,6 +1401,7 @@ function navigateToDashboardPage(page) {
   const hash = page === "country-intelligence" ? "#country-intelligence"
     : page === "country-benchmark" ? "#country-benchmark"
       : page === "migration-context" ? "#migration-context"
+        : page === "social-impact" ? "#social-impact"
         : page === "forecast-reliability" ? "#forecast-reliability"
           : page === "city-intelligence" ? "#city-intelligence"
             : page === "data-methodology" ? "#data-methodology" : "#european-outlook";
@@ -1216,22 +1415,24 @@ function applyDashboardRoute() {
   const isCityPage = window.location.hash === "#city-intelligence";
   const isMethodologyPage = window.location.hash === "#data-methodology";
   const isContextPage = window.location.hash === "#migration-context";
+  const isSocialImpactPage = window.location.hash === "#social-impact";
   const isBenchmarkPage = window.location.hash === "#country-benchmark";
   const isCountryPage = window.location.hash === "#country-intelligence";
-  state.activePage = isMethodologyPage ? "data-methodology" : isCityPage ? "city-intelligence" : isReliabilityPage ? "forecast-reliability" : isContextPage ? "migration-context" : isBenchmarkPage ? "country-benchmark" : isCountryPage ? "country-intelligence" : "european-outlook";
-  if ((isCountryPage || isContextPage || isCityPage) && state.selectedCountry === "all") {
+  state.activePage = isMethodologyPage ? "data-methodology" : isCityPage ? "city-intelligence" : isReliabilityPage ? "forecast-reliability" : isSocialImpactPage ? "social-impact" : isContextPage ? "migration-context" : isBenchmarkPage ? "country-benchmark" : isCountryPage ? "country-intelligence" : "european-outlook";
+  if ((isCountryPage || isContextPage || isCityPage || isSocialImpactPage) && state.selectedCountry === "all") {
     const countries = listCountries();
     const preferred = countries.find((item) => normalizeName(item.name) === "spain") ?? countries[0];
     if (preferred) state.selectedCountry = preferred.id;
   }
-  ui.europeanPage.hidden = isCountryPage || isBenchmarkPage || isContextPage || isReliabilityPage || isCityPage || isMethodologyPage;
+  ui.europeanPage.hidden = isCountryPage || isBenchmarkPage || isContextPage || isReliabilityPage || isCityPage || isMethodologyPage || isSocialImpactPage;
   ui.countryPage.hidden = !isCountryPage;
   ui.benchmarkPage.hidden = !isBenchmarkPage;
   ui.contextPage.hidden = !isContextPage;
   ui.reliabilityPage.hidden = !isReliabilityPage;
   ui.cityPage.hidden = !isCityPage;
   ui.methodologyPage.hidden = !isMethodologyPage;
-  ui.navEuropean.classList.toggle("is-active", !isCountryPage && !isBenchmarkPage && !isContextPage && !isReliabilityPage && !isCityPage && !isMethodologyPage);
+  ui.socialImpactPage.hidden = !isSocialImpactPage;
+  ui.navEuropean.classList.toggle("is-active", !isCountryPage && !isBenchmarkPage && !isContextPage && !isReliabilityPage && !isCityPage && !isMethodologyPage && !isSocialImpactPage);
   ui.navCountry.classList.toggle("is-active", isCountryPage);
   ui.navBenchmark.classList.toggle("is-active", isBenchmarkPage);
   ui.navContext.classList.toggle("is-active", isContextPage);
@@ -1239,6 +1440,8 @@ function applyDashboardRoute() {
   ui.navCity.classList.toggle("is-active", isCityPage);
   ui.navMethodology.classList.toggle("is-active", isMethodologyPage);
   ui.navMethodology.removeAttribute("aria-current");
+  ui.navSocialImpact.classList.toggle("is-active", isSocialImpactPage);
+  ui.navSocialImpact.removeAttribute("aria-current");
   if (isCountryPage) {
     ui.navCountry.setAttribute("aria-current", "page");
     ui.navEuropean.removeAttribute("aria-current");
@@ -1303,6 +1506,21 @@ function applyDashboardRoute() {
     ui.dashboardSubtitle.textContent = "Explore foreign population shares and city-level forecasts";
     document.title = "City Intelligence · migrAI";
     renderCityIntelligence();
+  } else if (isSocialImpactPage) {
+    ui.navSocialImpact.setAttribute("aria-current", "page");
+    ui.navEuropean.removeAttribute("aria-current");
+    ui.navCountry.removeAttribute("aria-current");
+    ui.navBenchmark.removeAttribute("aria-current");
+    ui.navContext.removeAttribute("aria-current");
+    ui.navReliability.removeAttribute("aria-current");
+    ui.navCity.removeAttribute("aria-current");
+    ui.navMethodology.removeAttribute("aria-current");
+    ui.dashboardTitle.textContent = "Social Impact";
+    ui.dashboardEyebrow.textContent = "EUROSTAT · TERRITORIAL CONTEXT";
+    ui.dashboardSubtitle.textContent = "Explore observed population, housing, health and education indicators";
+    document.title = "Social Impact · migrAI";
+    populateSocialImpactCountryControl();
+    renderEurostatSocialImpact();
   } else if (isMethodologyPage) {
     ui.navMethodology.setAttribute("aria-current", "page");
     ui.navEuropean.removeAttribute("aria-current");
@@ -1329,6 +1547,642 @@ function applyDashboardRoute() {
     document.title = "European Migration Outlook · migrAI";
     renderOutlook();
   }
+}
+
+function eurostatSocialCountryIso2(country = currentCountry()) {
+  if (!country) return null;
+  const byName = EUROSTAT_SOCIAL_COUNTRY_CODES[normalizeName(country.name)];
+  if (byName) return byName;
+  const normalizedId = normalizeName(country.id);
+  if (EUROSTAT_SOCIAL_CODE_ALIASES[normalizedId]) return EUROSTAT_SOCIAL_CODE_ALIASES[normalizedId];
+  return /^[a-z]{2}$/i.test(String(country.id)) ? String(country.id).toUpperCase() : null;
+}
+
+function populateSocialImpactCountryControl() {
+  const countries = listCountries()
+    .filter((country) => eurostatSocialCountryIso2(country))
+    .sort((a, b) => a.name.localeCompare(b.name, "en"));
+  replaceOptions(ui.socialImpactCountry, countries.map((country) => ({ value: country.id, label: country.name })));
+  if (!countries.length) {
+    ui.socialImpactCountry.disabled = true;
+    return null;
+  }
+  ui.socialImpactCountry.disabled = false;
+  let country = countries.find((item) => item.id === state.selectedCountry);
+  if (!country) {
+    country = countries.find((item) => normalizeName(item.name) === "spain") ?? countries[0];
+    state.selectedCountry = country.id;
+  }
+  ui.socialImpactCountry.value = country.id;
+  return country;
+}
+
+async function loadEurostatSocialRows(countryIso2, sectionId) {
+  const cacheKey = countryIso2 + "|" + sectionId;
+  if (state.socialImpactCache.has(cacheKey)) return state.socialImpactCache.get(cacheKey);
+  const pageSize = 1000;
+  const rows = [];
+  const columns = "dataset_code,section_id,indicator_id,indicator_label,definition,geo_code,geo_name,geo_level,country_iso2,year,dimensions,series_key,value,unit_code,unit_label,source_name,source_url,quality_flag,source_updated_at,retrieved_at_utc";
+  for (let offset = 0; ; offset += pageSize) {
+    const response = await supabaseClient.from("eurostat_dashboard_latest")
+      .select(columns)
+      .eq("section_id", sectionId)
+      .eq("country_iso2", countryIso2)
+      .order("dataset_code")
+      .order("geo_code")
+      .order("year")
+      .order("series_key")
+      .range(offset, offset + pageSize - 1);
+    if (response.error) throw response.error;
+    const page = response.data ?? [];
+    rows.push(...page);
+    if (page.length < pageSize) break;
+  }
+  state.socialImpactCache.set(cacheKey, rows);
+  return rows;
+}
+
+async function renderEurostatSocialImpact() {
+  if (!state.initialized || state.activePage !== "social-impact") return;
+  const country = populateSocialImpactCountryControl();
+  const sectionKey = state.socialImpactSection;
+  const section = EUROSTAT_SOCIAL_SECTIONS[sectionKey] ?? EUROSTAT_SOCIAL_SECTIONS.arrivals;
+  ui.socialImpactSectionIntro.textContent = section.intro;
+  ui.socialImpactTabs.querySelectorAll("[data-social-section]").forEach((tab) => {
+    tab.setAttribute("aria-selected", String(tab.dataset.socialSection === state.socialImpactSection));
+  });
+  if (!country) {
+    showEurostatSocialMessage("No country is available", "The production country list could not be matched to the Eurostat coverage.");
+    return;
+  }
+
+  const requestId = ++state.socialImpactRequestId;
+  const iso2 = eurostatSocialCountryIso2(country);
+  const cacheKey = iso2 + "|" + state.socialImpactSection;
+  ui.socialImpactLoading.hidden = false;
+  ui.socialImpactEmpty.hidden = true;
+  ui.socialImpactChart.replaceChildren();
+  ui.socialImpactLatestRows.replaceChildren();
+  ui.socialImpactLatestYear.textContent = "—";
+  ui.socialImpactLatestValue.textContent = "—";
+  ui.socialImpactCoverage.textContent = "—";
+  ui.socialImpactObservationCount.textContent = "—";
+  ui.socialImpactCaveat.textContent = "";
+  ui.socialImpactProvenance.textContent = "";
+  ui.socialImpactComparisonBanner.hidden = true;
+  ui.socialImpactIndicator.disabled = true;
+  ui.socialImpactIndicator.replaceChildren(new Option("Loading Eurostat data…", ""));
+
+  try {
+    const rows = await loadEurostatSocialRows(iso2, sectionKey);
+    if (requestId !== state.socialImpactRequestId
+        || state.activePage !== "social-impact"
+        || state.selectedCountry !== country.id
+        || state.socialImpactSection !== sectionKey) return;
+    state.socialImpactDatasetRows = rows;
+    ui.socialImpactLoading.hidden = true;
+    const datasetOrder = section.datasets;
+    const datasets = new Map();
+    rows.forEach((row) => {
+      if (!datasets.has(row.dataset_code)) datasets.set(row.dataset_code, row);
+    });
+    const available = datasetOrder.map((code) => datasets.get(code)).filter(Boolean);
+    replaceOptions(ui.socialImpactIndicator, available.map((row) => ({ value: row.dataset_code, label: row.indicator_label })));
+    ui.socialImpactIndicator.disabled = available.length === 0;
+    const selected = available.find((row) => row.dataset_code === state.socialImpactIndicator) ?? available[0];
+    state.socialImpactIndicator = selected?.dataset_code ?? null;
+    ui.socialImpactIndicator.value = state.socialImpactIndicator ?? "";
+    state.socialImpactRegion = "all";
+    state.socialImpactBreakdown = null;
+    state.socialImpactDimensionValues = {};
+    state.socialImpactControlKey = null;
+    renderEurostatSocialObservations();
+  } catch (error) {
+    if (requestId !== state.socialImpactRequestId) return;
+    ui.socialImpactLoading.hidden = true;
+    ui.socialImpactIndicator.disabled = true;
+    showEurostatSocialMessage(
+      "Eurostat data could not be loaded",
+      "The authenticated Eurostat view may be unavailable or its read access may not be configured. Check the connection and reload this page.",
+    );
+    console.warn("Eurostat social view query failed", error?.message ?? "unknown error");
+  }
+}
+
+function showEurostatSocialMessage(title, detail) {
+  ui.socialImpactLoading.hidden = true;
+  ui.socialImpactEmpty.hidden = false;
+  ui.socialImpactEmpty.querySelector("strong").textContent = title;
+  ui.socialImpactEmpty.querySelector("p").textContent = detail;
+  ui.socialImpactChart.replaceChildren();
+  ui.socialImpactLatestRows.replaceChildren();
+  ui.socialImpactLatestYear.textContent = "—";
+  ui.socialImpactLatestValue.textContent = "—";
+  ui.socialImpactCoverage.textContent = "—";
+  ui.socialImpactObservationCount.textContent = "—";
+  ui.socialImpactIndicatorTitle.textContent = ui.socialImpactIndicator.selectedOptions[0]?.textContent || "Eurostat observations";
+  ui.socialImpactIndicatorDefinition.textContent = detail;
+  ui.socialImpactLatestValueLabel.textContent = "Latest value";
+  ui.socialImpactLatestTableNote.textContent = "";
+  ui.socialImpactCaveat.textContent = "";
+  ui.socialImpactProvenance.textContent = "";
+  ui.socialImpactLatestRows.replaceChildren();
+  ui.socialImpactComparisonBanner.hidden = true;
+}
+
+function eurostatSocialDimensionCatalog(rows) {
+  const dimensions = new Map();
+  rows.forEach((row) => {
+    Object.entries(row.dimensions ?? {}).forEach(([name, raw]) => {
+      const code = typeof raw === "object" && raw !== null ? String(raw.code ?? "") : String(raw ?? "");
+      if (!code) return;
+      const label = typeof raw === "object" && raw !== null ? String(raw.label ?? code) : code;
+      if (!dimensions.has(name)) dimensions.set(name, new Map());
+      dimensions.get(name).set(code, label);
+    });
+  });
+  return [...dimensions.entries()].map(([name, values]) => ({
+    name,
+    label: name.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()),
+    options: [...values.entries()]
+      .map(([code, label]) => ({ code, label }))
+      .sort((a, b) => a.label.localeCompare(b.label, "en") || a.code.localeCompare(b.code, "en")),
+  }));
+}
+
+function eurostatSocialPreferredDimensionCode(datasetCode, dimension, options) {
+  const configured = EUROSTAT_SOCIAL_FILTER_DEFAULTS[datasetCode + "." + dimension];
+  if (configured && options.some((option) => option.code === configured)) return configured;
+  const total = options.find((option) => option.code.toUpperCase() === "TOTAL" || /^total$/i.test(option.label));
+  return total?.code ?? options[0]?.code ?? "";
+}
+
+function renderEurostatSocialControls(rows) {
+  const datasetCode = rows[0]?.dataset_code;
+  const isArrivalDataset = EUROSTAT_SOCIAL_SECTIONS.arrivals.datasets.includes(datasetCode);
+  const catalog = eurostatSocialDimensionCatalog(rows);
+  const geoLevel = rows[0]?.geo_level;
+  const iso2 = rows[0]?.country_iso2;
+  let breakdownOptions = catalog.filter((dimension) => dimension.name !== "unit" && dimension.options.length > 1);
+  const requestedBreakdown = state.socialImpactBreakdown
+    ?? (geoLevel === "nuts2" && state.socialImpactRegion === "all"
+      ? "none"
+      : EUROSTAT_SOCIAL_DEFAULT_BREAKDOWNS[datasetCode] ?? "none");
+  const defaultBreakdown = requestedBreakdown;
+  const chosenBreakdown = defaultBreakdown !== "none" && breakdownOptions.some((dimension) => dimension.name === defaultBreakdown)
+    ? defaultBreakdown
+    : "none";
+  state.socialImpactBreakdown = chosenBreakdown;
+  replaceOptions(ui.socialImpactBreakdown, [
+    { value: "none", label: geoLevel === "nuts2" && state.socialImpactRegion === "all" ? "Compare regions" : "One selected series" },
+    ...breakdownOptions.map((dimension) => ({
+      value: dimension.name,
+      label: dimension.name === "age" && isArrivalDataset ? "Age bands" : dimension.label,
+    })),
+  ]);
+  ui.socialImpactBreakdown.value = chosenBreakdown;
+  ui.socialImpactBreakdownField.hidden = breakdownOptions.length === 0;
+
+  const key = [iso2, datasetCode, geoLevel, chosenBreakdown].join("|");
+  if (state.socialImpactControlKey !== key) {
+    ui.socialImpactDimensionFilters.replaceChildren();
+    catalog
+      .filter((dimension) => dimension.name !== chosenBreakdown && dimension.options.length > 1)
+      .forEach((dimension) => {
+        const label = document.createElement("label");
+        const caption = document.createElement("span");
+        caption.textContent = dimension.label;
+        const select = document.createElement("select");
+        select.className = "compact-select";
+        select.dataset.socialDimension = dimension.name;
+        const previous = state.socialImpactDimensionValues[dimension.name];
+        const selected = dimension.options.some((option) => option.code === previous)
+          ? previous
+          : eurostatSocialPreferredDimensionCode(datasetCode, dimension.name, dimension.options);
+        replaceOptions(select, dimension.options.map((option) => ({ value: option.code, label: option.label })));
+        select.value = selected;
+        state.socialImpactDimensionValues[dimension.name] = selected;
+        label.append(caption, select);
+        ui.socialImpactDimensionFilters.append(label);
+      });
+    state.socialImpactControlKey = key;
+  }
+
+  if (geoLevel === "nuts2") {
+    const geographies = new Map();
+    rows.forEach((row) => geographies.set(row.geo_code, row.geo_name || row.geo_code));
+    const options = [...geographies.entries()]
+      .sort((a, b) => a[1].localeCompare(b[1], "en"))
+      .map(([code, label]) => ({ value: code, label }));
+    const currentRegion = state.socialImpactRegion;
+    replaceOptions(ui.socialImpactRegion, [{ value: "all", label: "Compare all regions" }, ...options]);
+    state.socialImpactRegion = currentRegion !== "all" && geographies.has(currentRegion) ? currentRegion : "all";
+    ui.socialImpactRegion.value = state.socialImpactRegion;
+    ui.socialImpactRegionField.hidden = false;
+  } else {
+    state.socialImpactRegion = "all";
+    ui.socialImpactRegionField.hidden = true;
+    ui.socialImpactRegion.replaceChildren();
+  }
+}
+
+function eurostatSocialFilteredRows(rows) {
+  const datasetCode = rows[0]?.dataset_code;
+  const breakdown = state.socialImpactBreakdown ?? "none";
+  const dimensions = ui.socialImpactDimensionFilters.querySelectorAll("[data-social-dimension]");
+  const selected = new Map([...dimensions].map((control) => [control.dataset.socialDimension, control.value]));
+  return rows.filter((row) => {
+    if (safeNumber(row.value) === null) return false;
+    if (row.geo_level === "nuts2" && state.socialImpactRegion !== "all" && row.geo_code !== state.socialImpactRegion) return false;
+    return [...selected.entries()].every(([name, code]) => {
+      const dimension = row.dimensions?.[name];
+      const value = typeof dimension === "object" && dimension !== null ? dimension.code : dimension;
+      return String(value ?? "") === String(code);
+    });
+  });
+}
+
+function eurostatSocialAgeInterval(rawCode) {
+  const code = String(rawCode ?? "").trim().toUpperCase();
+  if (code === "Y_LT1") return { from: 0, to: 1 };
+  let match = code.match(/^Y_LT(\d+)$/);
+  if (match) return { from: 0, to: Number(match[1]) };
+  match = code.match(/^Y_GE(\d+)$/);
+  if (match) return { from: Number(match[1]), to: Number.POSITIVE_INFINITY };
+  match = code.match(/^Y(\d+)-(\d+)$/);
+  if (match) return { from: Number(match[1]), to: Number(match[2]) + 1 };
+  match = code.match(/^Y(\d+)$/);
+  if (match) return { from: Number(match[1]), to: Number(match[1]) + 1 };
+  return null;
+}
+
+function eurostatSocialAgeBandComponents(ageCodes, band) {
+  const intervals = [...ageCodes].map((code) => ({ code, ...eurostatSocialAgeInterval(code) }))
+    .filter((entry) => entry.from !== undefined && entry.from >= band.from && entry.from < band.to && entry.to > entry.from)
+    .sort((a, b) => a.from - b.from || b.to - a.to || a.code.localeCompare(b.code, "en"));
+  const selected = [];
+  let cursor = band.from;
+  while (cursor < band.to) {
+    const candidates = intervals.filter((entry) => entry.from === cursor && entry.to <= band.to);
+    if (!candidates.length) return null;
+    const next = candidates[0];
+    selected.push(next.code);
+    cursor = next.to;
+  }
+  return selected;
+}
+
+function eurostatSocialAgeBandRows(rows, breakdown) {
+  if (breakdown !== "age" || !EUROSTAT_SOCIAL_SECTIONS.arrivals.datasets.includes(rows[0]?.dataset_code)) return rows;
+  const groups = new Map();
+  rows.forEach((row) => {
+    const rawAge = row.dimensions?.age;
+    const ageCode = String(typeof rawAge === "object" && rawAge !== null ? rawAge.code : rawAge ?? "").toUpperCase();
+    if (!ageCode || ["TOTAL", "UNK", "UNKNOWN"].includes(ageCode)) return;
+    const otherDimensions = Object.entries(row.dimensions ?? {})
+      .filter(([name]) => name !== "age")
+      .sort(([a], [b]) => a.localeCompare(b, "en"))
+      .map(([name, value]) => [name, typeof value === "object" && value !== null ? value.code : value]);
+    const key = JSON.stringify([row.dataset_code, row.geo_code, row.year, row.unit_code, otherDimensions]);
+    if (!groups.has(key)) groups.set(key, { first: row, dimensions: Object.fromEntries(otherDimensions), values: new Map() });
+    groups.get(key).values.set(ageCode, row);
+  });
+
+  const result = [];
+  groups.forEach(({ first, dimensions, values }) => {
+    EUROSTAT_SOCIAL_AGE_BANDS.forEach((band) => {
+      const codes = eurostatSocialAgeBandComponents(values.keys(), band);
+      if (!codes) return;
+      const members = codes.map((code) => values.get(code));
+      const flags = [...new Set(members.map((row) => row.quality_flag).filter(Boolean))];
+      result.push({
+        ...first,
+        dimensions: { ...dimensions, age: { code: band.code, label: band.label } },
+        series_key: [first.series_key || "", "age-band", band.code].join("|"),
+        value: members.reduce((sum, row) => sum + safeNumber(row.value), 0),
+        quality_flag: flags.join("; ") || null,
+      });
+    });
+  });
+  return result;
+}
+
+function eurostatSocialSeries(rows, breakdown, compareRegions) {
+  const groups = new Map();
+  rows.forEach((row) => {
+    const dimension = breakdown !== "none" ? row.dimensions?.[breakdown] : null;
+    const dimensionCode = typeof dimension === "object" && dimension !== null ? dimension.code : dimension;
+    const dimensionLabel = typeof dimension === "object" && dimension !== null ? dimension.label : dimensionCode;
+    const geoLabel = compareRegions ? (row.geo_name || row.geo_code) : "";
+    const label = [geoLabel, breakdown !== "none" ? (dimensionLabel || dimensionCode) : ""].filter(Boolean).join(" · ") || "Selected series";
+    const key = [compareRegions ? row.geo_code : "", breakdown !== "none" ? dimensionCode : ""].join("|");
+    if (!groups.has(key)) groups.set(key, { key, label, rows: [] });
+    groups.get(key).rows.push(row);
+  });
+  const series = [...groups.values()].map((group) => {
+    const byYear = new Map();
+    group.rows.forEach((row) => {
+      const year = safeNumber(row.year);
+      const value = safeNumber(row.value);
+      if (year !== null && value !== null) byYear.set(year, { ...row, year, value });
+    });
+    return { ...group, points: [...byYear.values()].sort((a, b) => a.year - b.year) };
+  }).filter((group) => group.points.length);
+  const latestYear = Math.max(...series.flatMap((group) => group.points.map((point) => point.year)));
+  return {
+    latestYear,
+    all: series,
+    shown: series
+      .filter((group) => group.points.some((point) => point.year === latestYear))
+      .sort((a, b) => {
+        const aValue = a.points.find((point) => point.year === latestYear)?.value ?? -Infinity;
+        const bValue = b.points.find((point) => point.year === latestYear)?.value ?? -Infinity;
+        return bValue - aValue || a.label.localeCompare(b.label, "en");
+      })
+      .slice(0, 8),
+  };
+}
+
+function socialImpactNumber(value) {
+  if (value === null || value === undefined || !Number.isFinite(Number(value))) return "—";
+  return new Intl.NumberFormat("en-GB", { maximumFractionDigits: 2 }).format(value);
+}
+
+function renderEurostatSocialObservations() {
+  if (!state.initialized || state.activePage !== "social-impact") return;
+  const datasetRows = state.socialImpactDatasetRows.filter((row) => row.dataset_code === state.socialImpactIndicator);
+  if (!datasetRows.length) {
+    showEurostatSocialMessage("No Eurostat observations in this section", "The selected country has no published values for the current section.");
+    return;
+  }
+  renderEurostatSocialControls(datasetRows);
+  const filtered = eurostatSocialFilteredRows(datasetRows);
+  const breakdown = state.socialImpactBreakdown ?? "none";
+  const displayRows = eurostatSocialAgeBandRows(filtered, breakdown);
+  const series = eurostatSocialSeries(displayRows, breakdown, datasetRows[0].geo_level === "nuts2" && state.socialImpactRegion === "all");
+  const migrationSeries = eurostatSocialMigrationSeries();
+  if (!displayRows.length || !series.shown.length || !Number.isFinite(series.latestYear)) {
+    showEurostatSocialMessage("No complete values for this selection", "Choose another breakdown or category. Age bands are shown only when the source provides the complete component groups; missing observations are not estimated.");
+    return;
+  }
+
+  const meta = datasetRows[0];
+  const latestRows = displayRows.filter((row) => safeNumber(row.year) === series.latestYear)
+    .sort((a, b) => safeNumber(b.value) - safeNumber(a.value))
+    .slice(0, 12);
+  const mostRecent = latestRows[0];
+  const years = displayRows.map((row) => safeNumber(row.year)).filter((year) => year !== null);
+  const firstYear = Math.min(...years);
+  const lastYear = Math.max(...years);
+  ui.socialImpactIndicatorTitle.textContent = meta.indicator_label || meta.dataset_code;
+  ui.socialImpactIndicatorDefinition.textContent = meta.definition || "Eurostat historical observations.";
+  ui.socialImpactLatestYear.textContent = String(series.latestYear);
+  const comparisonMode = (state.socialImpactBreakdown ?? "none") !== "none"
+    || (datasetRows[0].geo_level === "nuts2" && state.socialImpactRegion === "all");
+  ui.socialImpactLatestValueLabel.textContent = comparisonMode ? "Highest latest value" : "Latest value";
+  ui.socialImpactLatestValue.textContent = mostRecent
+    ? socialImpactNumber(safeNumber(mostRecent.value)) + " " + (mostRecent.unit_label || mostRecent.unit_code)
+    : "Not available";
+  ui.socialImpactCoverage.textContent = firstYear === lastYear ? String(firstYear) : firstYear + "–" + lastYear;
+  ui.socialImpactObservationCount.textContent = numberFormatter.format(displayRows.length);
+  const breakdownLabel = breakdown !== "none"
+    ? breakdown === "age" && EUROSTAT_SOCIAL_SECTIONS.arrivals.datasets.includes(meta.dataset_code)
+      ? "age band"
+      : (eurostatSocialDimensionCatalog(datasetRows).find((dimension) => dimension.name === breakdown)?.label || breakdown)
+    : datasetRows[0].geo_level === "nuts2" && state.socialImpactRegion === "all" ? "region" : "series";
+  const topLabel = mostRecent
+    ? [mostRecent.geo_level === "nuts2" ? (mostRecent.geo_name || mostRecent.geo_code) : null,
+      breakdown !== "none"
+        ? (mostRecent.dimensions?.[breakdown]?.label || mostRecent.dimensions?.[breakdown]?.code)
+        : null].filter(Boolean).join(" · ")
+    : "";
+  ui.socialImpactLatestTableNote.textContent = (comparisonMode && topLabel ? "Highest value: " + topLabel + " · " : "")
+    + "Showing up to 12 " + breakdownLabel + " values for " + series.latestYear + ".";
+  const ageBandNote = breakdown === "age" && EUROSTAT_SOCIAL_SECTIONS.arrivals.datasets.includes(meta.dataset_code)
+    ? " Age bands sum disjoint Eurostat age classes. This dataset publishes single years of age; the six bands are not identical to the city-profile groups (<16, 16–64, 65+). Overlapping aggregates and unknown ages are not assigned to a band."
+    : "";
+  ui.socialImpactCaveat.textContent = (EUROSTAT_SOCIAL_CAVEATS[meta.indicator_id] || "Eurostat aggregate indicator; interpret with its published population, geography and unit.") + ageBandNote;
+  renderEurostatSocialComparisonBanner(meta, migrationSeries);
+  ui.socialImpactProvenance.replaceChildren();
+  const provenance = document.createTextNode("Source: Eurostat · dataset " + meta.dataset_code
+    + " · source update " + (meta.source_updated_at || "not published")
+    + " · retrieved " + (meta.retrieved_at_utc || "not published") + " · ");
+  const link = document.createElement("a");
+  link.href = safeEurostatSourceUrl(meta.source_url);
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.textContent = "Open source table";
+  ui.socialImpactProvenance.append(provenance, link);
+  ui.socialImpactEmpty.hidden = true;
+  ui.socialImpactLoading.hidden = true;
+  ui.socialImpactChart.replaceChildren();
+  ui.socialImpactLatestRows.replaceChildren();
+  renderEurostatSocialLatestTable(latestRows, breakdown);
+  renderEurostatSocialLineChart(series.shown, meta.unit_label || meta.unit_code, migrationSeries);
+}
+
+function renderEurostatSocialLatestTable(rows, breakdown) {
+  rows.forEach((row) => {
+    const tr = document.createElement("tr");
+    const territory = document.createElement("td");
+    const dimension = breakdown !== "none" ? row.dimensions?.[breakdown] : null;
+    const dimensionLabel = typeof dimension === "object" && dimension !== null ? dimension.label : dimension;
+    territory.textContent = [
+      row.geo_level === "nuts2" ? (row.geo_name || row.geo_code) : (countryById(state.selectedCountry)?.name || row.geo_name),
+      dimensionLabel,
+    ].filter(Boolean).join(" · ");
+    const year = document.createElement("td");
+    year.textContent = String(row.year);
+    const value = document.createElement("td");
+    value.textContent = socialImpactNumber(safeNumber(row.value));
+    const unit = document.createElement("td");
+    unit.textContent = row.unit_label || row.unit_code;
+    const quality = document.createElement("td");
+    quality.textContent = row.quality_flag || "No flag supplied";
+    quality.title = row.quality_flag ? "Eurostat quality status: " + row.quality_flag : "Eurostat supplied no quality status for this observation.";
+    tr.append(territory, year, value, unit, quality);
+    ui.socialImpactLatestRows.append(tr);
+  });
+}
+
+function safeEurostatSourceUrl(value) {
+  try {
+    const url = new URL(String(value ?? ""));
+    if (url.protocol === "https:" && url.hostname === "ec.europa.eu") return url.href;
+  } catch {}
+  return "https://ec.europa.eu/eurostat/";
+}
+
+const EUROSTAT_SOCIAL_CHART_COLORS = ["#ff9b54", "#58b6d6", "#a58be0", "#6fc8a1", "#e6c66a", "#e486a4", "#83a9ed", "#d39a68"];
+
+function eurostatSocialMigrationSeries() {
+  const observed = currentCountryObservations()
+    .map((row) => ({ year: safeNumber(row.year), value: safeNumber(row.value) }))
+    .filter((point) => point.year !== null && point.value !== null);
+  const forecasts = currentCountryForecasts()
+    .filter((row) => forecastIsAvailable(row) && safeNumber(row.prediction) !== null && safeNumber(row.target_year) !== null)
+    .map((row) => ({
+      year: safeNumber(row.target_year),
+      value: safeNumber(row.prediction),
+      horizon: safeNumber(row.horizon),
+    }))
+    .sort((a, b) => a.year - b.year);
+  return { observed, forecasts };
+}
+
+function renderEurostatSocialComparisonBanner(meta, migrationSeries) {
+  if (!migrationSeries.observed.length && !migrationSeries.forecasts.length) {
+    ui.socialImpactComparisonBanner.hidden = true;
+    return;
+  }
+  const dimensionValues = new Map([...ui.socialImpactDimensionFilters.querySelectorAll("[data-social-dimension]")]
+    .map((control) => [control.dataset.socialDimension, control.value]));
+  const sameTarget = meta.dataset_code === "migr_imm8"
+    && meta.geo_level === "country"
+    && meta.unit_code === "NR"
+    && state.socialImpactBreakdown === "none"
+    && (dimensionValues.get("age") ?? state.socialImpactDimensionValues.age) === "TOTAL"
+    && (dimensionValues.get("sex") ?? state.socialImpactDimensionValues.sex) === "T"
+    && (dimensionValues.get("agedef") ?? state.socialImpactDimensionValues.agedef) === "COMPLET";
+  const title = ui.socialImpactComparisonBanner.querySelector("strong");
+  if (sameTarget) {
+    title.textContent = "Same migration measure · model forecasts remain estimates";
+    ui.socialImpactComparisonText.textContent = "The selected Eurostat series matches the national annual immigration target and unit. Historical observations and MigrAI forecast outputs are still shown as separate observed and estimated values.";
+  } else {
+    title.textContent = "Context only · no direct comparison or causal inference";
+    const geography = meta.geo_level === "nuts2"
+      ? "Eurostat shows " + (meta.indicator_label || "the selected indicator") + " (" + (meta.unit_label || meta.unit_code || "its published unit") + ") at NUTS 2 regional level, while MigrAI shows national total immigration in persons per year."
+      : "Eurostat measures " + (meta.indicator_label || "a contextual indicator") + " in " + (meta.unit_label || meta.unit_code || "its published unit") + ", while MigrAI shows total immigration in persons per year.";
+    const grouping = state.socialImpactBreakdown === "age"
+      ? " The Eurostat lines are age groups; the MigrAI series is total immigration."
+      : "";
+    ui.socialImpactComparisonText.textContent = geography + grouping
+      + " The lines share a time axis, not a common measurement scale. They may co-move or be correlated; the overlay does not establish causality.";
+  }
+  ui.socialImpactComparisonBanner.hidden = false;
+}
+
+function renderEurostatSocialLineChart(series, unitLabel, migrationSeries) {
+  const width = Math.max(380, Math.round(ui.socialImpactChart.getBoundingClientRect().width || 900));
+  const height = 340;
+  const margin = { top: 18, right: 86, bottom: 44, left: 67 };
+  const eurostatPoints = series.flatMap((group) => group.points);
+  const migrationPoints = [...migrationSeries.observed, ...migrationSeries.forecasts];
+  if (!eurostatPoints.length) return;
+  const allPoints = [...eurostatPoints, ...migrationPoints];
+  let minYear = Math.min(...allPoints.map((point) => point.year));
+  let maxYear = Math.max(...allPoints.map((point) => point.year));
+  if (minYear === maxYear) { minYear -= 1; maxYear += 1; }
+  let minEurostat = Math.min(...eurostatPoints.map((point) => point.value));
+  let maxEurostat = Math.max(...eurostatPoints.map((point) => point.value));
+  const eurostatPadding = Math.max((maxEurostat - minEurostat) * .1, Math.max(Math.abs(maxEurostat), Math.abs(minEurostat)) * .035, .1);
+  minEurostat -= eurostatPadding;
+  maxEurostat += eurostatPadding;
+  const hasMigration = migrationPoints.length > 0;
+  let minMigration = hasMigration ? Math.min(...migrationPoints.map((point) => point.value)) : 0;
+  let maxMigration = hasMigration ? Math.max(...migrationPoints.map((point) => point.value)) : 1;
+  const migrationPadding = Math.max((maxMigration - minMigration) * .1, Math.max(Math.abs(maxMigration), Math.abs(minMigration)) * .035, 1);
+  minMigration -= migrationPadding;
+  maxMigration += migrationPadding;
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  const x = (year) => margin.left + ((year - minYear) / (maxYear - minYear)) * plotWidth;
+  const yEurostat = (value) => margin.top + ((maxEurostat - value) / (maxEurostat - minEurostat)) * plotHeight;
+  const yMigration = (value) => margin.top + ((maxMigration - value) / (maxMigration - minMigration)) * plotHeight;
+  const svg = createSvg("svg", {
+    viewBox: "0 0 " + width + " " + height,
+    role: "img",
+    "aria-label": "Eurostat historical " + unitLabel + " values with country-level MigrAI immigration observations and forecasts on a secondary persons-per-year axis",
+  });
+  for (let index = 0; index <= 4; index += 1) {
+    const fraction = index / 4;
+    const yPosition = margin.top + fraction * plotHeight;
+    svg.append(createSvg("line", { x1: margin.left, x2: width - margin.right, y1: yPosition, y2: yPosition, class: "social-impact-gridline" }));
+    const leftTick = createSvg("text", { x: margin.left - 8, y: yPosition + 4, "text-anchor": "end", class: "social-impact-axis-label" });
+    leftTick.textContent = formatAxisNumber(maxEurostat - fraction * (maxEurostat - minEurostat));
+    svg.append(leftTick);
+    if (hasMigration) {
+      const rightTick = createSvg("text", { x: width - margin.right + 8, y: yPosition + 4, "text-anchor": "start", class: "social-impact-axis-label social-impact-axis-label--secondary" });
+      rightTick.textContent = formatAxisNumber(maxMigration - fraction * (maxMigration - minMigration));
+      svg.append(rightTick);
+    }
+  }
+  const tickCount = Math.min(7, Math.max(2, Math.ceil((maxYear - minYear) / 5) + 1));
+  const years = [...new Set(Array.from({ length: tickCount }, (_, index) =>
+    Math.round(minYear + index * (maxYear - minYear) / (tickCount - 1))))];
+  years.forEach((year) => {
+    const label = createSvg("text", { x: x(year), y: height - 16, "text-anchor": "middle", class: "social-impact-axis-label" });
+    label.textContent = String(year);
+    svg.append(label);
+  });
+  const legend = document.createElement("div");
+  legend.className = "social-impact-chart-legend";
+  const appendLegend = (label, color, dashed = false) => {
+    const key = document.createElement("span");
+    const swatch = document.createElement("i");
+    swatch.style.backgroundColor = color;
+    if (dashed) swatch.dataset.dashed = "true";
+    key.append(swatch, document.createTextNode(label));
+    legend.append(key);
+  };
+  series.forEach((group, index) => {
+    const color = EUROSTAT_SOCIAL_CHART_COLORS[index % EUROSTAT_SOCIAL_CHART_COLORS.length];
+    const pathParts = [];
+    let previousYear = null;
+    group.points.forEach((point) => {
+      const command = previousYear !== null && point.year <= previousYear + 1 ? "L" : "M";
+      pathParts.push(command + x(point.year).toFixed(1) + " " + yEurostat(point.value).toFixed(1));
+      previousYear = point.year;
+    });
+    svg.append(createSvg("path", { d: pathParts.join(" "), class: "social-impact-line", stroke: color }));
+    group.points.forEach((point) => {
+      const circle = createSvg("circle", { cx: x(point.year), cy: yEurostat(point.value), r: 2.6, class: "social-impact-point", fill: color });
+      const title = createSvg("title");
+      title.textContent = group.label + " · " + point.year + ": " + socialImpactNumber(point.value) + " " + (point.unit_label || unitLabel)
+        + (point.quality_flag ? " · status " + point.quality_flag : "");
+      circle.append(title);
+      svg.append(circle);
+    });
+    appendLegend(group.label, color);
+  });
+  if (migrationSeries.observed.length) {
+    const observedPath = migrationSeries.observed.map((point, index) =>
+      (index ? "L" : "M") + x(point.year).toFixed(1) + " " + yMigration(point.value).toFixed(1)).join(" ");
+    svg.append(createSvg("path", { d: observedPath, class: "social-impact-line social-impact-line--migration-observed" }));
+    migrationSeries.observed.forEach((point) => {
+      const circle = createSvg("circle", { cx: x(point.year), cy: yMigration(point.value), r: 2.6, class: "social-impact-migration-point" });
+      const title = createSvg("title");
+      title.textContent = point.year + " · MigrAI observed immigration · " + formatNumber(point.value) + " persons/year";
+      circle.append(title);
+      svg.append(circle);
+    });
+    appendLegend("MigrAI observed immigration", "#dceeff");
+  }
+  if (migrationSeries.forecasts.length) {
+    const forecastPathPoints = migrationSeries.observed.length
+      ? [migrationSeries.observed.at(-1), ...migrationSeries.forecasts]
+      : migrationSeries.forecasts;
+    const forecastPath = forecastPathPoints.map((point, index) =>
+      (index ? "L" : "M") + x(point.year).toFixed(1) + " " + yMigration(point.value).toFixed(1)).join(" ");
+    svg.append(createSvg("path", { d: forecastPath, class: "social-impact-line social-impact-line--migration-forecast" }));
+    migrationSeries.forecasts.forEach((point) => {
+      const circle = createSvg("circle", { cx: x(point.year), cy: yMigration(point.value), r: 3.4, class: "social-impact-migration-point social-impact-migration-point--forecast" });
+      const title = createSvg("title");
+      title.textContent = point.year + " · MigrAI " + point.horizon + "-year forecast · " + formatNumber(point.value) + " persons/year";
+      circle.append(title);
+      svg.append(circle);
+    });
+    appendLegend("MigrAI forecast", "#54dec5", true);
+  }
+  const leftAxis = createSvg("text", { x: 13, y: height / 2, transform: "rotate(-90 13 " + (height / 2) + ")", "text-anchor": "middle", class: "social-impact-axis-title" });
+  leftAxis.textContent = "Eurostat · " + unitLabel;
+  svg.append(leftAxis);
+  if (hasMigration) {
+    const rightAxis = createSvg("text", { x: width - 10, y: height / 2, transform: "rotate(90 " + (width - 10) + " " + (height / 2) + ")", "text-anchor": "middle", class: "social-impact-axis-title social-impact-axis-title--secondary" });
+    rightAxis.textContent = "MigrAI · persons/year";
+    svg.append(rightAxis);
+  }
+  ui.socialImpactChart.append(svg, legend);
 }
 
 function methodologySourceKey(row) {
@@ -5291,6 +6145,7 @@ function selectCountry(countryId) {
     renderMigrationHistoryChart();
     renderContextScatter();
   }
+  if (state.activePage === "social-impact") renderEurostatSocialImpact();
 }
 
 function showMapTooltip(event, name, point, value) {
