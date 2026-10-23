@@ -413,12 +413,12 @@ const EUROSTAT_SOCIAL_DEFAULT_BREAKDOWNS = {
 };
 
 const EUROSTAT_SOCIAL_AGE_BANDS = [
-  { code: "AGE_0_14", label: "0–14", members: ["Y_LT5", "Y5-9", "Y10-14"], fallbacks: [["Y_LT15"], ["Y0-14"]] },
-  { code: "AGE_15_29", label: "15–29", members: ["Y15-19", "Y20-24", "Y25-29"], fallbacks: [["Y15-29"]] },
-  { code: "AGE_30_44", label: "30–44", members: ["Y30-34", "Y35-39", "Y40-44"], fallbacks: [["Y30-44"]] },
-  { code: "AGE_45_64", label: "45–64", members: ["Y45-49", "Y50-54", "Y55-59", "Y60-64"], fallbacks: [["Y45-64"]] },
-  { code: "AGE_65_79", label: "65–79", members: ["Y65-69", "Y70-74", "Y75-79"], fallbacks: [["Y65-79"]] },
-  { code: "AGE_80_PLUS", label: "80+", members: ["Y80-84", "Y85-89", "Y90-94", "Y95-99", "Y_GE100"], fallbacks: [["Y80-84", "Y_GE85"], ["Y_GE80"]] },
+  { code: "AGE_0_14", label: "0–14", from: 0, to: 15 },
+  { code: "AGE_15_29", label: "15–29", from: 15, to: 30 },
+  { code: "AGE_30_44", label: "30–44", from: 30, to: 45 },
+  { code: "AGE_45_64", label: "45–64", from: 45, to: 65 },
+  { code: "AGE_65_79", label: "65–79", from: 65, to: 80 },
+  { code: "AGE_80_PLUS", label: "80+", from: 80, to: Number.POSITIVE_INFINITY },
 ];
 
 const EUROSTAT_SOCIAL_FILTER_DEFAULTS = {
@@ -1680,8 +1680,13 @@ function showEurostatSocialMessage(title, detail) {
   ui.socialImpactLatestValue.textContent = "—";
   ui.socialImpactCoverage.textContent = "—";
   ui.socialImpactObservationCount.textContent = "—";
+  ui.socialImpactIndicatorTitle.textContent = ui.socialImpactIndicator.selectedOptions[0]?.textContent || "Eurostat observations";
+  ui.socialImpactIndicatorDefinition.textContent = detail;
+  ui.socialImpactLatestValueLabel.textContent = "Latest value";
+  ui.socialImpactLatestTableNote.textContent = "";
   ui.socialImpactCaveat.textContent = "";
   ui.socialImpactProvenance.textContent = "";
+  ui.socialImpactLatestRows.replaceChildren();
   ui.socialImpactComparisonBanner.hidden = true;
 }
 
@@ -1797,6 +1802,36 @@ function eurostatSocialFilteredRows(rows) {
   });
 }
 
+function eurostatSocialAgeInterval(rawCode) {
+  const code = String(rawCode ?? "").trim().toUpperCase();
+  if (code === "Y_LT1") return { from: 0, to: 1 };
+  let match = code.match(/^Y_LT(\d+)$/);
+  if (match) return { from: 0, to: Number(match[1]) };
+  match = code.match(/^Y_GE(\d+)$/);
+  if (match) return { from: Number(match[1]), to: Number.POSITIVE_INFINITY };
+  match = code.match(/^Y(\d+)-(\d+)$/);
+  if (match) return { from: Number(match[1]), to: Number(match[2]) + 1 };
+  match = code.match(/^Y(\d+)$/);
+  if (match) return { from: Number(match[1]), to: Number(match[1]) + 1 };
+  return null;
+}
+
+function eurostatSocialAgeBandComponents(ageCodes, band) {
+  const intervals = [...ageCodes].map((code) => ({ code, ...eurostatSocialAgeInterval(code) }))
+    .filter((entry) => entry.from !== undefined && entry.from >= band.from && entry.from < band.to && entry.to > entry.from)
+    .sort((a, b) => a.from - b.from || b.to - a.to || a.code.localeCompare(b.code, "en"));
+  const selected = [];
+  let cursor = band.from;
+  while (cursor < band.to) {
+    const candidates = intervals.filter((entry) => entry.from === cursor && entry.to <= band.to);
+    if (!candidates.length) return null;
+    const next = candidates[0];
+    selected.push(next.code);
+    cursor = next.to;
+  }
+  return selected;
+}
+
 function eurostatSocialAgeBandRows(rows, breakdown) {
   if (breakdown !== "age" || !EUROSTAT_SOCIAL_SECTIONS.arrivals.datasets.includes(rows[0]?.dataset_code)) return rows;
   const groups = new Map();
@@ -1816,9 +1851,7 @@ function eurostatSocialAgeBandRows(rows, breakdown) {
   const result = [];
   groups.forEach(({ first, dimensions, values }) => {
     EUROSTAT_SOCIAL_AGE_BANDS.forEach((band) => {
-      const codes = band.members.every((code) => values.has(code))
-        ? band.members
-        : band.fallbacks.find((fallback) => fallback.every((code) => values.has(code)));
+      const codes = eurostatSocialAgeBandComponents(values.keys(), band);
       if (!codes) return;
       const members = codes.map((code) => values.get(code));
       const flags = [...new Set(members.map((row) => row.quality_flag).filter(Boolean))];
@@ -1926,7 +1959,7 @@ function renderEurostatSocialObservations() {
   ui.socialImpactLatestTableNote.textContent = (comparisonMode && topLabel ? "Highest value: " + topLabel + " · " : "")
     + "Showing up to 12 " + breakdownLabel + " values for " + series.latestYear + ".";
   const ageBandNote = breakdown === "age" && EUROSTAT_SOCIAL_SECTIONS.arrivals.datasets.includes(meta.dataset_code)
-    ? " Age bands sum disjoint Eurostat age classes. Their boundaries differ from the city-profile groups (<16, 16–64, 65+) because the Eurostat source uses five-year classes; overlapping aggregates and unknown ages are not assigned to a band."
+    ? " Age bands sum disjoint Eurostat age classes. This dataset publishes single years of age; the six bands are not identical to the city-profile groups (<16, 16–64, 65+). Overlapping aggregates and unknown ages are not assigned to a band."
     : "";
   ui.socialImpactCaveat.textContent = (EUROSTAT_SOCIAL_CAVEATS[meta.indicator_id] || "Eurostat aggregate indicator; interpret with its published population, geography and unit.") + ageBandNote;
   renderEurostatSocialComparisonBanner(meta, migrationSeries);
