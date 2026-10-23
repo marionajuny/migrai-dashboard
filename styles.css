@@ -64,8 +64,7 @@ img, svg { max-width: 100%; }
 .brand-mark { width: 38px; height: 38px; object-fit: contain; }
 .brand-name { font-size: 1.32rem; font-weight: 650; letter-spacing: -0.055em; }
 .brand-name span { color: var(--orange); }
-.site-nav { display: flex; align-items: center; justify-content: center; gap: clamp(18px, 3vw, 38px); margin-left: auto; }
-.landing-header-inner .site-nav { justify-content: flex-start; margin-left: clamp(20px, 3.2vw, 44px); }
+.site-nav { display: flex; align-items: center; justify-content: flex-start; gap: clamp(18px, 3vw, 38px); margin-left: clamp(20px, 3.2vw, 44px); }
 .site-nav a, .site-footer nav a { color: var(--ink-muted); font-size: 0.82rem; text-decoration: none; transition: color 160ms ease; }
 .site-nav a:hover, .site-nav a[aria-current="page"], .site-footer nav a:hover { color: var(--ink); }
 .site-nav a[aria-current="page"] { text-decoration: underline; text-decoration-color: var(--orange); text-underline-offset: 8px; }
@@ -323,8 +322,7 @@ td { color: #d4dde5; font-variant-numeric: tabular-nums; }
   .header-inner { min-height: 74px; flex-wrap: wrap; gap: 0 14px; padding-block: 12px; }
   .brand-mark { width: 32px; height: 32px; }
   .brand-name { font-size: 1.16rem; }
-  .site-nav { order: 3; width: 100%; justify-content: space-between; gap: 12px; margin: 12px 0 2px; }
-  .landing-header-inner .site-nav { justify-content: space-between; margin: 12px 0 2px; }
+  .site-nav { order: 3; width: 100%; justify-content: flex-start; gap: clamp(20px, 7vw, 38px); margin: 12px 0 2px; }
   .site-nav a { font-size: .73rem; }
   .button--nav { min-height: 37px; padding-inline: 11px; font-size: .7rem; }
   .session-controls { display: flex; align-items: center; }
