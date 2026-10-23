@@ -7,6 +7,7 @@
   const LABELS = { es: "ES", ca: "CA", en: "EN", fr: "FR" };
   const DICT = {
     "migrAI — Inteligencia migratoria": ["migrAI — Migration intelligence", "migrAI — Intelligence migratoire"],
+    "Inicio": ["Home", "Accueil"],
     "Producto": ["Product", "Produit"],
     "Planes": ["Plans", "Offres"],
     "Equipo": ["Team", "Équipe"],
@@ -190,6 +191,7 @@
 
   const CA = {
     "migrAI — Inteligencia migratoria": "migrAI — Intel·ligència migratòria",
+    "Inicio": "Inici",
     "Producto": "Producte",
     "Planes": "Plans",
     "Equipo": "Equip",
