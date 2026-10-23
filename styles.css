@@ -1057,9 +1057,11 @@ body.dashboard-mode .access-shell { width: 100%; min-height: 100vh; margin: 0; p
 .reliability-metric-status small { color: #8499ac; font-size: .51rem; line-height: 1.4; }
 .reliability-open-country { display: block; margin: 10px 0 0 auto; }
 .reliability-open-country:disabled { opacity: .45; cursor: not-allowed; }
-.reliability-lower-grid { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); align-items: stretch; gap: 13px; }
+.reliability-lower-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 13px; }
+.reliability-lower-grid > .outlook-panel { display: flex; flex-direction: column; }
+.reliability-lower-grid > .outlook-panel > .panel-heading { min-height: 3rem; }
 .reliability-model-process { display: grid; gap: 7px; }
-.reliability-model-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px; border: 1px solid rgba(112, 141, 166, .18); border-radius: 7px; background: rgba(12, 29, 47, .56); }
+.reliability-model-row { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); align-items: center; gap: 10px; padding: 10px; border: 1px solid rgba(112, 141, 166, .18); border-radius: 7px; background: rgba(12, 29, 47, .56); }
 .reliability-model-row strong { color: #f1a16b; font-size: .66rem; overflow-wrap: anywhere; }
 .reliability-model-row span { color: #91a5b7; font-size: .56rem; text-align: right; }
 .reliability-model-panel > .analysis-note { margin-bottom: 0; }
@@ -1071,6 +1073,7 @@ body.dashboard-mode .access-shell { width: 100%; min-height: 100vh; margin: 0; p
 }
 @media (max-width: 760px) {
   .reliability-chart-grid, .reliability-lower-grid { grid-template-columns: 1fr; }
+  .reliability-lower-grid > .outlook-panel > .panel-heading { min-height: 0; }
   .reliability-filter-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .reliability-scope-note { grid-column: 1 / -1; }
 }
@@ -1085,7 +1088,7 @@ body.dashboard-mode .access-shell { width: 100%; min-height: 100vh; margin: 0; p
   .reliability-ranking-row { grid-template-columns: 20px minmax(0, 1fr) auto; }
   .reliability-ranking-track { display: none; }
   .reliability-ranking-row small { grid-column: 2 / -1; text-align: left; }
-  .reliability-model-row { align-items: flex-start; flex-direction: column; }
+  .reliability-model-row { grid-template-columns: 1fr; }
   .reliability-model-row span { text-align: left; }
 }
 
