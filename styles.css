@@ -1376,3 +1376,78 @@ html:not(.i18n-ready) body { visibility: hidden; animation: i18n-reveal 0s 1.5s 
   #printReport th { background: #f1f1f1; }
   .print-report__note { margin-top: 10pt !important; color: #666; font-size: 8pt; }
 }
+
+/* Eurostat social-impact view */
+.social-impact-page { display: grid; gap: 13px; }
+.social-impact-selector > .panel-heading { align-items: flex-end; }
+.social-impact-controls { display: grid; grid-template-columns: minmax(145px, .72fr) minmax(230px, 1.28fr); align-items: end; gap: 9px; }
+.social-impact-controls label, .social-impact-filter-row label, .social-impact-dimension-filters label { display: grid; min-width: 0; gap: 5px; color: #8ea4b8; font-size: .58rem; }
+.social-impact-controls select, .social-impact-filter-row select, .social-impact-dimension-filters select { width: 100%; min-height: 36px; }
+.social-impact-tabs { display: flex; gap: 5px; max-width: 100%; margin: 4px 0 10px; overflow-x: auto; scrollbar-width: thin; scrollbar-color: #3a566d transparent; }
+.social-impact-tabs button { min-height: 35px; flex: 0 0 auto; padding: 0 14px; border: 1px solid rgba(112, 141, 166, .22); border-radius: 7px; color: #a9bdce; background: rgba(12, 29, 47, .7); font-size: .63rem; }
+.social-impact-tabs button[aria-selected="true"] { border-color: rgba(240, 123, 55, .58); color: #ffb078; background: rgba(240, 123, 55, .12); box-shadow: inset 0 -2px #f28a42; font-weight: 700; }
+.social-impact-tabs button:hover { border-color: rgba(240, 123, 55, .45); color: #f4d6c0; }
+.social-impact-section-intro { margin: 0; color: #93a9bc; font-size: .64rem; line-height: 1.5; }
+.social-impact-layout { display: grid; grid-template-columns: minmax(0, 1.48fr) minmax(310px, .72fr); align-items: start; gap: 13px; }
+.social-impact-eurostat-panel, .social-impact-forecast-panel { min-width: 0; }
+.social-impact-source-badge { flex: 0 0 auto; padding: 5px 8px; border: 1px solid rgba(240, 123, 55, .32); border-radius: 20px; color: #f3a16b; background: rgba(240, 123, 55, .07); font-size: .5rem; font-weight: 750; letter-spacing: .07em; white-space: nowrap; }
+.social-impact-filter-row, .social-impact-dimension-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; margin-bottom: 9px; }
+.social-impact-filter-row label, .social-impact-dimension-filters label { min-width: 150px; max-width: 230px; flex: 1 1 150px; }
+.social-impact-dimension-filters:empty { display: none; }
+.social-impact-stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 10px 0; }
+.social-impact-stat-grid article { display: grid; min-width: 0; min-height: 68px; align-content: space-between; gap: 6px; padding: 9px 10px; border: 1px solid rgba(112, 141, 166, .18); border-radius: 7px; background: rgba(12, 29, 47, .56); }
+.social-impact-stat-grid span { color: #8da3b6; font-size: .51rem; font-weight: 650; letter-spacing: .035em; text-transform: uppercase; }
+.social-impact-stat-grid strong { overflow-wrap: anywhere; color: #f1a16b; font-size: .79rem; font-variant-numeric: tabular-nums; }
+.social-impact-chart { min-width: 0; min-height: 180px; margin-top: 8px; }
+.social-impact-chart svg, .social-impact-forecast-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.social-impact-gridline { stroke: rgba(107, 138, 165, .22); stroke-width: 1; }
+.social-impact-axis-label { fill: #9db0c0; font-size: 9px; }
+.social-impact-axis-title { fill: #aebdca; font-size: 10px; }
+.social-impact-line { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.social-impact-point { stroke: #0b1d30; stroke-width: 1; }
+.social-impact-chart-legend { display: flex; flex-wrap: wrap; gap: 6px 12px; margin: 5px 0 0 47px; color: #a6b8c8; font-size: .53rem; }
+.social-impact-chart-legend span { display: inline-flex; max-width: 190px; align-items: center; gap: 5px; overflow-wrap: anywhere; }
+.social-impact-chart-legend i { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; }
+.social-impact-bar-track { fill: #142c42; }
+.social-impact-bar { fill: #f28a42; }
+.social-impact-chart-note { margin: 5px 0 0; color: #899fb3; font-size: .54rem; line-height: 1.45; }
+.social-impact-latest-wrap { margin-top: 14px; }
+.social-impact-table-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 0 0 6px; }
+.social-impact-table-heading h3 { margin: 0; color: #dfe8ef; font-size: .68rem; }
+.social-impact-table-heading span { color: #8197aa; font-size: .52rem; text-align: right; }
+.social-impact-table { min-width: 570px; }
+.social-impact-provenance a { color: #f3a16b; }
+.social-impact-forecast-panel { position: sticky; top: 125px; }
+.social-impact-forecast-cards { display: grid; gap: 7px; }
+.social-impact-forecast-card { display: grid; grid-template-columns: minmax(75px, .8fr) minmax(60px, .8fr) minmax(90px, 1fr); align-items: center; gap: 8px; padding: 8px; border: 1px solid rgba(112, 141, 166, .18); border-radius: 7px; background: rgba(12, 29, 47, .58); }
+.social-impact-forecast-card > span { color: #99adbf; font-size: .55rem; }
+.social-impact-forecast-card > strong { color: #ffb078; font-size: .78rem; font-variant-numeric: tabular-nums; text-align: right; }
+.social-impact-forecast-card > small { color: #8399ad; font-size: .51rem; text-align: right; }
+.social-impact-forecast-chart { min-height: 105px; margin: 12px 0 2px; }
+.social-impact-forecast-line { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.social-impact-forecast-line--observed { stroke: #ffd2b6; }
+.social-impact-forecast-line--forecast { stroke: #f28a42; stroke-dasharray: 5 4; }
+.social-impact-forecast-point { fill: #ffd2b6; stroke: #fff0e5; stroke-width: 1; }
+.social-impact-forecast-point--forecast { fill: #0b1d30; stroke: #ff9a4d; stroke-width: 1.7; }
+.social-impact-scope-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.social-impact-scope-grid p { margin: 0; padding: 9px 10px; border: 1px solid rgba(112, 141, 166, .17); border-radius: 7px; color: #98adbf; background: rgba(12, 29, 47, .48); font-size: .56rem; line-height: 1.5; }
+.social-impact-scope-grid strong { color: #f1a16b; }
+
+@media (max-width: 1180px) {
+  .social-impact-layout { grid-template-columns: minmax(0, 1fr); }
+  .social-impact-forecast-panel { position: static; }
+  .social-impact-forecast-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .social-impact-controls { width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .social-impact-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .social-impact-scope-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .social-impact-controls { grid-template-columns: 1fr; }
+  .social-impact-controls label, .social-impact-filter-row label, .social-impact-dimension-filters label { width: 100%; max-width: none; }
+  .social-impact-forecast-cards { grid-template-columns: 1fr; }
+  .social-impact-forecast-card { grid-template-columns: minmax(70px, .75fr) minmax(65px, .75fr) minmax(90px, 1fr); }
+  .social-impact-table-heading { align-items: flex-start; flex-direction: column; }
+  .social-impact-table-heading span { text-align: left; }
+}
