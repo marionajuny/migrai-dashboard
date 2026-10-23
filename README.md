@@ -13,6 +13,11 @@ Dashboard estático y privado para consultar los resultados del pipeline de migr
 - La consulta de `runs` solicita columnas explícitas y no incluye `github_run_url`. Para retirarlo también de la vista de Supabase, hay que cambiar la vista en la base de datos.
 - La página de metodología carga el inventario contextual bajo demanda y pagina las filas para respetar el límite de respuesta de la Data API. La cobertura publicada se presenta como rango observado; no se interpreta como cobertura completa si la base no expone un manifiesto de años esperados.
 
+## Incidencias documentadas
+
+- En `Social Impact` → `Health` → `Hospital beds by NUTS 2 region`, el eje Y y el banner pueden mostrar `Number` aunque esté seleccionada la unidad `HAB_P` (camas por 100.000 habitantes). La etiqueta se toma de la primera fila sin filtrar del dataset, no de la unidad seleccionada. Es un error de presentación; no causa los años ausentes.
+- En la instantánea Eurostat del pipeline, España tiene 304 observaciones `HAB_P`: 19 regiones en 1999–2010 y 2021–2024, sin observaciones para 2011–2020. La unidad `NR` (número de camas) sí tiene datos para las 19 regiones cada año de 1993 a 2024. La cobertura general indicada por Eurostat no implica un valor para cada unidad, región y año. Fuentes: [dataset hlth_rs_bdsrg2 de Eurostat](https://ec.europa.eu/eurostat/databrowser/view/hlth_rs_bdsrg2/default/table?lang=en) y [ejecución del pipeline](https://github.com/queraltnf/migrAI/actions/runs/40029690176).
+
 ## Estructura del código
 
 - `acceso.html`, `app.js`, `styles.css`: dashboard privado (siempre en inglés).
