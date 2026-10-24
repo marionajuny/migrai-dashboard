@@ -1070,6 +1070,17 @@ body.dashboard-mode .access-shell { width: 100%; min-height: 100vh; margin: 0; p
 .reliability-model-row strong { color: #f1a16b; font-size: .66rem; overflow-wrap: anywhere; }
 .reliability-model-row span { color: #91a5b7; font-size: .56rem; text-align: right; }
 .reliability-model-panel > .analysis-note { margin-bottom: 0; }
+.reliability-shap-panel { min-width: 0; }
+.reliability-shap-badge { flex: 0 0 auto; padding: 5px 7px; border: 1px solid rgba(240, 123, 55, .28); border-radius: 6px; color: #e6a270; font-size: .51rem; letter-spacing: .04em; }
+.reliability-shap-summary { margin: 0 0 8px; color: #becbd6; font-size: .62rem; line-height: 1.5; }
+.reliability-shap-chart { min-width: 0; overflow-x: auto; }
+.reliability-shap-chart svg { display: block; width: 100%; min-width: 760px; height: auto; }
+.reliability-shap-zero { stroke: rgba(255, 190, 131, .72); stroke-width: 1.4; stroke-dasharray: 4 4; }
+.reliability-shap-feature { fill: #c5d1db; font: 11px system-ui, sans-serif; }
+.reliability-shap-point { stroke: #071728; stroke-width: 1.1; }
+.reliability-shap-point--positive { fill: #ff994c; }
+.reliability-shap-point--negative { fill: #57c8bd; }
+.reliability-shap-panel > .analysis-note { margin: 6px 0 0; }
 .reliability-interpretation-panel .context-caveats-list { gap: 10px; }
 
 @media (max-width: 1080px) {
@@ -1095,6 +1106,8 @@ body.dashboard-mode .access-shell { width: 100%; min-height: 100vh; margin: 0; p
   .reliability-ranking-row small { grid-column: 2 / -1; text-align: left; }
   .reliability-model-row { grid-template-columns: 1fr; }
   .reliability-model-row span { text-align: left; }
+  .reliability-shap-panel > .panel-heading { align-items: flex-start; }
+  .reliability-shap-badge { font-size: .46rem; }
 }
 
 /* City Intelligence */

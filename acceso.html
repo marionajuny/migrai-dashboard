@@ -7,7 +7,7 @@
     <meta name="description" content="Private access to the migrAI dashboard." />
     <title>Private access · migrAI</title>
     <link rel="icon" href="migrai-mark.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=dashboard-header-tools-20261024" />
+    <link rel="stylesheet" href="styles.css?v=shap-attribution-20261024" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   </head>
   <body>
@@ -402,6 +402,20 @@
               </section>
             </div>
 
+            <section class="outlook-panel reliability-shap-panel" aria-labelledby="reliabilityShapTitle">
+              <div class="panel-heading">
+                <div>
+                  <h2 id="reliabilityShapTitle">SHAP feature contributions</h2>
+                  <p>How model inputs move an individual production forecast above or below its baseline</p>
+                </div>
+                <span class="reliability-shap-badge">LOCAL MODEL EXPLANATION</span>
+              </div>
+              <p id="reliabilityShapSummary" class="reliability-shap-summary" role="status" aria-live="polite">Select a horizon and model to inspect its feature contributions.</p>
+              <div id="reliabilityShapStatus" class="context-empty-state" hidden></div>
+              <div id="reliabilityShapChart" class="reliability-shap-chart" aria-live="polite"></div>
+              <p class="analysis-note">Positive SHAP values raise the model output relative to its baseline; negative values lower it. These are model attributions, not causal effects. Correlated inputs can share or shift attribution.</p>
+            </section>
+
             <div class="reliability-lower-grid">
               <section class="outlook-panel reliability-model-panel" aria-labelledby="reliabilityModelTitle">
                 <div class="panel-heading"><div><h2 id="reliabilityModelTitle">Model selection process</h2><p>Selection labels observed in current production forecasts</p></div></div>
@@ -666,6 +680,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
     <script src="insights.js?v=insights-20261023" defer></script>
-    <script src="app.js?v=social-impact-dual-axis-20261024" defer></script>
+    <script src="app.js?v=shap-attribution-20261024" defer></script>
   </body>
 </html>

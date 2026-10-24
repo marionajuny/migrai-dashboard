@@ -191,6 +191,9 @@ const ui = {
   reliabilityBacktestChart: document.querySelector("#reliabilityBacktestChart"),
   reliabilityMetricStatus: document.querySelector("#reliabilityMetricStatus"),
   reliabilityModelProcess: document.querySelector("#reliabilityModelProcess"),
+  reliabilityShapSummary: document.querySelector("#reliabilityShapSummary"),
+  reliabilityShapStatus: document.querySelector("#reliabilityShapStatus"),
+  reliabilityShapChart: document.querySelector("#reliabilityShapChart"),
   reliabilityRankingTitle: document.querySelector("#reliabilityRankingTitle"),
   reliabilityRankingSubtitle: document.querySelector("#reliabilityRankingSubtitle"),
   reliabilityRankingEmpty: document.querySelector("#reliabilityRankingEmpty"),
@@ -307,6 +310,8 @@ const state = {
   backtestMetrics: [],
   backtestEntityMetrics: [],
   backtestViewsAvailable: true,
+  shapAttributions: [],
+  shapAttributionsAvailable: true,
   contextRows: [],
   contextInventoryRows: [],
   contextInventoryStatus: "idle",
@@ -592,6 +597,8 @@ ui.logoutButton.addEventListener("click", async () => {
   state.backtestMetrics = [];
   state.backtestEntityMetrics = [];
   state.backtestViewsAvailable = true;
+  state.shapAttributions = [];
+  state.shapAttributionsAvailable = true;
   state.contextRows = [];
   state.selectedContextCountries = [];
   state.selectedContextIndicators = [];
@@ -923,7 +930,8 @@ async function loadDashboard() {
   setMessage(ui.dashboardMessage);
 
   const [runsResponse, forecastsResponse, observedResponse, backtestPredictionsResponse,
-    backtestEvaluationsResponse, backtestMetricsResponse, backtestEntityMetricsResponse] = await Promise.all([
+    backtestEvaluationsResponse, backtestMetricsResponse, backtestEntityMetricsResponse,
+    shapAttributionsResponse] = await Promise.all([
     supabaseClient.from("runs").select("run_id,started_at_madrid,run_label,trigger,status,levels,n_forecasts,is_latest,git_branch,git_commit,n_failed_steps").order("run_id", { ascending: false }).limit(25),
     supabaseClient.from("forecasts_latest").select("*").in("level", ["country", "city"]).order("entity_name").order("horizon"),
     supabaseClient.from("observed_latest").select("*").in("level", ["country", "city"]).order("year"),
@@ -931,6 +939,7 @@ async function loadDashboard() {
     supabaseClient.from("backtest_evaluations_latest").select("*"),
     supabaseClient.from("backtest_metrics_latest").select("*"),
     supabaseClient.from("backtest_entity_metrics_latest").select("*"),
+    supabaseClient.from("forecast_feature_attributions_latest").select("*").order("horizon").order("entity_name").limit(10000),
   ]);
 
   const error = runsResponse.error ?? forecastsResponse.error ?? observedResponse.error;
@@ -960,6 +969,8 @@ async function loadDashboard() {
   state.backtestEvaluations = backtestEvaluationsResponse.data ?? [];
   state.backtestMetrics = backtestMetricsResponse.data ?? [];
   state.backtestEntityMetrics = backtestEntityMetricsResponse.data ?? [];
+  state.shapAttributionsAvailable = !shapAttributionsResponse.error;
+  state.shapAttributions = shapAttributionsResponse.data ?? [];
   ui.connectionBadge.textContent = "Data connected";
   ui.connectionBadge.dataset.state = "ready";
 
@@ -4388,6 +4399,162 @@ function renderReliabilityModelProcess() {
   });
 }
 
+function renderReliabilityShap() {
+  ui.reliabilityShapChart.replaceChildren();
+  ui.reliabilityShapStatus.hidden = true;
+  ui.reliabilityShapSummary.textContent = "";
+  if (!state.shapAttributionsAvailable) {
+    ui.reliabilityShapStatus.hidden = false;
+    ui.reliabilityShapStatus.innerHTML = "<strong>SHAP view not connected</strong><p>The protected attribution view is not configured or accessible yet.</p>";
+    return;
+  }
+
+  const horizon = Number(ui.reliabilityHorizon.value);
+  const selectedModel = ui.reliabilityModel.value;
+  const selectedEntity = ui.reliabilityEntity.value;
+  const eligibleForecasts = reliabilityFilteredForecastRows(horizon)
+    .filter((row) => selectedModel === "all" || String(row.model_id) === selectedModel);
+  const eligibleModels = new Set([
+    "M0_RIDGE_AR", "comb_persist+ridge_delta", "comb_persist+xgb_nivel",
+  ]);
+  const eligibleAttributionRows = state.shapAttributions.filter((row) => row.level === state.reliabilityScope
+    && safeNumber(row.horizon) === horizon
+    && (selectedModel === "all" || String(row.model_id) === selectedModel)
+    && (selectedEntity === "all" || reliabilityEntityKey(row) === selectedEntity));
+
+  if (!eligibleAttributionRows.length) {
+    ui.reliabilityShapStatus.hidden = false;
+    const title = document.createElement("strong");
+    const note = document.createElement("p");
+    if (selectedModel !== "all" && !eligibleModels.has(selectedModel)) {
+      title.textContent = "This production model has no SHAP attribution";
+      note.textContent = "SHAP is published only for the learned Ridge and XGBoost models. Persistence and Drift are deterministic rules, so their formula is the appropriate explanation.";
+    } else if (!eligibleForecasts.length) {
+      title.textContent = "No production forecast matches these filters";
+      note.textContent = "Select another scope, horizon, model or entity.";
+    } else {
+      title.textContent = "No SHAP records for this forecast";
+      note.textContent = "The latest production run does not contain an attribution for this selection.";
+    }
+    ui.reliabilityShapStatus.replaceChildren(title, note);
+    return;
+  }
+
+  const byForecastAndFeature = new Map();
+  eligibleAttributionRows.forEach((row) => {
+    const cityIdentity = state.reliabilityScope === "city" && row.feature_group === "City identity";
+    const featureKey = cityIdentity ? "__city_identity__" : String(row.feature_name);
+    const key = `${row.run_id}|${row.level}|${row.entity_id}|${row.horizon}|${featureKey}`;
+    const existing = byForecastAndFeature.get(key);
+    if (existing) {
+      existing.shap_value += safeNumber(row.shap_value) ?? 0;
+      existing.feature_label = "City identity";
+      existing.feature_group = "City identity";
+      existing.feature_value = null;
+      existing.city_identity_grouped = true;
+    } else {
+      byForecastAndFeature.set(key, {
+        ...row,
+        feature_label: cityIdentity ? "City identity" : (row.feature_label || row.feature_name),
+        feature_key: featureKey,
+        city_identity_grouped: false,
+      });
+    }
+  });
+  const points = [...byForecastAndFeature.values()];
+  const features = new Map();
+  points.forEach((point) => {
+    const group = features.get(point.feature_key) ?? { key: point.feature_key, label: point.feature_label, points: [] };
+    group.points.push(point);
+    features.set(point.feature_key, group);
+  });
+  const rankedFeatures = [...features.values()]
+    .map((feature) => ({
+      ...feature,
+      meanAbs: feature.points.reduce((sum, point) => sum + Math.abs(safeNumber(point.shap_value) ?? 0), 0)
+        / Math.max(feature.points.length, 1),
+    }))
+    .sort((a, b) => b.meanAbs - a.meanAbs)
+    .slice(0, 14);
+  const displayedPoints = rankedFeatures.flatMap((feature) => feature.points);
+  const forecastKeys = new Set(eligibleAttributionRows.map((row) => `${row.run_id}|${row.level}|${row.entity_id}|${row.horizon}`));
+  const unit = state.reliabilityScope === "city" ? "pp" : "persons/year";
+
+  if (selectedEntity !== "all" && eligibleAttributionRows.length) {
+    const first = eligibleAttributionRows[0];
+    const finalValue = safeNumber(first.forecast_prediction);
+    const explained = safeNumber(first.explained_value);
+    const base = safeNumber(first.base_value);
+    const clipped = finalValue !== null && explained !== null && Math.abs(finalValue - explained) > 1e-6;
+    ui.reliabilityShapSummary.textContent = `${reliabilityEntityLabel(first)} · baseline ${formatMetricValue(base)} + Σ SHAP = model output ${formatMetricValue(explained)} ${unit} · published forecast ${formatMetricValue(finalValue)}${clipped ? " (post-processed)" : ""}.`;
+  } else {
+    ui.reliabilityShapSummary.textContent = `${forecastKeys.size} production forecast${forecastKeys.size === 1 ? "" : "s"} · ${features.size} feature groups shown. Each point is one model contribution; the horizontal axis is in ${unit}.`;
+  }
+
+  const width = 1040;
+  const rowHeight = 31;
+  const height = Math.max(160, 94 + rankedFeatures.length * rowHeight);
+  const margin = { top: 24, right: 32, bottom: 46, left: 275 };
+  const maxAbs = Math.max(...displayedPoints.map((point) => Math.abs(safeNumber(point.shap_value) ?? 0)), 0);
+  const domain = maxAbs > 0 ? maxAbs * 1.12 : 1;
+  const plotWidth = width - margin.left - margin.right;
+  const x = (value) => margin.left + ((value + domain) / (domain * 2)) * plotWidth;
+  const zeroX = x(0);
+  const svg = createSvg("svg", {
+    viewBox: `0 0 ${width} ${height}`,
+    role: "img",
+    "aria-label": `SHAP feature contributions for ${state.reliabilityScope} ${horizon}-year forecasts`,
+  });
+  svg.append(createSvg("line", {
+    x1: zeroX, y1: margin.top - 4, x2: zeroX,
+    y2: height - margin.bottom + 2, class: "reliability-shap-zero",
+  }));
+  svg.append(createSvg("line", {
+    x1: margin.left, y1: height - margin.bottom,
+    x2: width - margin.right, y2: height - margin.bottom, class: "reliability-axis",
+  }));
+  const axisLabel = createSvg("text", {
+    x: width / 2, y: height - 10, "text-anchor": "middle", class: "reliability-chart-label",
+  });
+  axisLabel.textContent = `SHAP contribution (${unit}) · negative lowers forecast · positive raises forecast`;
+  svg.append(axisLabel);
+
+  rankedFeatures.forEach((feature, featureIndex) => {
+    const centerY = margin.top + featureIndex * rowHeight + rowHeight / 2;
+    const label = createSvg("text", {
+      x: margin.left - 12, y: centerY + 4, "text-anchor": "end", class: "reliability-shap-feature",
+    });
+    label.textContent = feature.label.length > 38 ? `${feature.label.slice(0, 35)}…` : feature.label;
+    const labelTitle = createSvg("title");
+    labelTitle.textContent = feature.label;
+    label.append(labelTitle);
+    svg.append(label);
+    feature.points.forEach((point, pointIndex) => {
+      const value = safeNumber(point.shap_value) ?? 0;
+      const jitter = selectedEntity === "all" ? ((pointIndex % 7) - 3) * 2.6 : 0;
+      const marker = createSvg("circle", {
+        cx: x(value), cy: centerY + jitter, r: selectedEntity === "all" ? 4.5 : 5.4,
+        class: value < 0 ? "reliability-shap-point reliability-shap-point--negative" : "reliability-shap-point reliability-shap-point--positive",
+      });
+      const featureValue = point.city_identity_grouped
+        ? "combined city indicator contribution"
+        : `${formatMetricValue(point.feature_value, 3)}${point.feature_value_was_imputed ? " · median-imputed model input" : ""}`;
+      const title = createSvg("title");
+      title.textContent = `${reliabilityEntityLabel(point)} · ${feature.label} · input ${featureValue} · SHAP ${formatMetricValue(value, 4)} ${unit}`;
+      marker.append(title);
+      svg.append(marker);
+    });
+  });
+  [-domain, 0, domain].forEach((value) => {
+    const tick = createSvg("text", {
+      x: x(value), y: height - margin.bottom + 17, "text-anchor": "middle", class: "reliability-chart-label",
+    });
+    tick.textContent = formatMetricValue(value, 2);
+    svg.append(tick);
+  });
+  ui.reliabilityShapChart.append(svg);
+}
+
 function renderReliabilityRankingState() {
   const cityScope = state.reliabilityScope === "city";
   ui.reliabilityRankingTitle.textContent = cityScope ? "City error ranking" : "Country error ranking";
@@ -4499,6 +4666,7 @@ function renderForecastReliability() {
   renderReliabilityScatter();
   renderReliabilityBacktestTimeline();
   renderReliabilityModelProcess();
+  renderReliabilityShap();
   renderReliabilityRankingState();
 }
 
