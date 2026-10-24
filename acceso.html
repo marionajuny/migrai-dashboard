@@ -7,7 +7,7 @@
     <meta name="description" content="Private access to the migrAI dashboard." />
     <title>Private access · migrAI</title>
     <link rel="icon" href="migrai-mark.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="styles.css?v=shap-attribution-20261024" />
+    <link rel="stylesheet" href="styles.css?v=dashboard-review-20261024" />
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   </head>
   <body>
@@ -197,6 +197,12 @@
                 <p id="countryReliabilityNote" class="analysis-note">Country-level selection-backtest diagnostics are shown by horizon when available. They are not independent holdout results.</p>
               </section>
             </div>
+
+            <section class="outlook-panel entity-shap-panel" aria-labelledby="countryShapTitle">
+              <div class="panel-heading"><div><h2 id="countryShapTitle">What drives the 5-year outlook?</h2><p>Top SHAP contributions for this country's published Ridge forecast</p></div><span class="reliability-shap-badge">MODEL EXPLANATION</span></div>
+              <div id="countryShapSummary" class="entity-shap-summary" aria-live="polite"></div>
+              <p class="analysis-note">SHAP describes how model inputs contribute to this forecast; it does not show causal effects.</p>
+            </section>
 
             <section class="outlook-panel city-explorer-panel" aria-labelledby="cityExplorerTitle">
               <div class="panel-heading panel-heading--wrap"><div><p class="eyebrow">NATIONAL TO URBAN</p><h2 id="cityExplorerTitle">Main Cities Explorer</h2><p>Urban indicators available within the selected country's production scope</p></div><span id="cityExplorerCoverage" class="coverage-note">Checking city coverage…</span></div>
@@ -487,6 +493,12 @@
               </section>
             </div>
 
+            <section class="outlook-panel entity-shap-panel city-shap-panel" aria-labelledby="cityShapTitle">
+              <div class="panel-heading"><div><h2 id="cityShapTitle">What drives the city outlook?</h2><p>Leading SHAP contributions for the available 1-year and 3-year models</p></div><span class="reliability-shap-badge">MODEL EXPLANATION</span></div>
+              <div id="cityShapSummary" class="entity-shap-summary entity-shap-summary--horizons" aria-live="polite"></div>
+              <p class="analysis-note">SHAP describes how model inputs contribute to each forecast; it does not show causal effects.</p>
+            </section>
+
             <div class="city-lower-grid">
               <section class="outlook-panel city-reliability-panel" aria-labelledby="cityReliabilityTitle">
                 <div class="panel-heading"><div><h2 id="cityReliabilityTitle">City Model Reliability</h2><p>City-level evaluation evidence · percentage points</p></div></div>
@@ -614,11 +626,11 @@
                 <div class="panel-heading"><div><h2 id="methodologyLineageTitle">Source lineage and methodology</h2><p>From documented source families to the authenticated dashboard</p></div></div>
                 <div class="methodology-lineage">
                   <details class="methodology-stage" open><summary><span>01</span><strong>Data sources</strong></summary><p>Contextual indicators publish source names and dataset identifiers in the inventory above. The separate immigration-flow view does not currently expose row-level source attribution.</p></details>
-                  <details class="methodology-stage"><summary><span>02</span><strong>Processing</strong></summary><p>Project materials describe cleaning, validation, duplicate handling and missing-value treatment in the upstream pipeline. Detailed transformation logs are not exposed in these dashboard views.</p></details>
-                  <details class="methodology-stage"><summary><span>03</span><strong>Country &amp; City datasets</strong></summary><p>Country and City observations and forecast rows are read from the published <code>observed_latest</code> and <code>forecasts_latest</code> views in the <code>migrai</code> schema.</p></details>
-                  <details class="methodology-stage"><summary><span>04</span><strong>Model evaluation</strong></summary><p>Production forecasts remain separate from backtesting. The dashboard reads published observed/predicted pairs and horizon/entity metrics from protected backtest views; these are diagnostics from the model-selection backtest, not an independent holdout.</p></details>
-                  <details class="methodology-stage"><summary><span>05</span><strong>Production forecasts</strong></summary><p>Forecast status, target year, horizon, model label and interval bounds are displayed only when the corresponding fields are present and valid in the published rows.</p></details>
-                  <details class="methodology-stage"><summary><span>06</span><strong>Supabase → Dashboard</strong></summary><p>Supabase Auth gates access. The static GitHub Pages client makes authenticated, read-only queries to the approved views, including the published context and backtest views. No secret or service-role key is used by the browser.</p></details>
+                  <details class="methodology-stage" open><summary><span>02</span><strong>Processing</strong></summary><p>The project documentation describes pipeline steps for cleaning, validation, duplicate handling and missing-value treatment. This dashboard does not expose transformation logs, so it cannot verify which rule changed an individual record.</p></details>
+                  <details class="methodology-stage" open><summary><span>03</span><strong>Country &amp; City datasets</strong></summary><p>Country and City observations and forecast rows are read from the published <code>observed_latest</code> and <code>forecasts_latest</code> views in the <code>migrai</code> schema.</p></details>
+                  <details class="methodology-stage" open><summary><span>04</span><strong>Model evaluation</strong></summary><p>Production forecasts remain separate from backtesting. The dashboard reads published observed/predicted pairs and horizon/entity metrics from protected backtest views; these are diagnostics from the model-selection backtest, not an independent holdout.</p></details>
+                  <details class="methodology-stage" open><summary><span>05</span><strong>Production forecasts</strong></summary><p>Forecast status, target year, horizon, model label and interval bounds are displayed only when the corresponding fields are present and valid in the published rows.</p></details>
+                  <details class="methodology-stage" open><summary><span>06</span><strong>Supabase → Dashboard</strong></summary><p>Supabase Auth gates access. The static GitHub Pages client makes authenticated, read-only queries to the approved views, including the published context and backtest views. No secret or service-role key is used by the browser.</p></details>
                 </div>
                 <p class="analysis-note">A published year range describes rows currently available, not the complete set of years expected by the pipeline. The current views do not expose an expected entity-year manifest.</p>
               </section>
@@ -680,6 +692,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
     <script src="insights.js?v=insights-20261023" defer></script>
-    <script src="app.js?v=shap-attribution-20261024" defer></script>
+    <script src="app.js?v=dashboard-review-20261024" defer></script>
   </body>
 </html>

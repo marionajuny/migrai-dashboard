@@ -122,6 +122,7 @@ const ui = {
   cityExplorerCoverage: document.querySelector("#cityExplorerCoverage"),
   cityExplorerContent: document.querySelector("#cityExplorerContent"),
   countryInsightsList: document.querySelector("#countryInsightsList"),
+  countryShapSummary: document.querySelector("#countryShapSummary"),
   benchmarkSelectionCount: document.querySelector("#benchmarkSelectionCount"),
   benchmarkReset: document.querySelector("#benchmarkReset"),
   benchmarkSelectorToggle: document.querySelector("#benchmarkSelectorToggle"),
@@ -231,6 +232,7 @@ const ui = {
   cityProfileSubtitle: document.querySelector("#cityProfileSubtitle"),
   cityProfileContent: document.querySelector("#cityProfileContent"),
   cityInsights: document.querySelector("#cityInsights"),
+  cityShapSummary: document.querySelector("#cityShapSummary"),
   cityReliabilityMae: document.querySelector("#cityReliabilityMae"),
   cityReliabilityMaeNote: document.querySelector("#cityReliabilityMaeNote"),
   cityReliabilityWape: document.querySelector("#cityReliabilityWape"),
@@ -4555,6 +4557,103 @@ function renderReliabilityShap() {
   ui.reliabilityShapChart.append(svg);
 }
 
+function renderEntityShapSummary(container, { level, entityId, countryIso2 = null, horizons, unit }) {
+  if (!container) return;
+  container.replaceChildren();
+  if (!state.shapAttributionsAvailable) {
+    const message = document.createElement("p");
+    message.className = "entity-shap-empty";
+    message.textContent = "SHAP explanations are currently unavailable because the protected view could not be loaded.";
+    container.append(message);
+    return;
+  }
+
+  horizons.forEach(({ horizon, modelId, label }) => {
+    const card = document.createElement("article");
+    card.className = "entity-shap-card";
+    const heading = document.createElement("div");
+    heading.className = "entity-shap-card__heading";
+    const title = document.createElement("strong");
+    title.textContent = label;
+    const model = document.createElement("span");
+    model.textContent = modelId;
+    heading.append(title, model);
+    card.append(heading);
+
+    const rows = state.shapAttributions.filter((row) => row.level === level
+      && String(row.entity_id) === String(entityId)
+      && safeNumber(row.horizon) === horizon
+      && String(row.model_id) === modelId
+      && (!countryIso2 || String(row.country_iso2 ?? "") === String(countryIso2)));
+    if (!rows.length) {
+      const empty = document.createElement("p");
+      empty.className = "entity-shap-empty";
+      empty.textContent = `No SHAP explanation is published for this ${horizon}-year model and selection.`;
+      card.append(empty);
+      container.append(card);
+      return;
+    }
+
+    const features = new Map();
+    rows.forEach((row) => {
+      const cityIdentity = level === "city" && row.feature_group === "City identity";
+      const key = cityIdentity ? "__city_identity__" : String(row.feature_name);
+      const value = safeNumber(row.shap_value) ?? 0;
+      const feature = features.get(key);
+      if (feature) feature.value += value;
+      else features.set(key, {
+        key,
+        label: cityIdentity ? "City identity" : (row.feature_label || row.feature_name || "Model input"),
+        value,
+      });
+    });
+    const topFeatures = [...features.values()]
+      .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
+      .slice(0, 3);
+    const maxAbs = Math.max(...topFeatures.map((feature) => Math.abs(feature.value)), 0);
+    const list = document.createElement("ul");
+    list.className = "entity-shap-list";
+    topFeatures.forEach((feature) => {
+      const item = document.createElement("li");
+      item.className = "entity-shap-row";
+      const name = document.createElement("span");
+      name.className = "entity-shap-row__name";
+      name.textContent = feature.label;
+      name.title = feature.label;
+      const track = document.createElement("span");
+      track.className = "entity-shap-row__track";
+      const bar = document.createElement("i");
+      const magnitude = maxAbs ? Math.abs(feature.value) / maxAbs * 48 : 0;
+      bar.style.width = `${magnitude}%`;
+      bar.className = feature.value < 0 ? "is-negative" : "is-positive";
+      if (feature.value < 0) bar.style.right = "50%";
+      else bar.style.left = "50%";
+      track.append(bar);
+      const contribution = document.createElement("strong");
+      contribution.className = feature.value < 0 ? "is-negative" : "is-positive";
+      const sign = feature.value > 0 ? "+" : feature.value < 0 ? "−" : "";
+      contribution.textContent = `${sign}${formatMetricValue(Math.abs(feature.value), 2)} ${unit}`;
+      contribution.title = feature.value < 0 ? "Lowers the model output" : "Raises the model output";
+      item.append(name, track, contribution);
+      list.append(item);
+    });
+    card.append(list);
+
+    const first = rows[0];
+    const output = safeNumber(first.forecast_prediction);
+    const explained = safeNumber(first.explained_value);
+    const base = safeNumber(first.base_value);
+    const details = document.createElement("p");
+    details.className = "entity-shap-card__details";
+    const targetYear = safeNumber(first.target_year);
+    const modelOutput = explained ?? output;
+    const postProcessed = output !== null && modelOutput !== null && Math.abs(output - modelOutput) > 1e-6;
+    details.textContent = `${targetYear ? `Target ${targetYear} · ` : ""}${base !== null && modelOutput !== null ? `baseline ${formatMetricValue(base)} → model output ${formatMetricValue(modelOutput)} ${unit}` : "Top 3 contributions"}${postProcessed ? ` · published forecast ${formatMetricValue(output)} ${unit}` : ""}`;
+    card.append(details);
+    container.append(card);
+  });
+}
+
 function renderReliabilityRankingState() {
   const cityScope = state.reliabilityScope === "city";
   ui.reliabilityRankingTitle.textContent = cityScope ? "City error ranking" : "Country error ranking";
@@ -4737,6 +4836,12 @@ function renderCountryIntelligence() {
   renderCountryYearChange();
   renderCountryForecastComparison();
   renderCountryReliability();
+  renderEntityShapSummary(ui.countryShapSummary, {
+    level: "country",
+    entityId: country.id,
+    horizons: [{ horizon: 5, modelId: "M0_RIDGE_AR", label: "5-year outlook" }],
+    unit: "persons/year",
+  });
   renderCityExplorer(country);
   renderCountryInsights(country, observations, currentCountryForecasts());
   renderSummaryItems(document.querySelector("#countrySummary"), buildCountrySummary(country));
@@ -5297,6 +5402,11 @@ function clearCityIntelligenceDetails() {
   cityEmpty(ui.cityForecastCompare, "No matching City forecast and observed baseline are available.");
   cityEmpty(ui.cityProfileContent, "No verified city profile metadata is available.", "city-profile-empty");
   cityEmpty(ui.cityInsights, "Insights will appear when verified City observations or forecasts are available.", "city-insights-empty");
+  ui.cityShapSummary.replaceChildren();
+  const shapPrompt = document.createElement("p");
+  shapPrompt.className = "entity-shap-empty";
+  shapPrompt.textContent = "Select a verified city to see the available model explanations.";
+  ui.cityShapSummary.append(shapPrompt);
   [ui.cityTrendNote, ui.cityRankingSubtitle, ui.cityRankingNote, ui.cityYoyNote, ui.cityForecastCompareNote, ui.cityProfileSubtitle].forEach((element) => { element.textContent = ""; });
   ui.cityReliabilityInterval.textContent = "Not published";
   ui.cityReliabilityIntervalNote.textContent = "No verified City forecast interval is available for this selection";
@@ -5348,6 +5458,16 @@ function renderSelectedCity(city) {
   const forecasts = cityForecastSeries(city);
   const availableForecasts = forecasts.filter(Boolean);
   renderCityReliability(city);
+  renderEntityShapSummary(ui.cityShapSummary, {
+    level: "city",
+    entityId: city.id,
+    countryIso2: city.countryId,
+    horizons: [
+      { horizon: 1, modelId: "comb_persist+ridge_delta", label: "1-year outlook" },
+      { horizon: 3, modelId: "comb_persist+xgb_nivel", label: "3-year outlook" },
+    ],
+    unit: "pp",
+  });
   ui.cityKpiName.textContent = city.name;
   ui.cityKpiCountry.textContent = country?.name ?? "Verified country";
   ui.cityKpiYear.textContent = latest ? String(latest.year) : "Not available";
@@ -5891,7 +6011,7 @@ function exportCountryChart() {
   setMessage(ui.dashboardMessage, "Country chart exported as SVG.");
 }
 
-const MAP_DATA_URL = "assets/europe-countries.geojson";
+const MAP_DATA_URL = new URL("./assets/europe-countries.geojson", document.baseURI).toString();
 
 // Natural Earth 5.1.2 populated-place points (Admin-0 capitals; WGS84 [longitude, latitude]).
 const EUROPEAN_CAPITALS = [
@@ -5938,18 +6058,23 @@ async function loadEuropeMap() {
     if (!window.d3) showMapUnavailable("Map rendering is unavailable in this browser.");
     return;
   }
+  if (window.location.protocol === "file:") {
+    showMapUnavailable("This local file preview cannot fetch GeoJSON because the browser blocks file:// requests. Serve the project over HTTP; GitHub Pages uses the bundled map asset.");
+    return;
+  }
   try {
     const response = await fetch(MAP_DATA_URL);
-    if (!response.ok) throw new Error("Map boundaries could not be loaded.");
+    if (!response.ok) throw new Error(`Map asset request failed (HTTP ${response.status}).`);
     const data = await response.json();
+    if (data.type !== "FeatureCollection" || !Array.isArray(data.features)) throw new Error("Map asset is not a valid GeoJSON FeatureCollection.");
     state.mapFeatures = (data.features ?? []).filter((feature) => {
       const [longitude, latitude] = d3.geoCentroid(feature);
       const inEuropeanBounds = longitude >= -32 && longitude <= 45 && latitude >= 32 && latitude <= 74;
       return inEuropeanBounds && (feature.properties?.CONTINENT === "Europe" || entityForFeature(feature) !== null);
     });
     renderMap();
-  } catch {
-    showMapUnavailable("Map boundaries could not be loaded. Country values remain available in the ranking.");
+  } catch (error) {
+    showMapUnavailable(`Map boundaries could not be loaded. ${error.message} Country values remain available in the ranking.`);
   }
 }
 
